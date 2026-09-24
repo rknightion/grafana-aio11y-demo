@@ -103,7 +103,9 @@ resource "aws_cognito_user_pool_client" "gateway" {
   enable_token_revocation              = true
   read_attributes                      = ["email", "email_verified"]
 
-  # Long refresh tokens keep developer sessions alive across a multi-day demo.
+  # The gateway sign-in gets no refresh token (no offline_access), so developer sessions last
+  # the gateway's session.ttl_hours and the login bot signs in again; these validities do not
+  # extend them.
   access_token_validity  = 1
   id_token_validity      = 1
   refresh_token_validity = 30

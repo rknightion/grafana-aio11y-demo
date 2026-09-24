@@ -2,7 +2,7 @@
 #
 # Stable keys (Terraform's chart_values output sets these, so do not rename them): nameOverride,
 # images, serviceAccounts, secrets, aws, agents (per-agent modelProfileArn/team), contentCapture,
-# traffic (enabled/siteRequestsPerMinute/experimentsSchedule), site (ingress), alloy (enabled).
+# traffic (enabled/siteRequestsPerMinute), site (ingress).
 # Everything else here is an addition, free to change.
 
 # -- Prefix used for every object this chart creates (Deployment/Service/CronJob names, the
@@ -54,10 +54,10 @@ secrets:
   agento11y: touchline-agento11y
   # -- Existing Secret with key collector_url (empty when frontend observability is off).
   faro: touchline-faro
-  # -- Optional existing Secret (keys grafana_url, token) so the experiments job can publish or
-  # read the stored test suite through the Grafana control plane (AGENTO11Y_GRAFANA_URL /
-  # AGENTO11Y_SERVICE_ACCOUNT_TOKEN). Empty string omits both env vars; the experiment runner still
-  # records trial results with the agento11y ingest token in the agento11y secret above.
+  # -- Existing Secret (keys grafana_url, token) for the experiments job's control-plane calls
+  # (AGENTO11Y_GRAFANA_URL / AGENTO11Y_SERVICE_ACCOUNT_TOKEN): publishing the stored test suite and
+  # every read the write-only ingest token is refused, including evaluator scores. Terraform always
+  # sets it. Empty omits both env vars, and runs then fail at their first score read.
   experiments: ""
 
 aws:

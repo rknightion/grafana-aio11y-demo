@@ -34,7 +34,7 @@ operator action.
 | `MODEL_KEY` | agents | Model key for usage rows and `x-agent-model` (default `default`) |
 | `MODEL_NAME` | agents | Recorded model name; a Bedrock id such as `eu.anthropic.claude-haiku-4-5-20251001-v1:0` is normalised to `claude-haiku-4-5` (default `MODEL_KEY`) |
 | `MODEL_PROFILES` | orchestrator | Optional JSON `{"<key>": {"arn": "...", "name": "..."}}` enabling per-request model overrides for model-comparison experiments |
-| `BEDROCK_API`, `MANTLE_MODEL` | agents | `mantle` sends that agent through the Anthropic Messages API on Bedrock with base model `MANTLE_MODEL` (default `converse`) |
+| `BEDROCK_API`, `MANTLE_MODEL` | agents | `BEDROCK_API` defaults to `converse` (Converse against the team's inference profile); `mantle` sends that agent through the Anthropic Messages API on Bedrock with base model `MANTLE_MODEL` (default `anthropic.<model name>`) |
 | `CONTENT_CAPTURE` | all | `true` (default) records prompts, responses and tool content; `false` records metadata only |
 | `AGENTO11Y_CONTENT_CAPTURE_MODE` | all | Overrides `CONTENT_CAPTURE` with an SDK mode (`full`, `metadata_only`, ...; `none` means `metadata_only`) |
 | `AGENTO11Y_ENDPOINT`, `AGENTO11Y_AUTH_TENANT_ID`, `AGENTO11Y_AUTH_TOKEN` | all | Agent Observability ingest (token needs `sigil:write`) |

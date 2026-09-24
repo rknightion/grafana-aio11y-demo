@@ -19,7 +19,7 @@ output "cognito_user_pool_id" {
 }
 
 output "developers" {
-  description = "Developer usernames by team."
+  description = "Each developer's team, keyed by developer name."
   value       = { for name, d in local.developers : name => d.team }
 }
 

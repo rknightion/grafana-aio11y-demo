@@ -93,8 +93,9 @@ port forward below; the hostname must resolve to 127.0.0.1 and the forward must 
 ## Traffic
 
 With `traffic_enabled`, each developer runs `dev-session` every `session_interval_minutes`
-(jittered): a random prompt from `prompts/` (70% written for the developer's team, about 20% PII
-probes that the preflight deny guard should block), a model weighted mostly towards Haiku within
+(jittered): a random prompt from `prompts/` (about 20% PII probes that the preflight deny guard should
+block; of the rest, 70% are written for the developer's team and the others are any non-PII
+prompt), a model weighted mostly towards Haiku within
 the team's allowed models, `--max-budget-usd 0.30`, and one JSON result line in the container log
 (`event=dev_session`, with `guard_blocked` for blocked probes). Sessions auto-approve only the
 tools the prompts need (read-only git plus clone/reset/checkout, file tools, python3, node, jq

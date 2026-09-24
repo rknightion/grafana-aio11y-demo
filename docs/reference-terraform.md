@@ -97,7 +97,7 @@ here would need every consumer (docs, examples, the chart) updated in the same c
 | `agent_host_instance_id` | no | EC2 instance id of the agent host (use with `aws ssm start-session`). |
 | `gateway_url` | no | Gateway URL as the developer containers see it. From your laptop use `just gateway-tunnel` and `https://localhost:8443`. |
 | `cognito_user_pool_id` | no | Cognito user pool holding the demo developers. |
-| `developers` | no | Developer usernames by team. |
+| `developers` | no | Each developer's team, keyed by developer name. |
 | `developer_passwords` | yes | Generated Cognito passwords, for signing in by hand if the login bot fails. |
 | `gateway_admin_read_key` | yes | Gateway admin read key for the spend API and admin UI over the tunnel. |
 | `agents_role_arn` | no | IAM role the in-app agents assume through EKS Pod Identity. |

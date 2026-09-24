@@ -12,8 +12,8 @@ Those run on the EC2 agent host built by `terraform/` and `agent-host/` (see the
 the cluster's Kubernetes RBAC boundary.
 
 This chart never creates a Kubernetes `Secret`. It reads existing ones that Terraform already
-created, by name, via `secrets.grafanaOtlp` / `secrets.agento11y` / `secrets.faro` (and optionally
-`secrets.experiments`).
+created, by name, via `secrets.grafanaOtlp` / `secrets.agento11y` / `secrets.faro` (and
+`secrets.experiments`, which the experiments job needs for its score reads).
 
 ## Installing
 
@@ -140,9 +140,9 @@ Keys marked Frozen are the ones the Terraform module sets; `values.schema.json` 
 | `nameOverride` | string | `touchline` | Prefix for every object this chart creates. Must equal Terraform's `var.name`. Frozen. |
 | `namespace` | string | `touchline` | Namespace used in resource attributes and object metadata. Set to match the namespace you install into. |
 | `deploymentEnvironment` | string | `demo` | Reported as `deployment.environment` on every signal. |
-| `images.registry` | string | `ghcr.io/rknightion` | Registry for the `agents` and `site` images. Frozen. |
+| `images.registry` | string | `ghcr.io/rknightion` | Registry for this chart's images (`agents`, `site`, `site-browser`). Frozen. |
 | `images.namePrefix` | string | `grafana-aio11y-demo-` | Prefixed onto every image name, e.g. `registry/namePrefixagents`. `""` for a private mirror whose repositories are already `registry/<app>`. Frozen. |
-| `images.tag` | string | `0.1.0` | Tag for the `agents` and `site` images; defaults to this chart's release. Frozen. <!-- x-release-please-version --> |
+| `images.tag` | string | `0.1.0` | Tag for this chart's images; defaults to this chart's release. Frozen. <!-- x-release-please-version --> |
 | `images.digests` | map | `{}` | Optional digest pins, app name to `sha256:...`; a pinned image is referenced as `<ref>:<tag>@<digest>`. Terraform sets it from `var.images.digests`. |
 | `images.pullSecret` | string | `""` | Name of an existing `imagePullSecret`. Empty means none. |
 | `serviceAccounts.agents` | string | `touchline-agents` | ServiceAccount for the 5 agents only. Bound to the Bedrock IAM role by EKS Pod Identity (by name; no annotation). Frozen. |
@@ -152,7 +152,7 @@ Keys marked Frozen are the ones the Terraform module sets; `values.schema.json` 
 | `secrets.grafanaOtlp` | string | `touchline-grafana-otlp` | Existing Secret (keys `endpoint`, `username`, `password`) Alloy uses to forward to Grafana Cloud. Frozen. |
 | `secrets.agento11y` | string | `touchline-agento11y` | Existing Secret (keys `endpoint`, `tenant_id`, `token`) for the Agent Observability SDK. Frozen. |
 | `secrets.faro` | string | `touchline-faro` | Existing Secret (key `collector_url`, may be absent/empty) for frontend observability. Frozen. |
-| `secrets.experiments` | string | `""` | Optional existing Secret (keys `grafana_url`, `token`) so the experiments job can publish/read the stored test suite through the Grafana control plane (`AGENTO11Y_GRAFANA_URL`/`AGENTO11Y_SERVICE_ACCOUNT_TOKEN`). Empty disables both env vars. |
+| `secrets.experiments` | string | `""` | Existing Secret (keys `grafana_url`, `token`) for the experiments job's control-plane calls (`AGENTO11Y_GRAFANA_URL`/`AGENTO11Y_SERVICE_ACCOUNT_TOKEN`): publishing the stored test suite, and every read the ingest token is refused, including evaluator scores. Terraform always sets it. Empty omits both env vars, and runs then fail at their first score read. |
 | `aws.region` | string | `eu-west-1` | Region passed to the agents as `AWS_REGION`. Frozen. |
 | `agentVersion` | string | `v1` | `AGENT_VERSION` on every agent, the load generator and the experiments job. Must be identical on the orchestrator and the experiments job: the runner computes each prompt variant's version independently in both processes and compares them. |
 | `agents.<role>.modelProfileArn` | string | `""` | Bedrock application inference profile ARN for that agent (`MODEL_PROFILE_ARN`). Frozen key shape (`agents` map, `modelProfileArn`/`team` fields). |
@@ -164,7 +164,7 @@ Keys marked Frozen are the ones the Terraform module sets; `values.schema.json` 
 | `contentCapture` | bool | `true` | Sets `AGENTO11Y_CONTENT_CAPTURE_MODE` (agents/loadgen/experiments) and `CONTENT_CAPTURE` (every app, including site-browser, which has no `AGENTO11Y_*` vars since it does not use the Agent Observability SDK). Frozen. See `docs/security.md`. |
 | `traffic.enabled` | bool | `true` | Master switch for the load generator, the experiments schedule and the site-browser schedule. Frozen. |
 | `traffic.siteRequestsPerMinute` | number | `2` | Load generator rate, passed through a ConfigMap (`requestsPerMinute` in the rate file). Frozen. |
-| `traffic.experimentsSchedule` | string | `17 */2 * * *` | Cron schedule for the experiments job. Frozen. |
+| `traffic.experimentsSchedule` | string | `17 */2 * * *` | Cron schedule for the experiments job. |
 | `loadgen.dailyBudgetUsd` | number | `5` | Estimated Bedrock spend cap per UTC day, passed through the rate file (`dailyBudgetUsd`); the load generator itself caps this at 30 USD/day regardless. |
 | `loadgen.persistence.enabled` | bool | `false` | Give the load generator a PVC for its spend ledger; `false` uses an `emptyDir` (state resets on restart), needed on clusters with no default StorageClass. |
 | `loadgen.persistence.size` | string | `1Gi` | PVC size. |
@@ -179,7 +179,7 @@ Keys marked Frozen are the ones the Terraform module sets; `values.schema.json` 
 | `site.resources` | object | 50m/128Mi request, 512Mi limit | Site resources. |
 | `redis.image.repository` / `.tag` | string | `redis` / `7.4.6` | Redis image. No persistence: it only caches synthetic demo traffic state. |
 | `redis.resources` | object | 25m/64Mi request, 128Mi limit | Redis resources. |
-| `alloy.enabled` | bool | `true` | Run the in-namespace collector. Frozen. |
+| `alloy.enabled` | bool | `true` | Run the in-namespace collector. |
 | `alloy.resources` | object | 100m/256Mi request, 512Mi limit | Alloy resources. |
 
 See `values.schema.json` for the machine-checked shape of the frozen keys, and `NOTES.txt` for

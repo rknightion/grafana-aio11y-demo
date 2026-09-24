@@ -74,9 +74,11 @@ The agent host's user data holds no credentials; it reads them from Secrets Mana
 - The gateway pushes a separate Agent Observability client token (`sigil:write`,
   `metrics:write`, `traces:write`) to every signed-in developer as a managed environment variable,
   so any session can read it. It is scoped to the Claude Code plugin's own generations, metrics
-  and traces, and shares nothing with the ingest token: the ingest token (metrics, logs and traces
-  write for everything else) never leaves the host, used only by the gateway's
-  `telemetry.forward_to` export and the host's own Alloy.
+  and traces, and shares nothing with the ingest token. The ingest token (metrics, logs, traces
+  and Agent Observability write) never enters a developer container: on the host only the
+  gateway's `telemetry.forward_to` export and the host's own Alloy use it, and in the cluster it
+  sits in the `<prefix>-grafana-otlp` and `<prefix>-agento11y` Secrets for Alloy and the in-app
+  agents.
 - The network is the boundary around the developer containers. Developers run on their own bridge
   network, and a host firewall (`agent-host/host/agent-host-firewall`) keeps that network off
   everything except DNS, the gateway on 443 and the public internet. The firewall runs before
@@ -98,8 +100,9 @@ The agent host's user data holds no credentials; it reads them from Secrets Mana
   `npx` - the traffic loop's own scripted prompts need an interpreter to write and run small
   scripts. A prompt that talked a session into running an arbitrary script still runs it inside
   that isolated network, with nowhere to send anything private and no path to a credential beyond
-  what the container already has. The file tools are auto-approved only inside the session's own
-  temporary working directory, and reads and edits under `~/.claude` are denied; because
+  what the container already has. Edits and writes are auto-approved only inside the session's own
+  temporary working directory; `Read`, `Glob` and `Grep` are approved anywhere, and reads and
+  edits under `~/.claude` are denied; because
   `python3` and `node` can still write anywhere the container user can, the container re-seeds
   its user-scope Claude config (`settings.json`, the MCP server list, user `CLAUDE.md`, agents,
   commands and skills) on every start and before every session, so anything a session persists
