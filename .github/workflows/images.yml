@@ -33,11 +33,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { name: agents, context: apps, dockerfile: apps/agents/Dockerfile }
-          - { name: site, context: apps, dockerfile: apps/site/Dockerfile }
-          - { name: site-browser, context: apps, dockerfile: apps/site/Dockerfile.browser }
-          - { name: mcp-tools, context: apps, dockerfile: apps/mcp-tools/Dockerfile }
-          - { name: gateway, context: apps/gateway, dockerfile: apps/gateway/Dockerfile }
+          - { name: agents, context: apps, dockerfile: agents/Dockerfile }
+          - { name: site, context: apps, dockerfile: site/Dockerfile }
+          - { name: site-browser, context: apps, dockerfile: site/Dockerfile.browser }
+          - { name: mcp-tools, context: apps, dockerfile: mcp-tools/Dockerfile }
+          - { name: gateway, context: apps/gateway, dockerfile: Dockerfile }
           - { name: dev-workstation, context: ".", dockerfile: apps/dev-workstation/Dockerfile }
     permissions:
       contents: write
@@ -45,6 +45,7 @@ jobs:
       id-token: write
       attestations: write
       security-events: write
+    # The reusable resolves dockerfile relative to context.
     uses: rknightion/.github/.github/workflows/container-publish.yml@8d14adaa295c4a7670b1d4e744b070955b710598 # v1.24.0
     with:
       release-tag: ${{ inputs.release_tag }}
