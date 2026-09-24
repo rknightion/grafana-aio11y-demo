@@ -67,9 +67,7 @@ spec:
         - name: loadgen
           image: "{{ include "touchline.image" (dict "root" . "name" "agents") }}"
           imagePullPolicy: IfNotPresent
-          # Same image as the in-app agents; the loadgen mode is selected by command, not by a
-          # separate image (matches how the source lab manifests ran it).
-          command: ["npm", "run", "loadgen"]
+          # Same image and entrypoint as the in-app agents; ROLE=loadgen below selects the mode.
           env:
             - name: ROLE
               value: loadgen

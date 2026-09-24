@@ -99,10 +99,11 @@ here dashboards against.
 ## Shared image, different command
 
 The 5 agent Deployments, the load generator and the experiments `CronJob` all run
-`images.registry/images.namePrefix` + `agents:images.tag`. The load generator overrides
-`command: ["npm", "run", "loadgen"]` and the experiments job overrides
+`images.registry/images.namePrefix` + `agents:images.tag`. The load generator keeps the image's
+entrypoint and sets `ROLE=loadgen`, and the experiments job overrides
 `command: ["node", "experiments/run-experiment.mjs"]` with `args`, running the same agents image
-in three roles rather than building three separate images.
+in three roles rather than building three separate images. The images carry no npm CLI, so a
+container command must call `node` directly (`just lint` rejects `npm` and `npx`).
 `images.registry/images.namePrefix` + `site:images.tag` is the site backend;
 `images.registry/images.namePrefix` + `site-browser:images.tag` (the `Dockerfile.browser` image,
 run by the optional `siteBrowser` CronJob) is a third, separate image built from the same

@@ -32,6 +32,8 @@ lint:
     tflint --chdir=terraform
     helm lint charts/touchline -f charts/touchline/ci/test-values.yaml
     helm template touchline charts/touchline -f charts/touchline/ci/test-values.yaml | kubeconform -strict -summary -
+    # The images drop the npm CLI (docs/security.md), so no container may exec npm or npx.
+    ! helm template touchline charts/touchline -f charts/touchline/ci/test-values.yaml | grep -nE 'command: \["(npm|npx)"'
     git ls-files -co --exclude-standard -z '*.sh' | xargs -0 -r shellcheck
     python3 tools/scrub_check.py
 
