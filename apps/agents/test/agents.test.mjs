@@ -194,8 +194,17 @@ test('stalled specialist fetch aborts before the site deadline', async () => {
   const service = createAgentService({ ...common, role: 'orchestrator', telemetry: t, specialistTimeoutMs: 20, fetchImpl: async (_url, init) => new Promise((_resolve, reject) => {
     init.signal.addEventListener('abort', () => reject(init.signal.reason), { once: true });
   }) });
+  // AbortSignal.timeout()'s own timer is unref'd by design (Node.js and every other runtime that
+  // implements it agree this must not keep the event loop alive on its own), and this fake fetch does
+  // no real I/O, so nothing else refs the loop while we wait for it to fire. Depending on what else is
+  // scheduled elsewhere in the process at that moment, node:test can decide the loop has gone idle while
+  // this promise is still pending and cancel the rest of the file with 'cancelledByParent'. A ref'd
+  // keep-alive timer guarantees the real timer gets a chance to fire without touching the assertion: if
+  // the abort stopped happening, this promise would simply never settle and the test would time out
+  // instead of passing silently.
+  const keepAlive = setInterval(() => {}, 5);
   try { await assert.rejects(service.orchestrate({ question: 'Compare odds, news and offers' }), /operation was aborted due to timeout/); }
-  finally { await service.shutdown(); await t.shutdown(); }
+  finally { clearInterval(keepAlive); await service.shutdown(); await t.shutdown(); }
 });
 
 test('names follow SERVICE_NAMESPACE, OTel resource attributes and the chart ROLE variable', () => {
