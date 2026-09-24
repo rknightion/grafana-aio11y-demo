@@ -62,6 +62,8 @@ show the caps table and say when it would trip. Set the caps you want to show be
 not live: an apply to `spend_caps` reaches the host through the agent-host secret and can take up
 to 5 minutes to land. The host is not replaced, but the wait is unpredictable mid-demo.
 
+![Claude apps gateway dashboard, audit log tab: sign-ins, inference requests and managed settings](assets/screenshots/dashboards-gateway.png)
+
 ### Observing Claude Code
 
 | Click | Say |
@@ -74,6 +76,8 @@ to 5 minutes to land. The host is not replaced, but the wait is unpredictable mi
 | *OpenTelemetry: traces*, open one | "Each prompt is a trace: model requests and tool calls as child spans, with time to first token." |
 | *OpenTelemetry + Agent Observability plugin* | "The plugin adds a second, independent view: conversations, subagent cost, guard outcomes and evaluation scores." |
 | *Bedrock invocation log: gateway caller* | "From Bedrock's side, every developer is one IAM role. Bedrock knows the tokens and the prompt, not the person." (Empty if invocation logging is off; say that is the default.) |
+
+![Claude Code dashboard, OpenTelemetry overview tab: spend, sessions and tokens per developer and team](assets/screenshots/dashboards-claude-code.png)
 
 ### The PII guard
 
@@ -136,6 +140,8 @@ inference profiles."
 | Experiments: the latest scheduled run, then compare two runs | "The same cases against different prompt variants or models, scored by the same evaluator, with cost and duration per case." |
 | *Traces* tab | "Every conversation links through to its trace." |
 
+![Agentic app dashboard, overview tab: generations, tokens and site traffic per agent](assets/screenshots/dashboards-agents.png)
+
 ### Observing Bedrock
 
 | Click | Say |
@@ -148,6 +154,8 @@ inference profiles."
 caps and cost; Claude Code's telemetry for tools and content; the plugin for guards and
 evaluations. For your own agents: OpenTelemetry plus the Agent Observability SDK. And Bedrock's
 own view to check both against."
+
+![Bedrock dashboard, CloudWatch metrics tab: invocations, tokens and latency per inference profile](assets/screenshots/dashboards-bedrock.png)
 
 ## 25-minute version
 
@@ -162,15 +170,3 @@ own view to check both against."
 
 Set `traffic_enabled = false` and apply to stop Bedrock spend while keeping everything deployed,
 or destroy it ([teardown.md](teardown.md)).
-
-## Dashboard screenshots
-
-A quick look at each of the four dashboards, for anyone who has not run the demo yet.
-
-![Claude Code dashboard](assets/screenshots/dashboards-claude-code.png)
-
-![Claude apps gateway dashboard](assets/screenshots/dashboards-gateway.png)
-
-![In-app agents dashboard](assets/screenshots/dashboards-agents.png)
-
-![Bedrock dashboard](assets/screenshots/dashboards-bedrock.png)

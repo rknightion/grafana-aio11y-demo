@@ -31,6 +31,8 @@ Observability, with online evaluations (groundedness, PII, responsible-gambling 
 prompt-injection guard on tool results and scheduled experiments comparing prompt variants and
 models.
 
+![Agentic app dashboard, overview tab: generations, tokens and site traffic per agent](assets/screenshots/dashboards-agents.png)
+
 ### Claude Code developers through the Claude apps gateway
 
 Five developers in three teams
@@ -41,12 +43,18 @@ and pushes managed settings: OpenTelemetry export, MCP servers and the Agent Obs
 The plugin sends every prompt and tool call through Cloud guards (a PII deny guard, secret and PII
 redaction, content safety) and makes sessions available to online evaluations.
 
+![Claude Code dashboard, OpenTelemetry overview tab: spend, sessions and tokens per developer and team](assets/screenshots/dashboards-claude-code.png)
+
+![Claude apps gateway dashboard, audit log tab: sign-ins, inference requests and managed settings](assets/screenshots/dashboards-gateway.png)
+
 ### Bedrock's own view
 
 A CloudWatch metric stream sends the `AWS/Bedrock` namespace to Grafana
 Cloud Metrics, and optional model invocation logging sends Bedrock's per-call log to Grafana Cloud
 Logs. Per-team application inference profiles make AWS-side attribution possible without the
 gateway.
+
+![Bedrock dashboard, CloudWatch metrics tab: invocations, tokens and latency per inference profile](assets/screenshots/dashboards-bedrock.png)
 
 ### Everything in one Grafana Cloud stack
 

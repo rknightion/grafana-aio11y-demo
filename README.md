@@ -18,6 +18,8 @@ OpenTelemetry and recorded as a generation in Grafana Agent Observability, with 
 evaluations (groundedness, PII, responsible-gambling language), a prompt-injection guard on tool
 results and scheduled experiments comparing prompt variants and models.
 
+![Agentic app dashboard, overview tab: generations, tokens and site traffic per agent](docs/assets/screenshots/dashboards-agents.png)
+
 ### Claude Code developers through the Claude apps gateway
 
 Five developers in three teams
@@ -27,6 +29,8 @@ which models each team can use, enforces per-organization, per-team and per-deve
 and pushes managed settings: OpenTelemetry export, MCP servers and the Agent Observability plugin.
 The plugin sends every prompt and tool call through Cloud guards (a PII deny guard, secret and
 PII redaction, content safety) and makes sessions available to online evaluations.
+
+![Claude Code dashboard, OpenTelemetry overview tab: spend, sessions and tokens per developer and team](docs/assets/screenshots/dashboards-claude-code.png)
 
 ### Bedrock's own view
 
