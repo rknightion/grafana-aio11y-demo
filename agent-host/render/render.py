@@ -231,8 +231,11 @@ def gateway_config(v):
         # fails open silently.
         "AGENTO11Y_GUARDS_TIMEOUT_MS": "5000",
         "AGENTO11Y_AUTO_UPDATE": "false",
-        # Guards and evaluation rules select the demo's traffic by this tag.
+        # Evaluation rules select the demo's generations by this tag. Guard calls carry no tags
+        # (plugin v0.48.0), so the guards select the demo by this agent name instead; the plugin
+        # appends /<subagent> for subagents.
         "AGENTO11Y_TAGS": f"service.namespace={name}",
+        "AGENTO11Y_AGENT_NAME": f"claude-code/{name}",
         "AGENTO11Y_CONTENT_CAPTURE_MODE": "full" if content else "metadata_only",
     }
     if content:

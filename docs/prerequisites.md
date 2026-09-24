@@ -13,8 +13,7 @@ Any Grafana Cloud stack you can administer. Note its slug (the `<slug>` in
 
 A dedicated stack is simplest. On a shared stack the module scopes its objects to the demo (see
 [security.md](security.md#guards-and-evaluation-scope)), but it still creates stack-wide objects
-such as the Knowledge Graph rule file, the Claude Code guards (which act on every Claude Code user
-of the stack) and, if you let it, the Application Observability switch.
+such as the Knowledge Graph rule file and, if you let it, the Application Observability switch.
 
 **Deploying this module twice with the same `var.name` at the same Grafana Cloud stack collides.**
 Every object name, access policy, folder uid and Agent Observability id derives from `name`

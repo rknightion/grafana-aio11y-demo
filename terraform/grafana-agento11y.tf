@@ -25,12 +25,12 @@ locals {
     agent_name                                  = ["claude-code", "claude-code/*"]
     ("tags.${local.grafana_agento11y_tag_key}") = [local.prefix]
   })
-  # Guard (hook) rules match on agent name alone: the Claude Code plugin's prompt and tool guards
-  # (agento11y plugin v0.48.0, internal/agents/guard) send no tags with the hook request, so a
-  # tags.* condition never matches and every guard is inert. On a shared stack these guards
-  # therefore also apply to other Claude Code users whose plugin sends guard calls to it.
+  # Guard (hook) rules match the demo's own agent name: the Claude Code plugin's prompt and tool
+  # guards (agento11y plugin v0.48.0, internal/agents/guard) send no tags with the hook request,
+  # so a tags.* condition never matches. The gateway sets AGENTO11Y_AGENT_NAME=claude-code/<prefix>
+  # for the demo developers, which keeps other Claude Code users of the stack out of the guards.
   grafana_claude_code_guard_match = jsonencode({
-    agent_name = ["claude-code", "claude-code/*"]
+    agent_name = ["claude-code/${local.prefix}", "claude-code/${local.prefix}/*"]
   })
 
   # Appended to every judge system prompt: evaluated content is data, never instructions.
