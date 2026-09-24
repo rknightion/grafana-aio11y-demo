@@ -140,14 +140,14 @@ test('SDK experiment path records model, usage, timing, artifact, trace and fina
     flushGenerations: async () => {},
     uploadArtifact: async (request) => { calls.push(['artifact', request]); return { artifact_id: 'a1' }; },
     triggerTrialEvaluation: async (id, trialId) => { calls.push(['evaluate', id, trialId]); return { evaluationId: 'e1', status: 'success' }; },
-    listScores: async () => ({ items: [{ trialId: calls.filter((item) => item[0] === 'trial').at(-1)[2].trialId,
-      evaluatorId: 'touchline_answer_quality', value: { number: 0.86 } }] }),
     exportScores: async (scores) => { calls.push(['scores', scores]); return scores.length; },
     finalize: async (id, status) => { calls.push(['finalize', id, status]); return {}; },
   };
   const pushed = [];
   const suites = { pushSuite: async (portable, options) => { pushed.push([portable, options]); return { suiteVersion: 'v1' }; } };
-  const reads = { listRuns: async () => [], getSuite: async () => null };
+  const reads = { listRuns: async () => [], getSuite: async () => null,
+    listScores: async () => ({ items: [{ trialId: calls.filter((item) => item[0] === 'trial').at(-1)[2].trialId,
+      evaluatorId: 'touchline_answer_quality', value: { number: 0.86 } }] }) };
   const result = await executeExperiment({ suite, baseUrl: `http://127.0.0.1:${server.address().port}`,
     runIdPrefix: 'local-test', set: 'variants', variantIds: variants, client, suites, reads, env: {} });
   assert.equal(result.runIds.length, 3);
@@ -243,6 +243,20 @@ test('control-plane reads use the ingest token and paginate the complete run inv
   assert.deepEqual((await api.listRuns()).map((item) => item.experiment_id), ['run-1', 'run-2']);
   assert.ok(calls.every(([url, auth]) => url.startsWith('https://agento11y.example.test/api/v1/eval/experiments?') &&
     auth === `Basic ${Buffer.from('123456:test-token').toString('base64')}`));
+});
+
+test('experiment scores are read through the control plane, so a write-only ingest token falls back to the SA token', async () => {
+  const calls = [];
+  const api = controlPlane({ ...ingestIdentity, ingestToken: 'ingest', grafanaUrl: 'https://stack.example.test/', saToken: 'sa', fetchImpl: async (url, options) => {
+    calls.push([url, options.headers.Authorization]);
+    return String(url).startsWith('https://agento11y.') ? { ok: false, status: 401 }
+      : { ok: true, json: async () => ({ items: [{ trial_id: 't1', evaluator_id: 'e1', value: { number: 0.9 } }], next_cursor: 'c2' }) };
+  } });
+  assert.deepEqual(await api.listScores('run 1', { limit: 100, cursor: 'c1' }),
+    { items: [{ trial_id: 't1', evaluator_id: 'e1', value: { number: 0.9 } }], nextCursor: 'c2' });
+  assert.equal(calls[1][0], 'https://stack.example.test/api/plugins/grafana-agento11y-app/resources/eval/experiments/run%201/scores?limit=100&cursor=c1');
+  assert.equal(calls[1][1], 'Bearer sa');
+  assert.equal(await evaluatorScore(api, 'run 1', 't1', 'e1'), 0.9);
 });
 
 test('control-plane read falls back to the SA token only on ingest auth rejection, and 404 means no suite', async () => {

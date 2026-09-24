@@ -249,6 +249,15 @@ export function controlPlane({ endpoint, tenantId, ingestToken, grafanaUrl, saTo
       }
     },
     getSuite: (suiteId) => get(`/test-suites/${encodeURIComponent(suiteId)}`, { allowMissing: true }),
+    // Same shape as ExperimentsClient.listScores, whose ingest-token read needs a scope the
+    // write-only ingest policy does not carry.
+    async listScores(runId, { limit = 100, cursor } = {}) {
+      const query = new URLSearchParams({ limit: String(limit) });
+      if (cursor) query.set('cursor', cursor);
+      const body = await get(`/experiments/${encodeURIComponent(runId)}/scores?${query}`);
+      const items = Array.isArray(body?.items) ? body.items : [];
+      return body?.next_cursor ? { items, nextCursor: body.next_cursor } : { items };
+    },
   };
 }
 
@@ -344,7 +353,7 @@ export async function pollEvaluation(client, runId, trialId, evaluationId, { att
   throw new PendingEvaluationError(runId, trialId, evaluationId, status.status);
 }
 
-export async function resumePendingRun(client, runId, evaluations, { evaluator, evaluationPoll = {} } = {}) {
+export async function resumePendingRun(client, runId, evaluations, { evaluator, evaluationPoll = {}, reads = client } = {}) {
   if (!evaluator?.evaluator_id) throw new Error('pending resume requires the suite online evaluator');
   const pending = [];
   for (const original of evaluations) {
@@ -353,7 +362,7 @@ export async function resumePendingRun(client, runId, evaluations, { evaluator, 
       await pollEvaluation(client, runId, trialId, evaluationId, evaluationPoll);
       if (!testCaseId) throw new Error('pending resume requires testCaseId for each evaluation');
       if (!conversationId) throw new Error('pending resume requires conversationId for each evaluation');
-      const value = await evaluatorScore(client, runId, trialId, evaluator.evaluator_id);
+      const value = await evaluatorScore(reads, runId, trialId, evaluator.evaluator_id);
       const trial = Trial.fromRef(client, { experimentId: runId, testCaseId, attempt: 1 });
       trial.bindConversation(conversationId);
       if (original.traceId) await trial.bindTrace(original.traceId, original.spanId ?? '');
@@ -498,7 +507,7 @@ export async function executeExperiment({ suite, baseUrl, runIdPrefix, runIdsOve
           const evaluation = await trial.evaluate(evaluator.evaluator_id,
             { ...(evaluator.version ? { evaluatorVersion: evaluator.version } : {}), timeoutMs: evaluationPoll.timeoutMs ?? 600_000 });
           if (evaluation.status !== 'success') throw new Error(`${runId}/${trial.trialId}: evaluator returned ${evaluation.status}`);
-          const value = await evaluatorScore(ingest, runId, trial.trialId, evaluator.evaluator_id);
+          const value = await evaluatorScore(plane, runId, trial.trialId, evaluator.evaluator_id);
           trial.finalScore(value, { passed: value >= 0.8, evaluator: evaluatorMeta(evaluator),
             metadata: { startedAt: startedAt.toISOString(), completedAt: completedAt.toISOString(),
               durationMs: completedAt.getTime() - startedAt.getTime(), usage: reply.usage } });
@@ -586,7 +595,10 @@ async function main(argv = process.argv.slice(2)) {
   if (options.pollRunId || options.pollEvaluations) {
     if (!options.pollRunId || !options.pollEvaluations || options.execute) throw new Error('poll mode requires --poll-evaluation-run and --poll-evaluations without --execute');
     const tuples = parsePendingTuples(options.pollEvaluations);
-    await resumePendingRun(new ExperimentsClient(), options.pollRunId, tuples, { evaluator: suite.online_evaluator });
+    const client = new ExperimentsClient();
+    const reads = controlPlane({ endpoint: client.endpoint, tenantId: client.tenantId, ingestToken: process.env.AGENTO11Y_AUTH_TOKEN,
+      grafanaUrl: process.env.AGENTO11Y_GRAFANA_URL, saToken: process.env.AGENTO11Y_SERVICE_ACCOUNT_TOKEN });
+    await resumePendingRun(client, options.pollRunId, tuples, { evaluator: suite.online_evaluator, reads });
     process.stdout.write(`${JSON.stringify({ event: 'experiment_complete', runId: options.pollRunId, evaluationCount: tuples.length })}\n`);
     return;
   }
