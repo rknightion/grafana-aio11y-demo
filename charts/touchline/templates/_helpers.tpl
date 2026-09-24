@@ -19,7 +19,11 @@ Full image reference for one of this repo's images: "<registry>/<namePrefix><nam
 Call as (include "touchline.image" (dict "root" $root "name" "agents")).
 */}}
 {{- define "touchline.image" -}}
-{{- printf "%s/%s%s:%s" .root.Values.images.registry .root.Values.images.namePrefix .name .root.Values.images.tag -}}
+{{- $ref := printf "%s/%s%s:%s" .root.Values.images.registry .root.Values.images.namePrefix .name .root.Values.images.tag -}}
+{{- with (get (.root.Values.images.digests | default dict) .name) -}}
+{{- $ref = printf "%s@%s" $ref . -}}
+{{- end -}}
+{{- $ref -}}
 {{- end -}}
 
 {{/*

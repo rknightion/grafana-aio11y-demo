@@ -26,6 +26,11 @@
           "description": "Prefixed onto every image name, e.g. registry/<namePrefix>agents. \"\" for a private mirror whose repositories are already <registry>/<app>."
         },
         "tag": { "type": "string", "minLength": 1 },
+        "digests": {
+          "type": "object",
+          "propertyNames": { "enum": ["agents", "site", "site-browser", "mcp-tools", "gateway", "dev-workstation"] },
+          "additionalProperties": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+        },
         "pullSecret": { "type": "string" }
       }
     },

@@ -93,6 +93,7 @@ locals {
       registry   = var.images.registry
       namePrefix = var.images.name_prefix
       tag        = var.images.tag
+      digests    = var.images.digests
       pullSecret = var.images.pull_secret == null ? "" : var.images.pull_secret
     }
     serviceAccounts = local.service_accounts

@@ -27,6 +27,9 @@ images:
   # -- Image tag for every image above. Defaults to this chart's own release; Terraform sets it
   # from var.images.tag.
   tag: "0.1.0" # x-release-please-version
+  # -- Optional per-image digest pins (app name => sha256:...); a pinned image is referenced as
+  # <ref>:<tag>@<digest>. Terraform sets this from var.images.digests.
+  digests: {}
   # -- Name of an existing imagePullSecret. Empty string means none (the default GHCR images are
   # public once the repo is public).
   pullSecret: ""
