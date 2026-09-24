@@ -8,7 +8,6 @@
       "include-component-in-tag": false,
       "draft": false,
       "prerelease": false,
-      "release-as": "0.1.0",
       "extra-files": [
         "terraform/variables.tf",
         "charts/touchline/values.yaml",
