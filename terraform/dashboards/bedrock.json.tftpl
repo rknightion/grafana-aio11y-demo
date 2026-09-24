@@ -633,6 +633,7 @@
               },
               "fieldConfig": {
                 "defaults": {
+                  "displayName": "$${__field.labels.region}",
                   "unit": "short"
                 },
                 "overrides": []
@@ -645,7 +646,7 @@
         "kind": "Panel",
         "spec": {
           "id": 10,
-          "title": "Which agent called, and as which team / model",
+          "title": "Which IAM role called, and as which team / model",
           "description": "identity.arn: all in-app agents assume ONE IAM role through EKS Pod Identity; the role session name carries the pod, so the agent is recoverable. Team and model come from the application inference profile.",
           "links": [],
           "transparent": false,
@@ -731,7 +732,7 @@
                         "name": "${ds_logs}"
                       },
                       "spec": {
-                        "expr": "sum by (stop) (count_over_time(${bedrock_log_selector} | json pid=\"modelId\", itok=\"input.inputTokenCount\", otok=\"output.outputTokenCount\", lat=\"output.outputBodyJson.metrics.latencyMs\", region=\"inferenceRegion\", caller=\"identity.arn\", stop=\"output.outputBodyJson.stopReason\", op=\"operation\" | label_format pid=`{{ regexReplaceAll \".*/\" .pid \"\" }}`, agent=`{{ regexReplaceAll \"${agent_caller_re}\" .caller \"$${1}\" }}` | label_format profile=`${profile_chain}` [$__range]))",
+                        "expr": "sum by (stop) (count_over_time(${bedrock_log_selector} | json pid=\"modelId\", itok=\"input.inputTokenCount\", otok=\"output.outputTokenCount\", lat=\"output.outputBodyJson.metrics.latencyMs\", region=\"inferenceRegion\", caller=\"identity.arn\", stop=\"output.outputBodyJson.stopReason\", op=\"operation\" | label_format pid=`{{ regexReplaceAll \".*/\" .pid \"\" }}`, agent=`{{ regexReplaceAll \"${agent_caller_re}\" .caller \"$${1}\" }}` | label_format profile=`${profile_chain}`, stop=`{{ or .stop \"none\" }}` [$__range]))",
                         "queryType": "instant",
                         "refId": "A",
                         "legendFormat": "{{stop}}"
@@ -769,6 +770,7 @@
               },
               "fieldConfig": {
                 "defaults": {
+                  "displayName": "$${__field.labels.stop}",
                   "unit": "short"
                 },
                 "overrides": []

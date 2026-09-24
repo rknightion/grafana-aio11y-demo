@@ -81,8 +81,10 @@ locals {
       )
       profile_chain = local.grafana_profile_chain
       model_chain   = local.grafana_model_chain
-      # Pod Identity role sessions are named eks-<cluster>-<pod>-<uuid>; capture the agent service.
-      agent_caller_re = ".*/eks-.*?-(${local.prefix}-(?:${join("|", sort(keys(local.agent_teams)))}))-.*"
+      # The caller is an STS assumed-role ARN; keep only the role name, which drops the account id.
+      # Pod Identity sessions are eks-<cluster>-<namespace>--<uuid>, with no pod or service in them,
+      # so every in-app agent shows as the one agents role and the gateway as the agent-host role.
+      agent_caller_re = ".*:assumed-role/([^/]+)/.*"
       # The gateway calls Bedrock as the agent host's instance role (L3 names it <prefix>-agent-host...).
       gateway_caller_re = ".*:assumed-role/${local.prefix}-agent-host[^/]*/.*"
     },

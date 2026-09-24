@@ -165,16 +165,6 @@ or destroy it ([teardown.md](teardown.md)).
 
 ## Dashboard screenshots
 
-<!--
-Planned screenshots, not yet captured. Add the files under docs/assets/screenshots/ and this
-section is done; the image paths below already point at where they will live.
-
-  dashboards-claude-code.png  - the touchline-claude-code dashboard, OpenTelemetry overview tab
-  dashboards-gateway.png      - the touchline-gateway dashboard, audit log tab
-  dashboards-agents.png       - the touchline-agents dashboard, overview tab
-  dashboards-bedrock.png      - the touchline-bedrock dashboard, CloudWatch metrics tab
--->
-
 A quick look at each of the four dashboards, for anyone who has not run the demo yet.
 
 ![Claude Code dashboard](assets/screenshots/dashboards-claude-code.png)
