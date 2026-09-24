@@ -66,9 +66,22 @@ through the `grafana.cloud` alias.
 
 ### Knowledge Graph
 
-Initialize the Knowledge Graph on the stack (Observability > Knowledge Graph, follow the onboarding)
-before the first apply. The module adds a service-graph rule file for the demo services; set
-`knowledge_graph_enabled = false` if you do not want it.
+Two independent switches:
+
+- **Onboarding.** Either initialize the Knowledge Graph yourself (Observability > Knowledge
+  Graph, follow the onboarding) before the first apply, or set `manage_knowledge_graph = true`
+  and let the module do it (it creates its own Cloud access policy token and stack Admin service
+  account token to run the onboarding flow, and counts both on the same variable). Onboarding is
+  a stack-wide singleton: destroying it (or applying with `manage_knowledge_graph = false` after
+  it was true) disables Knowledge Graph for the whole stack, not just this demo. Leave it `false`
+  on a shared stack that already has Knowledge Graph on.
+- **This demo's objects.** With `knowledge_graph_enabled = true` (the default), the module adds a
+  service-graph rule file and a trace configuration scoped to this demo's namespace, once the
+  Knowledge Graph is initialized by either route above.
+
+The `team` span-metrics dimension used by the agents dashboard stays a manual App Observability
+step either way; it has no Knowledge Graph or Terraform equivalent (see
+[Application Observability](#application-observability) below).
 
 ### Application Observability
 

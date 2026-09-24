@@ -86,7 +86,8 @@ here would need every consumer (docs, examples, the chart) updated in the same c
 | Variable | Type | Default | Description |
 |---|---|---|---|
 | `manage_app_observability` | bool | `false` | Let this module switch Application Observability on. Stack-wide singleton: destroy switches the product off for the whole stack, so leave `false` on a shared stack where it is already on. |
-| `knowledge_graph_enabled` | bool | `true` | Create the Knowledge Graph service-graph rule. The Knowledge Graph must already be initialized on the stack. |
+| `manage_knowledge_graph` | bool | `false` | Let this module perform Knowledge Graph (Asserts) onboarding, creating its own Cloud access policy token and stack Admin service account token to do it (both counted on this variable). Stack-wide singleton: destroy calls the same API the onboarding wizard's disable control uses, switching Knowledge Graph off for the whole stack, so leave `false` on a shared stack where it is already on. |
+| `knowledge_graph_enabled` | bool | `true` | Create the Knowledge Graph service-graph rule and this demo's own trace configuration (entity properties for its services, scoped to `var.namespace`, at a low priority so it never overrides another config on a shared stack). The Knowledge Graph must already be initialized on the stack, either by `manage_knowledge_graph` or by hand. |
 
 ## Outputs
 

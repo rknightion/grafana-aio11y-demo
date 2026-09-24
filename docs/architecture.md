@@ -128,8 +128,10 @@ Terraform creates, through two provider aliases:
 - `grafana.stack` (Admin service account token): the folder and four dashboards, the spend
   datasource over PDC, recording and alert rule groups, the contact point, Agent Observability
   evaluators, guards (hook rules) and online evaluation rules, the Knowledge Graph service-graph
-  rule, a service account for the experiments, and optionally the Application Observability
-  switch.
+  rule and this demo's own trace configuration, a service account for the experiments, and
+  optionally the Application Observability switch and Knowledge Graph onboarding
+  (`grafana_asserts_stack`, gated on `manage_knowledge_graph`, with its own Cloud access policy
+  token and stack service account token on `grafana.cloud`).
 
 Alert rules use simplified routing (`notification_settings`) straight to a contact point, so the
 module never touches the stack's notification policy tree.

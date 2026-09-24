@@ -250,8 +250,14 @@ variable "manage_app_observability" {
   default     = false
 }
 
+variable "manage_knowledge_graph" {
+  description = "Let this module perform Knowledge Graph (Asserts) onboarding: provisions the stack's own Mimir/GCom/assertion-detector tokens, auto-detects datasets and enables the stack (creating a Cloud access policy token and a stack Admin service account token for it, both counted on this variable). It is a stack-wide singleton, the same shape as manage_app_observability: destroy calls the same API the onboarding wizard's disable control uses, which switches Knowledge Graph off for the WHOLE stack, not just this demo's objects. Leave false and onboard by hand (Observability > Knowledge Graph) on a shared stack that already has it on, or where a later destroy must not disable it for other tenants."
+  type        = bool
+  default     = false
+}
+
 variable "knowledge_graph_enabled" {
-  description = "Create the Knowledge Graph service-graph rule. The Knowledge Graph must already be initialized on the stack."
+  description = "Create the Knowledge Graph service-graph rule and this demo's own trace configuration (entity properties for its services, scoped to var.namespace, at a low priority so it never overrides another config on a shared stack). The Knowledge Graph must already be initialized on the stack, either by manage_knowledge_graph or by hand."
   type        = bool
   default     = true
 }
