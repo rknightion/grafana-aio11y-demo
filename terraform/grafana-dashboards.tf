@@ -20,7 +20,8 @@ locals {
   # aws-metric-stream.tf: the invocation-log Firehose stamps these two static Loki labels.
   grafana_bedrock_log_group     = "/aws/bedrock/${local.prefix}-invocations"
   grafana_bedrock_metric_stream = "${local.prefix}-bedrock"
-  grafana_bedrock_log_selector  = "{service_namespace=\"${local.prefix}\", service_name=\"${local.prefix}-bedrock-invocations\"}"
+  # CloudWatch Logs subscriptions also ship non-JSON control messages; drop them so `| json` never errors.
+  grafana_bedrock_log_selector = "{service_namespace=\"${local.prefix}\", service_name=\"${local.prefix}-bedrock-invocations\"} != \"CWL CONTROL MESSAGE\""
 
   # Rule and guard ids shared by dashboards, alert rules and grafana-agento11y.tf.
   grafana_ids = {
