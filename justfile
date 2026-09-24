@@ -53,7 +53,9 @@ ci: check
 # Build multi-arch images and push them to REGISTRY (e.g. a private ECR mirror)
 [group('build')]
 images-push registry tag="dev":
-    for spec in {{ images }}; do IFS=: read -r name ctx file <<<"$spec"; docker buildx build --platform linux/amd64,linux/arm64 -t {{ registry }}/$name:{{ tag }} -f "$file" --push "$ctx"; done
+    # Multi-platform builds need a docker-container builder; create a dedicated one if missing.
+    docker buildx inspect aio11y-multiarch >/dev/null 2>&1 || docker buildx create --name aio11y-multiarch --driver docker-container >/dev/null
+    for spec in {{ images }}; do IFS=: read -r name ctx file <<<"$spec"; docker buildx build --builder aio11y-multiarch --platform linux/amd64,linux/arm64 -t {{ registry }}/$name:{{ tag }} -f "$file" --push "$ctx"; done
 
 # Render the chart to plain manifests for kubectl users (VALUES from `terraform output -raw chart_values`)
 [group('gen')]

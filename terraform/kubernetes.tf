@@ -92,7 +92,7 @@ locals {
     images = {
       registry   = var.images.registry
       tag        = var.images.tag
-      pullSecret = coalesce(var.images.pull_secret, "")
+      pullSecret = var.images.pull_secret == null ? "" : var.images.pull_secret
     }
     serviceAccounts = local.service_accounts
     secrets = {
