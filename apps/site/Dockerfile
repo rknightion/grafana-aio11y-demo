@@ -24,6 +24,11 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY site/package.json ./
 COPY --from=build /app/public/index.html /app/public/app.bundle.js ./public/
 COPY site/src ./src
+# npm/npx/corepack are unused at runtime (the entrypoint is plain node); drop the base image's
+# bundled npm CLI so its own vulnerable transitive deps (pacote, sigstore, picomatch, ...) never
+# ship in the image.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+    /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack
 USER node
 EXPOSE 8080
 CMD ["node", "--import", "./src/telemetry.mjs", "src/server.mjs"]

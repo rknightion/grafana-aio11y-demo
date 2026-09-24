@@ -35,10 +35,15 @@ jobs:
         include:
           - { name: agents, context: apps, dockerfile: agents/Dockerfile }
           - { name: site, context: apps, dockerfile: site/Dockerfile }
-          - { name: site-browser, context: apps, dockerfile: site/Dockerfile.browser }
+          # site-browser and dev-workstation carry Playwright's/apt's debian OS packages: every
+          # remaining HIGH/CRITICAL there has no fixed version yet (verified against the live
+          # Debian bookworm-slim archive, not just the pinned digest) - see images.yml history.
+          - { name: site-browser, context: apps, dockerfile: site/Dockerfile.browser, trivy-ignore-unfixed: true }
           - { name: mcp-tools, context: apps, dockerfile: mcp-tools/Dockerfile }
-          - { name: gateway, context: apps/gateway, dockerfile: Dockerfile }
-          - { name: dev-workstation, context: ".", dockerfile: apps/dev-workstation/Dockerfile }
+          # gateway is plain debian:bookworm-slim with no application code: every HIGH/CRITICAL is
+          # an OS package with no fixed version yet upstream.
+          - { name: gateway, context: apps/gateway, dockerfile: Dockerfile, trivy-ignore-unfixed: true }
+          - { name: dev-workstation, context: ".", dockerfile: apps/dev-workstation/Dockerfile, trivy-ignore-unfixed: true }
     permissions:
       contents: write
       packages: write
@@ -54,4 +59,5 @@ jobs:
       dockerfile: ${{ matrix.dockerfile }}
       # Private until published: no code-scanning upload or attestations on this plan yet.
       trivy-upload-sarif: false
+      trivy-ignore-unfixed: ${{ matrix.trivy-ignore-unfixed || false }}
       provenance: false

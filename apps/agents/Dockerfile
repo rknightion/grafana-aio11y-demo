@@ -29,6 +29,11 @@ COPY agents/config ./config
 # Default loadgen spend-ledger dir, writable by the runtime user (mount a volume here to keep it
 # across pod restarts; with a read-only root filesystem an emptyDir or PVC is required).
 RUN mkdir -p /var/lib/loadgen && chown node:node /var/lib/loadgen
+# npm/npx/corepack are unused at runtime (the entrypoint is plain node); drop the base image's
+# bundled npm CLI so its own vulnerable transitive deps (pacote, sigstore, picomatch, ...) never
+# ship in the image.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+    /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack
 USER node
 EXPOSE 8080
 CMD ["node", "--experimental-loader=@opentelemetry/instrumentation/hook.mjs", "--import", "./src/instrumentation.mjs", "src/server.mjs"]
