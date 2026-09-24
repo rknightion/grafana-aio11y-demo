@@ -58,6 +58,8 @@ DIALOGS = (
     ("Managed settings require approval", "Yes, I trust these settings"),
 )
 CONNECT_PROMPT = "Press Enter to connect"
+# After the device sign-in, 2.1.281 shows this acknowledgement before the managed-settings dialog.
+CONNECTED_MARKERS = ("Connected to Cloud gateway.", "Press Enter to continue.")
 
 
 def log(msg):
@@ -224,7 +226,7 @@ def attempt(args, want_fp):
     os.makedirs(WORKDIR, exist_ok=True)
     tmux("new-session", "-d", "-s", TMUX, "-x", "250", "-y", "60", "-c", WORKDIR, "claude")
 
-    state = {"url": None, "browser": None, "login_typed": False, "trusted": False, "connected": False,
+    state = {"url": None, "browser": None, "login_typed": False, "trusted": False, "connected": False, "acknowledged": False,
              "exit_sent": 0.0}
     last_action, last_screen = 0.0, ""
     deadline = time.time() + args.timeout
@@ -284,6 +286,13 @@ def attempt(args, want_fp):
                 keys(*seq)
                 last_action = now
                 continue
+        # The post-sign-in acknowledgement, answered once and only after a sign-in this attempt started.
+        if state["url"] and all(m in text for m in CONNECTED_MARKERS) and not state.get("acknowledged"):
+            log("'Connected to Cloud gateway': pressing Enter to continue")
+            keys("Enter")
+            state["acknowledged"] = True
+            last_action = now
+            continue
         if CONNECT_PROMPT in text and not state["connected"]:
             keys("Enter")
             state["connected"] = True
