@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Manual sign-in fallback: print this developer's gateway verification link and wait for a human
+# to complete it (in a browser that can reach the gateway, e.g. through an SSM port forward).
+# `just login-developers` runs this in every developer container.
+set -Eeuo pipefail
+exec dev-login --manual --attempts 1 "$@"

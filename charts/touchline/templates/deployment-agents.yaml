@@ -1,0 +1,111 @@
+{{- $root := . -}}
+{{- range $role, $cfg := .Values.agents }}
+{{- $name := printf "%s-%s" (include "touchline.prefix" $root) $role }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  namespace: {{ $root.Values.namespace }}
+  labels:
+    {{- include "touchline.labels" $root | nindent 4 }}
+    {{- include "touchline.selectorLabels" $name | nindent 4 }}
+    touchline.io/agent-role: {{ $role }}
+    touchline.io/team: {{ $cfg.team }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "touchline.selectorLabels" $name | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "touchline.selectorLabels" $name | nindent 8 }}
+        touchline.io/agent-role: {{ $role }}
+        touchline.io/team: {{ $cfg.team }}
+    spec:
+      serviceAccountName: {{ $root.Values.serviceAccounts.agents }}
+      {{- if $root.Values.images.pullSecret }}
+      imagePullSecrets:
+        - name: {{ $root.Values.images.pullSecret }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: agent
+          image: "{{ $root.Values.images.registry }}/agents:{{ $root.Values.images.tag }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: ROLE
+              value: {{ $role }}
+            - name: AGENT_TEAM
+              value: {{ $cfg.team }}
+            - name: AGENT_VERSION
+              value: {{ $root.Values.agentVersion | quote }}
+            - name: SPECIALIST_URL_TEMPLATE
+              value: {{ printf "http://%s-{role}:8080/v1/agent" (include "touchline.prefix" $root) | quote }}
+            - name: OTEL_SERVICE_NAME
+              value: {{ $name }}
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: {{ include "touchline.resourceAttributes" (dict "root" $root) }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://{{ include "touchline.prefix" $root }}-alloy:4318"
+            - name: MODEL_PROFILE_ARN
+              value: {{ $cfg.modelProfileArn | quote }}
+            - name: MODEL_KEY
+              value: {{ $cfg.modelKey | quote }}
+            - name: MODEL_NAME
+              value: {{ $cfg.modelName | quote }}
+            {{- if $cfg.modelProfiles }}
+            - name: MODEL_PROFILES
+              value: {{ $cfg.modelProfiles | toJson | quote }}
+            {{- end }}
+            - name: AWS_REGION
+              value: {{ $root.Values.aws.region }}
+            - name: CONTENT_CAPTURE
+              value: {{ $root.Values.contentCapture | quote }}
+            - name: AGENTO11Y_PROTOCOL
+              value: http
+            - name: AGENTO11Y_AUTH_MODE
+              value: basic
+            - name: AGENTO11Y_CONTENT_CAPTURE_MODE
+              value: {{ include "touchline.contentCaptureMode" $root }}
+            - name: AGENTO11Y_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $root.Values.secrets.agento11y }}
+                  key: endpoint
+            - name: AGENTO11Y_AUTH_TENANT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $root.Values.secrets.agento11y }}
+                  key: tenant_id
+            - name: AGENTO11Y_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $root.Values.secrets.agento11y }}
+                  key: token
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+          resources:
+            {{- toYaml $root.Values.agentResources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 10001
+            capabilities:
+              drop:
+                - ALL
+---
+{{- end }}

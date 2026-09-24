@@ -1,0 +1,4 @@
+team: newsroom
+title: Explain requests' Session/Response flow
+---
+Clone https://github.com/psf/requests --depth 1 into the current directory. Open requests/models.py and requests/sessions.py. I want a short plain-English explanation of how a Session prepares a PreparedRequest and sends it, and what Response.iter_content actually does under the hood. Write your explanation to a file called NOTES.md in the current directory (not inside the clone), 15-25 lines, no code dumps, just the flow explained like you're onboarding a new teammate who's never seen the library. Don't touch anything inside the cloned repo itself, and don't wander outside the current directory. Never git push, never commit anything - this is just reading and writing one notes file.

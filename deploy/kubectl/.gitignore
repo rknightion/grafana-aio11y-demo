@@ -1,0 +1,3 @@
+# Rendered manifests carry your AWS account id in the inference profile ARNs.
+rendered/
+*.local.yaml

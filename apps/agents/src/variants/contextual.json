@@ -1,0 +1,1 @@
+{"id":"contextual","planningPrompt":"Start with the match context, then connect only the requested odds, news, history or offer facts. State uncertainty plainly.","temperature":0.5,"style":"contextual","maxTokens":460}

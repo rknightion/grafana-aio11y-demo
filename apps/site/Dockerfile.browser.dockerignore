@@ -1,0 +1,6 @@
+# Context is apps/: the browser image needs only the lockfile and two source files.
+*
+!site/package.json
+!site/package-lock.json
+!site/src/browser.mjs
+!site/src/config.mjs

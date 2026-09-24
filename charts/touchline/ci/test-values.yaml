@@ -1,0 +1,104 @@
+# Realistic fake values for `helm lint` / `helm template` in CI. Every ARN, id and hostname here
+# is fabricated (fake account id, fake profile ids) and safe to publish.
+nameOverride: touchline
+namespace: touchline
+deploymentEnvironment: demo
+
+images:
+  registry: ghcr.io/rknightion/grafana-aio11y-demo
+  tag: "0.1.0"
+  pullSecret: ""
+
+serviceAccounts:
+  agents: touchline-agents
+  loadgen: touchline-loadgen
+  experiments: touchline-experiments
+  site: touchline-site
+
+secrets:
+  grafanaOtlp: touchline-grafana-otlp
+  agento11y: touchline-agento11y
+  faro: touchline-faro
+  experiments: touchline-experiments
+
+aws:
+  region: eu-west-1
+
+agentVersion: v1
+
+agents:
+  orchestrator:
+    modelProfileArn: "arn:aws:bedrock:eu-west-1:123456789012:application-inference-profile/platform-sonnet-abcd12"
+    modelKey: sonnet
+    modelName: "eu.anthropic.claude-sonnet-4-6-20250929-v1:0"
+    team: platform
+    modelProfiles:
+      haiku:
+        arn: "arn:aws:bedrock:eu-west-1:123456789012:application-inference-profile/platform-haiku-abcd90"
+        name: "eu.anthropic.claude-haiku-4-5-20251001-v1:0"
+      sonnet:
+        arn: "arn:aws:bedrock:eu-west-1:123456789012:application-inference-profile/platform-sonnet-abcd12"
+        name: "eu.anthropic.claude-sonnet-4-6-20250929-v1:0"
+  news:
+    modelProfileArn: "arn:aws:bedrock:eu-west-1:123456789012:application-inference-profile/newsroom-haiku-abcd34"
+    modelKey: haiku
+    modelName: "eu.anthropic.claude-haiku-4-5-20251001-v1:0"
+    team: newsroom
+  odds:
+    modelProfileArn: "arn:aws:bedrock:eu-west-1:123456789012:application-inference-profile/trading-haiku-abcd56"
+    modelKey: haiku
+    modelName: "eu.anthropic.claude-haiku-4-5-20251001-v1:0"
+    team: trading
+  editorial:
+    modelProfileArn: "arn:aws:bedrock:eu-west-1:123456789012:application-inference-profile/newsroom-sonnet-abcd78"
+    modelKey: sonnet
+    modelName: "eu.anthropic.claude-sonnet-4-6-20250929-v1:0"
+    team: newsroom
+  compliance:
+    modelProfileArn: "arn:aws:bedrock:eu-west-1:123456789012:application-inference-profile/platform-haiku-abcd90"
+    modelKey: haiku
+    modelName: "eu.anthropic.claude-haiku-4-5-20251001-v1:0"
+    team: platform
+
+agentResources:
+  requests:
+    cpu: 50m
+    memory: 256Mi
+  limits:
+    memory: 512Mi
+
+contentCapture: true
+
+traffic:
+  enabled: true
+  siteRequestsPerMinute: 2
+  experimentsSchedule: "17 */2 * * *"
+
+loadgen:
+  dailyBudgetUsd: 5
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClassName: gp3
+
+siteBrowser:
+  enabled: true
+  schedule: "*/10 * * * *"
+
+experiments:
+  variantIds: "brief,balanced,contextual"
+
+site:
+  ingress:
+    className: nginx
+    host: touchline.example.com
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+
+redis:
+  image:
+    repository: redis
+    tag: "7.4.6"
+
+alloy:
+  enabled: true

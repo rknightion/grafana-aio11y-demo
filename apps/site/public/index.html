@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Touchline Times - Match Desk</title>
+<style>
+  :root { --paper: #f7f4ec; --ink: #1c1b19; --muted: #5d5a52; --rule: #cfc8b8; --accent: #b3261e; --panel: #fffdf7; }
+  @media (prefers-color-scheme: dark) { :root { --paper: #161513; --ink: #ece8de; --muted: #a39e92; --rule: #3a3731; --accent: #f28b82; --panel: #1f1e1b; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 17px/1.5 Georgia, "Times New Roman", serif; }
+  header { border-bottom: 3px double var(--rule); padding: 1.5rem 1rem 1rem; text-align: center; }
+  .masthead { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 700; letter-spacing: .02em; margin: 0; }
+  .strap { color: var(--muted); font: 600 .8rem/1.4 system-ui, sans-serif; letter-spacing: .12em; text-transform: uppercase; margin: .4rem 0 0; }
+  main { max-width: 44rem; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+  h2 { font-size: 1.4rem; margin: 0 0 .25rem; }
+  .lede { color: var(--muted); margin: 0 0 1.25rem; }
+  label { display: block; font: 600 .85rem system-ui, sans-serif; margin-bottom: .35rem; }
+  input { width: 100%; font: inherit; padding: .7rem .8rem; border: 1px solid var(--rule); border-radius: 4px; background: var(--panel); color: var(--ink); }
+  button { margin-top: .8rem; font: 600 1rem system-ui, sans-serif; padding: .7rem 1.3rem; border: 0; border-radius: 4px; background: var(--accent); color: #fff; cursor: pointer; }
+  pre { white-space: pre-wrap; word-break: break-word; background: var(--panel); border: 1px solid var(--rule); border-radius: 4px; padding: 1rem; margin-top: 1.25rem; min-height: 3rem; font-size: .85rem; }
+  footer { border-top: 1px solid var(--rule); color: var(--muted); font: .8rem/1.5 system-ui, sans-serif; padding: 1rem; text-align: center; }
+</style>
+</head>
+<body>
+<header>
+  <p class="masthead">Touchline Times</p>
+  <p class="strap">Match Desk &middot; odds, team news and offers</p>
+</header>
+<main>
+  <h2>Ask the match desk</h2>
+  <p class="lede">Our AI desk checks fictional odds, team news, head-to-head history and offers for upcoming fixtures.</p>
+  <form id="picks-form">
+    <label for="question">Your question</label>
+    <input id="question" required value="What are the odds and recent news for Harbour City vs Northgate Rovers?">
+    <button type="submit">Ask the desk</button>
+  </form>
+  <pre id="result" aria-live="polite"></pre>
+</main>
+<footer>All clubs, odds, bookmakers and offers are fictional. 18+ only. Please gamble responsibly.</footer>
+<script>window.SITE_CONFIG = __SITE_CONFIG_JSON__;</script>
+<script type="module" src="/app.js"></script>
+</body>
+</html>

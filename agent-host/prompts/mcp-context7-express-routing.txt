@@ -1,0 +1,4 @@
+team: platform
+title: Look up Express 5 routing changes
+---
+Use the context7 MCP server to look up the current Express documentation (resolve the library id first, then fetch the docs on routing). Summarise in NOTES.md, 10-15 lines, what changed about path patterns and error handling in Express 5 compared with Express 4, with one tiny example route. Work only in the current directory.

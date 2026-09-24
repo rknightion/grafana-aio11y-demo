@@ -1,0 +1,22 @@
+{{- $root := . -}}
+{{- range $role, $cfg := .Values.agents }}
+{{- $name := printf "%s-%s" (include "touchline.prefix" $root) $role }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  namespace: {{ $root.Values.namespace }}
+  labels:
+    {{- include "touchline.labels" $root | nindent 4 }}
+    {{- include "touchline.selectorLabels" $name | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "touchline.selectorLabels" $name | nindent 4 }}
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      protocol: TCP
+---
+{{- end }}

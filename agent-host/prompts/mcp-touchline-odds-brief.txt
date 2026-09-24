@@ -1,0 +1,4 @@
+team: trading
+title: Brief on tonight's odds via the {{MCP}} tools
+---
+Use the {{MCP}} MCP server's tools to get the odds and latest news for Harbour City vs Northgate Rovers. Write BRIEF.md with the best available price for each outcome, one line of team news, and a responsible-gambling line (18+, gamble responsibly). Keep it under 12 lines.

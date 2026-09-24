@@ -1,0 +1,47 @@
+[
+  {
+    "id": "offer-crossbar-football-welcome",
+    "bookmaker": "Crossbar Bet",
+    "market": "football",
+    "headline": "Crossbar Bet: stake 10, get 30 in free bets on Premier Division matchday",
+    "terms": "New customers only. Min deposit 10. Min stake 10 on odds of 1.5 or greater. Free bets credited within 48 hours of settlement and expire after 7 days. Free bet stakes not included in returns. Full terms apply.",
+    "min_age": 18,
+    "responsible_gambling": "Only bet what you can afford to lose. Gambling can be addictive, please play responsibly. Free, confidential support is available from your national gambling helpline."
+  },
+  {
+    "id": "offer-halftime-football-acca",
+    "bookmaker": "Halftime Odds",
+    "market": "football",
+    "headline": "Halftime Odds: accumulator cover, stake back as a free bet if one leg loses",
+    "terms": "Applies to accumulators of 5 or more selections at odds of 1.2 or greater per leg. Maximum refund 25 as a free bet. Free bet stakes not included in returns and expire after 7 days. Full terms apply.",
+    "min_age": 18,
+    "responsible_gambling": "Gambling can be addictive, please play responsibly. 18+ only. Set deposit limits in your account settings, and contact your national gambling helpline if you need help."
+  },
+  {
+    "id": "offer-longshot-basketball-welcome",
+    "bookmaker": "Longshot & Co",
+    "market": "basketball",
+    "headline": "Longshot & Co: stake 20, get 40 in Pro Basketball League preseason free bets",
+    "terms": "New customers only. Min deposit 20. Min stake 20 on odds of 1.5 or greater. Free bets credited as 4x10 within 24 hours of settlement and expire after 14 days. Full terms apply.",
+    "min_age": 18,
+    "responsible_gambling": "Set a deposit limit before you start. Gambling can be addictive, please play responsibly. Free support is available from your national gambling helpline."
+  },
+  {
+    "id": "offer-crossbar-general-price-boost",
+    "bookmaker": "Crossbar Bet",
+    "market": "general",
+    "headline": "Crossbar Bet: daily price boost on one featured fixture, opt in each day",
+    "terms": "One opt-in per customer per day. Maximum stake 5 per boosted selection. Boosted price applies to that market only and may change without notice. Full terms apply.",
+    "min_age": 18,
+    "responsible_gambling": "Gambling can be addictive, please play responsibly. 18+ only. Take a break with a time-out or self-exclusion if betting stops being fun."
+  },
+  {
+    "id": "offer-halftime-general-cashback",
+    "bookmaker": "Halftime Odds",
+    "market": "general",
+    "headline": "Halftime Odds: weekly cashback up to 10 on net losses",
+    "terms": "Calculated on settled bets placed Monday to Sunday. Cashback capped at 10 and paid as bonus funds within 72 hours, wagered once before withdrawal. Full terms apply.",
+    "min_age": 18,
+    "responsible_gambling": "Only bet what you can afford to lose. Gambling can be addictive, please play responsibly. Free, confidential support is available from your national gambling helpline."
+  }
+]

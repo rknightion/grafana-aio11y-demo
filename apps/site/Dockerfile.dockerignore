@@ -1,0 +1,8 @@
+# Context is apps/: allow only the site package.
+*
+!site/package.json
+!site/package-lock.json
+!site/public
+!site/src
+**/node_modules
+**/app.bundle.js

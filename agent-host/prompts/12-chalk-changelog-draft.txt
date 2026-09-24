@@ -1,0 +1,4 @@
+team: platform
+title: Draft a CHANGELOG entry for chalk
+---
+Clone https://github.com/chalk/chalk --depth 1. Look at the last handful of commits (git log) and the existing changelog style if there is one, then draft a plausible "Unreleased" changelog entry summarising what those recent commits actually changed - keep it in the project's existing format and tone, don't invent changes that aren't there. Use the time MCP tool to get today's date and put that at the top of the entry. Save it as CHANGELOG-DRAFT.md in the current directory, not inside the clone - don't touch the real changelog file. No commit, no push, stay in the current directory.

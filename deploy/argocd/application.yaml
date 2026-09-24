@@ -1,0 +1,45 @@
+# Argo CD Application for the Touchline Times workloads (charts/touchline).
+#
+# Terraform still owns the AWS and Grafana half and, in the cluster, the namespace, the Secrets and
+# the Pod Identity association. Apply the module with deploy_workloads = false first, then replace
+# the valuesObject below with the output of:
+#
+#   tofu -chdir=examples/complete output -raw chart_values
+#
+# The values contain no secrets (the chart reads the Terraform-created Secrets by name), but they
+# do contain your AWS account id in the inference profile ARNs.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: touchline
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/rknightion/grafana-aio11y-demo
+    # Pin the same release tag as the Terraform module source.
+    targetRevision: main
+    path: charts/touchline
+    helm:
+      releaseName: touchline
+      valuesObject:
+        # PASTE `terraform output -raw chart_values` HERE, indented under valuesObject.
+        # The keys below only show the shape.
+        nameOverride: touchline
+        namespace: touchline
+        aws:
+          region: eu-west-1
+        agents:
+          orchestrator:
+            team: platform
+            modelProfileArn: REPLACE_WITH_TERRAFORM_OUTPUT
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: touchline
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      # Terraform creates and owns the namespace.
+      - CreateNamespace=false

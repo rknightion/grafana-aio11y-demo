@@ -1,0 +1,4 @@
+team: platform
+title: RG line wording audit across all offers
+---
+Quick wording check across all the offers we're currently running, not just one market this time, pull the full list from the offers tool. We've got a few slightly different phrasings of the responsible gambling line floating around and I want to know how many variants actually exist and whether any of them drop the gambling helpline reference entirely. Get the current time and stamp the report with it so we know when this snapshot was taken, write everything to rg-wording-audit.md with the offer id next to each variant found. Flag anything missing the RG line altogether at the very top, that's the one that actually matters. No commits, no pushes, current directory only.

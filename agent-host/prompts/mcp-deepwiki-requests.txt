@@ -1,0 +1,4 @@
+team: newsroom
+title: Where requests handles retries
+---
+Ask the deepwiki MCP server about the psf/requests repository: where retries and connection pooling are implemented and how they relate to urllib3. Write RETRIES.md with a short explanation (under 15 lines). Do not clone anything.

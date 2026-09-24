@@ -1,0 +1,4 @@
+team: newsroom
+title: Stonebridge Saints v Bramley Rangers cup preview
+---
+Cup tie preview time, Stonebridge Saints v Bramley Rangers. Pull news for both clubs, the head-to-head history, and the current odds for the fixture, we like to drop one odds line into these previews near the end as a soft nudge towards the offers section. Write it up in our usual format, intro, a paragraph per team using the news, a head-to-head note, then close with a line like "Crossbar Bet has the hosts at X" using whatever the actual current price is, don't make a number up. Save as draft-sbs-bmr-preview.md. No commits, no pushes, stay in the current directory throughout.

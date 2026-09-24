@@ -1,0 +1,4 @@
+team: newsroom
+title: How does FastAPI dependency injection work
+---
+Use the deepwiki MCP server to ask about the tiangolo/fastapi repository: how its dependency injection system resolves Depends() at request time. Write DI.md, 10-20 lines, in plain English for an on-call engineer, and list the two source files deepwiki points to.

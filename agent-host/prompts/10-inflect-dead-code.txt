@@ -1,0 +1,4 @@
+team: trading
+title: Hunt for dead code in inflect
+---
+Clone https://github.com/jaraco/inflect --depth 1. It's mostly one big module so should be a quick scan. Look for anything that looks unreachable or unused - a private function nothing calls, a branch that can never trigger, commented-out code blocks that have clearly been dead for a while. List what you find in dead-code-notes.md in the current directory - or note plainly that you didn't find anything convincing, that's a valid outcome too, don't force findings that aren't there. Don't change anything inside the clone itself, no commit, no push, stay in the current directory.

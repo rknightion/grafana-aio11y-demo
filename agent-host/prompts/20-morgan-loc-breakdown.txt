@@ -1,0 +1,4 @@
+team: platform
+title: Line count breakdown for morgan
+---
+Clone https://github.com/expressjs/morgan --depth 1. Do a quick breakdown of total lines of code by file extension across the repo (.js, .md, .json, whatever's actually there) - a find + wc -l pipeline is fine, keep it simple, no need for a fancy tool. Put the results as a small table in loc-summary.txt in the current directory, sorted by total lines descending. Don't touch anything inside the clone, no commit, no push, stay in the current directory for the whole task.

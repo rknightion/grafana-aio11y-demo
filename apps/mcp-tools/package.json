@@ -1,0 +1,28 @@
+{
+  "name": "@touchline/mcp-tools",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Deterministic, offline odds/news/history/offers tools for the Touchline Times demo, served over stdio MCP and imported by the in-app agents.",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "exports": {
+    ".": "./src/tools.mjs",
+    "./tools": "./src/tools.mjs"
+  },
+  "bin": {
+    "touchline-mcp-tools": "src/server.mjs"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "start": "node src/server.mjs",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.30.0"
+  }
+}

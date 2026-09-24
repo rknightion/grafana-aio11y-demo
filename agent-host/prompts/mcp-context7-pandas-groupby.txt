@@ -1,0 +1,4 @@
+team: trading
+title: Pandas groupby cheat sheet
+---
+Use the context7 MCP server to fetch the pandas documentation for DataFrame.groupby and named aggregation. Write groupby.md (under 20 lines) showing how to compute average odds per bookmaker and the best price per match from a table with columns match, bookmaker, price. Then write a small python3 script demo.py with 6 rows of made-up data that runs it, and run it once.

@@ -1,0 +1,62 @@
+{
+  "Harbour City": [
+    { "date": "2026-09-28", "headline": "Harbour City keep a fourth straight clean sheet", "body": "The back four have not conceded in 360 minutes going into the Northgate Rovers fixture." },
+    { "date": "2026-09-26", "headline": "Harbour City midfielder back in training after ankle knock", "body": "The coaching staff expect a late fitness call before matchday." }
+  ],
+  "Northgate Rovers": [
+    { "date": "2026-09-27", "headline": "Northgate Rovers away form dips after two draws on the road", "body": "The visitors have taken two points from their last two away trips." },
+    { "date": "2026-09-22", "headline": "Northgate Rovers summer signing scores on debut", "body": "The new forward found the net inside twenty minutes of his first start." }
+  ],
+  "Kingsbridge United": [
+    { "date": "2026-09-29", "headline": "Kingsbridge United unbeaten in nine across all competitions", "body": "Squad rotation has kept legs fresh through a crowded fixture list." },
+    { "date": "2026-09-25", "headline": "Kingsbridge United full-back close to return from hamstring strain", "body": "He has been on the bench for the last two matchdays." }
+  ],
+  "Ashford Athletic": [
+    { "date": "2026-09-28", "headline": "Ashford Athletic away scoring drought stretches to three games", "body": "The front line has managed one shot on target in that run." },
+    { "date": "2026-09-23", "headline": "Ashford Athletic hand academy graduate a first start", "body": "The teenager impressed in a cameo from the bench last week." }
+  ],
+  "Redvale": [
+    { "date": "2026-09-29", "headline": "Redvale stretch their winning run to six", "body": "The front three have eleven goals between them during the run." },
+    { "date": "2026-09-24", "headline": "Redvale captain doubtful with muscle tightness", "body": "A fitness test is planned two days before kickoff." }
+  ],
+  "Fellgate Wanderers": [
+    { "date": "2026-09-27", "headline": "Fellgate Wanderers unbeaten in their last three cup away ties", "body": "The side has not lost at this ground since 2024." },
+    { "date": "2026-09-21", "headline": "Fellgate Wanderers new striker scores twice on home debut", "body": "He has now scored in back-to-back appearances." }
+  ],
+  "Porthaven Town": [
+    { "date": "2026-09-28", "headline": "Porthaven Town tighten up at set pieces", "body": "Only two goals conceded in the last five league games." },
+    { "date": "2026-09-20", "headline": "Porthaven Town winger nears return from long-term injury", "body": "He played for the reserve side for the first time this month." }
+  ],
+  "Millbrook Lions": [
+    { "date": "2026-09-26", "headline": "Millbrook Lions record at Lighthouse Road stays strong", "body": "They have lost once in their last six visits." },
+    { "date": "2026-09-19", "headline": "Millbrook Lions plan rotation before a midweek cup tie", "body": "The manager hinted at changes to the usual starting line-up." }
+  ],
+  "Stonebridge Saints": [
+    { "date": "2026-09-29", "headline": "Stonebridge Saints home run reaches fourteen unbeaten", "body": "Their last home defeat in this fixture was more than two seasons ago." },
+    { "date": "2026-09-23", "headline": "Stonebridge Saints forward close to full fitness", "body": "He is expected to start on the bench at the earliest." }
+  ],
+  "Bramley Rangers": [
+    { "date": "2026-09-28", "headline": "Bramley Rangers away form questioned after back-to-back draws", "body": "The side has struggled to convert first-half chances on the road." },
+    { "date": "2026-09-18", "headline": "Bramley Rangers expected to reshuffle midfield for the trip", "body": "The head coach signalled a more defensive shape away from home." }
+  ],
+  "Eastcliff Stars": [
+    { "date": "2026-09-29", "headline": "Eastcliff Stars ride a five-match winning streak", "body": "They have scored at least twice in each of those games." },
+    { "date": "2026-09-22", "headline": "Eastcliff Stars centre-back back in full training", "body": "He missed the last two matchdays with a minor knock." }
+  ],
+  "Westford City": [
+    { "date": "2026-09-27", "headline": "Westford City unbeaten on the road since August", "body": "Three away wins and a draw have lifted confidence before the trip to Clifftop Arena." },
+    { "date": "2026-09-17", "headline": "Westford City switch to a back three pays off", "body": "The new manager has his first away win with the change of shape." }
+  ],
+  "Metro Rockets": [
+    { "date": "2026-09-30", "headline": "Metro Rockets preseason opener to test a new starting five", "body": "Coaches will use the early games to trial lineup combinations." }
+  ],
+  "Summit Hawks": [
+    { "date": "2026-09-30", "headline": "Summit Hawks ease into preseason with a veteran-heavy roster", "body": "Minutes are expected to be capped for the regular starters." }
+  ],
+  "Bayview Vipers": [
+    { "date": "2026-09-30", "headline": "Bayview Vipers preseason focus lands on bench depth", "body": "Coaches want a longer look at the reserve ball-handlers." }
+  ],
+  "Canyon Thunder": [
+    { "date": "2026-09-30", "headline": "Canyon Thunder open preseason on the road", "body": "The roster is still settling after summer changes." }
+  ]
+}

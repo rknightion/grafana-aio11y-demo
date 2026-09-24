@@ -1,0 +1,4 @@
+team: newsroom
+title: Add a missing test for tqdm formatting
+---
+Clone https://github.com/tqdm/tqdm --depth 1. Look at the format_interval or format_sizeof helper (check tqdm/std.py first, it might live somewhere slightly different) and see if there's an existing test for it under tests/. Pick one small edge case that doesn't look covered - zero, a very large number, negative input, whatever seems missing - and write one new test function for it, matching the style the repo already uses. Run just that test with pytest if it's available on the box; if not, run python3 directly against the function to sanity check the expected value instead. Show me the diff at the end with git diff. Never commit, never push, stay inside the current directory.

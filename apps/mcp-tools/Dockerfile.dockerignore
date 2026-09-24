@@ -1,0 +1,6 @@
+# Context is apps/: allow only the MCP tools package.
+*
+!mcp-tools/package.json
+!mcp-tools/package-lock.json
+!mcp-tools/src
+**/node_modules

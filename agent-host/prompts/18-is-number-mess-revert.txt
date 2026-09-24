@@ -1,0 +1,4 @@
+team: trading
+title: Poke at is-number, then bin the changes
+---
+clone https://github.com/jonschlinkert/is-number --depth 1. make a couple of quick throwaway edits to index.js - add a stray console.log, rename a variable, whatever, it doesn't need to be good, it just needs to actually change the file. confirm with git status / git diff that the tree is dirty. then just git reset --hard it so the working tree is clean again, back to exactly what got cloned. double check with git status that it's clean afterwards and say so. never commit any of this, never push, stay in the current directory the whole time.

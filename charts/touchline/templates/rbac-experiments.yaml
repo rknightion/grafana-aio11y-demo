@@ -1,0 +1,38 @@
+# The experiments CronJob takes a coordination.k8s.io Lease (see apps/agents/experiments/lease.mjs)
+# so overlapping scheduled Jobs never double-create experiment runs. Bound to its own SA
+# (serviceAccounts.experiments), scoped to exactly the one Lease it uses. "create" cannot take a
+# resourceNames filter (the object does not exist yet), so it stays a separate, unscoped rule;
+# get/update/patch are scoped to this Lease by name.
+{{- $name := printf "%s-experiments" (include "touchline.prefix" .) }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "touchline.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["create"]
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "update", "patch"]
+    resourceNames:
+      - {{ $name }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "touchline.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $name }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.serviceAccounts.experiments }}
+    namespace: {{ .Values.namespace }}

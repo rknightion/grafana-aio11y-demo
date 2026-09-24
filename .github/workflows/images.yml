@@ -1,0 +1,56 @@
+# Build and publish every image multi-arch to ghcr.io/<owner>/grafana-aio11y-demo/<name> through
+# the shared container-publish reusable. Edge builds on main; release_tag set for releases.
+name: images
+
+on:
+  push:
+    branches: [main]
+    paths: ["apps/**", ".github/workflows/images.yml"]
+  workflow_call:
+    inputs:
+      release_tag:
+        type: string
+        required: false
+        default: ""
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Release tag (vX.Y.Z) to publish; empty = edge build"
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  image:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: agents, context: apps, dockerfile: apps/agents/Dockerfile }
+          - { name: site, context: apps, dockerfile: apps/site/Dockerfile }
+          - { name: site-browser, context: apps, dockerfile: apps/site/Dockerfile.browser }
+          - { name: mcp-tools, context: apps, dockerfile: apps/mcp-tools/Dockerfile }
+          - { name: gateway, context: apps/gateway, dockerfile: apps/gateway/Dockerfile }
+          - { name: dev-workstation, context: ".", dockerfile: apps/dev-workstation/Dockerfile }
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+      attestations: write
+      security-events: write
+    uses: rknightion/.github/.github/workflows/container-publish.yml@8d14adaa295c4a7670b1d4e744b070955b710598 # v1.24.0
+    with:
+      release-tag: ${{ inputs.release_tag }}
+      image-name: grafana-aio11y-demo/${{ matrix.name }}
+      context: ${{ matrix.context }}
+      dockerfile: ${{ matrix.dockerfile }}
+      # Private until published: no code-scanning upload or attestations on this plan yet.
+      trivy-upload-sarif: false
+      provenance: false

@@ -1,0 +1,259 @@
+{{- if .Values.alloy.enabled }}
+{{- $name := printf "%s-alloy" (include "touchline.prefix" .) }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "touchline.labels" . | nindent 4 }}
+---
+# The k8sattributes processor's filter block (below, in config.alloy) restricts it to watching
+# pods in .Values.namespace only, so this can be a namespaced Role: get/list/watch on pods (to
+# resolve the sending pod from its connection IP) and replicasets (to walk the pod's
+# ownerReferences up to the owning Deployment for k8s.deployment.name). It never reads namespace
+# objects (no namespace labels/annotations are extracted), so "namespaces" is dropped too.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "touchline.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["replicasets"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "touchline.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $name }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ $name }}
+    namespace: {{ .Values.namespace }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "touchline.labels" . | nindent 4 }}
+data:
+  config.alloy: |
+    logging {
+    	level  = "info"
+    	format = "logfmt"
+    }
+
+    // Every app in this namespace sends its OTLP here instead of straight to Grafana Cloud, so
+    // one place holds the Grafana Cloud credential and the Kubernetes enrichment rule.
+    otelcol.receiver.otlp "apps" {
+    	grpc {
+    		endpoint = "0.0.0.0:4317"
+    	}
+
+    	http {
+    		endpoint = "0.0.0.0:4318"
+    	}
+
+    	output {
+    		metrics = [otelcol.processor.k8sattributes.apps.input]
+    		logs    = [otelcol.processor.k8sattributes.apps.input]
+    		traces  = [otelcol.processor.k8sattributes.apps.input]
+    	}
+    }
+
+    // Resolves the sending pod from the OTLP connection's source IP and adds its namespace, pod,
+    // node and owning-deployment identity as resource attributes on every signal. Scoped to this
+    // release's own namespace: it never needs to watch pods anywhere else, which is what lets the
+    // RBAC below be a namespaced Role instead of a cluster-wide ClusterRole.
+    otelcol.processor.k8sattributes "apps" {
+    	filter {
+    		namespace = "{{ .Values.namespace }}"
+    	}
+
+    	extract {
+    		metadata = [
+    			"k8s.namespace.name",
+    			"k8s.pod.name",
+    			"k8s.pod.uid",
+    			"k8s.node.name",
+    			"k8s.deployment.name",
+    		]
+    	}
+
+    	pod_association {
+    		source {
+    			from = "connection"
+    		}
+    	}
+
+    	output {
+    		metrics = [otelcol.processor.batch.apps.input]
+    		logs    = [otelcol.processor.batch.apps.input]
+    		traces  = [otelcol.processor.batch.apps.input]
+    	}
+    }
+
+    otelcol.processor.batch "apps" {
+    	output {
+    		metrics = [otelcol.exporter.otlphttp.grafana_cloud.input]
+    		logs    = [otelcol.exporter.otlphttp.grafana_cloud.input]
+    		traces  = [otelcol.exporter.otlphttp.grafana_cloud.input]
+    	}
+    }
+
+    otelcol.auth.basic "grafana_cloud" {
+    	username = sys.env("GRAFANA_CLOUD_OTLP_USERNAME")
+    	password = sys.env("GRAFANA_CLOUD_OTLP_PASSWORD")
+    }
+
+    otelcol.exporter.otlphttp "grafana_cloud" {
+    	client {
+    		endpoint = sys.env("GRAFANA_CLOUD_OTLP_ENDPOINT")
+    		auth     = otelcol.auth.basic.grafana_cloud.handler
+    	}
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "touchline.labels" . | nindent 4 }}
+    {{- include "touchline.selectorLabels" $name | nindent 4 }}
+spec:
+  # One replica: this collector only relays this namespace's demo traffic and losing a few
+  # seconds of it on a restart is fine. A DaemonSet or > 1 replica would gain nothing here.
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "touchline.selectorLabels" $name | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "touchline.selectorLabels" $name | nindent 8 }}
+    spec:
+      serviceAccountName: {{ $name }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 473
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: alloy
+          image: docker.io/grafana/alloy:v1.12.1@sha256:c311595156fca7b1131683d383dae1acfd29e8879d347161d2a6f714ebac0c0b
+          imagePullPolicy: IfNotPresent
+          args:
+            - run
+            - /etc/alloy/config.alloy
+            - --storage.path=/var/lib/alloy/data
+          ports:
+            - name: otlp-grpc
+              containerPort: 4317
+              protocol: TCP
+            - name: otlp-http
+              containerPort: 4318
+              protocol: TCP
+          env:
+            - name: GRAFANA_CLOUD_OTLP_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.grafanaOtlp }}
+                  key: endpoint
+            - name: GRAFANA_CLOUD_OTLP_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.grafanaOtlp }}
+                  key: username
+            - name: GRAFANA_CLOUD_OTLP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.grafanaOtlp }}
+                  key: password
+          volumeMounts:
+            - name: config
+              mountPath: /etc/alloy
+              readOnly: true
+            - name: data
+              mountPath: /var/lib/alloy/data
+          resources:
+            {{- toYaml .Values.alloy.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 473
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: config
+          configMap:
+            name: {{ $name }}
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "touchline.labels" . | nindent 4 }}
+    {{- include "touchline.selectorLabels" $name | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "touchline.selectorLabels" $name | nindent 4 }}
+  ports:
+    - name: otlp-grpc
+      port: 4317
+      targetPort: otlp-grpc
+      protocol: TCP
+    - name: otlp-http
+      port: 4318
+      targetPort: otlp-http
+      protocol: TCP
+---
+# The OTLP receiver above has no authentication, so anything that can reach it can inject
+# telemetry. Restrict ingress to pods in this same namespace (every app this chart deploys, plus
+# nothing else); egress is left unrestricted (the collector still needs to reach Grafana Cloud and
+# the Kubernetes API).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "touchline.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "touchline.selectorLabels" $name | nindent 6 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        # No namespaceSelector: an empty podSelector peer matches every pod in the NetworkPolicy's
+        # own namespace only, never pods in another namespace.
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 4317
+        - protocol: TCP
+          port: 4318
+{{- end }}

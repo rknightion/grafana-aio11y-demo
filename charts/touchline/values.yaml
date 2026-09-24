@@ -1,0 +1,200 @@
+# Default values for the touchline chart. See README.md for the full values table.
+#
+# Stable keys (Terraform's chart_values output sets these, so do not rename them): nameOverride,
+# images, serviceAccounts, secrets, aws, agents (per-agent modelProfileArn/team), contentCapture,
+# traffic (enabled/siteRequestsPerMinute/experimentsSchedule), site (ingress), alloy (enabled).
+# Everything else here is an addition, free to change.
+
+# -- Prefix used for every object this chart creates (Deployment/Service/CronJob names, the
+# OTel service.name values, etc). Terraform sets this to var.name so k8s object names match the
+# names Terraform's IAM, Pod Identity and Secrets already assume.
+nameOverride: touchline
+
+# -- The namespace all telemetry reports via service.namespace. Terraform installs this chart
+# into a namespace it created with the same value; this is a separate field (rather than reading
+# .Release.Namespace) so `helm template` without --namespace still renders correct attributes.
+namespace: touchline
+
+# -- Environment label reported on every span/log/metric as deployment.environment.
+deploymentEnvironment: demo
+
+images:
+  registry: ghcr.io/rknightion/grafana-aio11y-demo
+  # -- Image tag for every image above. Defaults to this chart's own release; Terraform sets it
+  # from var.images.tag.
+  tag: "0.1.0" # x-release-please-version
+  # -- Name of an existing imagePullSecret. Empty string means none (the default GHCR images are
+  # public once the repo is public).
+  pullSecret: ""
+
+serviceAccounts:
+  # -- Bound to the agents Bedrock IAM role via EKS Pod Identity (by name, no IRSA annotation).
+  # Used only by the 5 in-app agent Deployments.
+  agents: touchline-agents
+  # -- No AWS access and no Kubernetes API access. Used only by the load generator Deployment.
+  loadgen: touchline-loadgen
+  # -- No AWS access. Used only by the experiments CronJob, which is bound to the Lease Role in
+  # rbac-experiments.yaml (scoped to that one Lease) rather than to any AWS permission.
+  experiments: touchline-experiments
+  # -- No AWS access.
+  site: touchline-site
+
+secrets:
+  # -- Existing Secret (created by Terraform, never by this chart) with keys endpoint/username/
+  # password: the Grafana Cloud OTLP gateway the in-namespace Alloy forwards to.
+  grafanaOtlp: touchline-grafana-otlp
+  # -- Existing Secret with keys endpoint/tenant_id/token for the Grafana AI Observability SDK.
+  agento11y: touchline-agento11y
+  # -- Existing Secret with key collector_url (empty when frontend observability is off).
+  faro: touchline-faro
+  # -- Optional existing Secret (keys grafana_url, token) so the experiments job can publish or
+  # read the stored test suite through the Grafana control plane (AGENTO11Y_GRAFANA_URL /
+  # AGENTO11Y_SERVICE_ACCOUNT_TOKEN). Empty string omits both env vars; the experiment runner still
+  # records trial results with the agento11y ingest token in the agento11y secret above.
+  experiments: ""
+
+aws:
+  region: eu-west-1
+
+# -- Recorded as AGENT_VERSION on every agent, the load generator and the experiments job. The
+# experiments runner computes each prompt variant's version independently in its own process and
+# the orchestrator's process (variantVersion() hashes the variant file plus AGENT_VERSION), so the
+# two must agree or the runner's variant-version check fails every trial.
+agentVersion: v1
+
+# -- One entry per in-app agent. Each becomes a Deployment + ClusterIP Service named
+# "<nameOverride>-<key>". modelProfileArn is the per-team Bedrock application inference profile
+# ARN Terraform copies for that agent's team; modelKey/modelName become MODEL_KEY/MODEL_NAME (the
+# app normalises a raw Bedrock model/profile id such as "eu.anthropic.claude-haiku-4-5-20251001-v1:0"
+# to "claude-haiku-4-5" for the recorded gen_ai model name); team is carried through as an env var
+# and label only (Terraform, not this chart, decides which profile belongs to which team).
+agents:
+  orchestrator:
+    modelProfileArn: ""
+    modelKey: sonnet
+    modelName: ""
+    team: platform
+    # -- Extra Bedrock profiles the orchestrator can route to per-request via the x-agent-model
+    # header (used by the model-comparison experiments). Map key -> {arn, name}; rendered as the
+    # MODEL_PROFILES env var (compact JSON). Empty map means single-model routing only (the
+    # modelProfileArn/modelKey/modelName above still apply as the default profile).
+    modelProfiles: {}
+  news:
+    modelProfileArn: ""
+    modelKey: haiku
+    modelName: ""
+    team: newsroom
+  odds:
+    modelProfileArn: ""
+    modelKey: haiku
+    modelName: ""
+    team: trading
+  editorial:
+    modelProfileArn: ""
+    modelKey: sonnet
+    modelName: ""
+    team: newsroom
+  compliance:
+    modelProfileArn: ""
+    modelKey: haiku
+    modelName: ""
+    team: platform
+
+# -- Resource requests/limits shared by all 5 agent Deployments.
+agentResources:
+  requests:
+    cpu: 50m
+    memory: 256Mi
+  limits:
+    memory: 512Mi
+
+# -- Sets AGENTO11Y_CONTENT_CAPTURE_MODE (full/none) on the agents, loadgen and experiments, and
+# CONTENT_CAPTURE (true/false) on every app container. See docs/security.md: this captures prompt
+# and completion text in telemetry when true.
+contentCapture: true
+
+# -- Master switch plus rates for synthetic traffic generated inside the cluster (the site load
+# generator and the experiments schedule). The agent-host developer traffic has its own switch
+# (agent-host/, not this chart).
+traffic:
+  enabled: true
+  siteRequestsPerMinute: 2
+  experimentsSchedule: "17 */2 * * *"
+
+loadgen:
+  # -- Estimated Bedrock spend cap per UTC day (dailyBudgetUsd in the rate file); the load
+  # generator itself caps this at 30 USD/day regardless of what is configured here.
+  dailyBudgetUsd: 5
+  persistence:
+    # -- false mounts an emptyDir at LOADGEN_STATE_DIR instead of a PVC (Auto Mode clusters have
+    # no default StorageClass); the spend ledger resets on pod restart.
+    enabled: false
+    size: 1Gi
+    # -- Empty string uses the cluster's default StorageClass.
+    storageClassName: ""
+  resources:
+    requests:
+      cpu: 25m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
+
+# -- Optional synthetic headless-browser reader CronJob (site-browser image): one real Chromium
+# page load per run against the site, so Frontend Observability gets page loads, web vitals and
+# browser-to-backend traces with no human visitor. Shares the traffic.enabled switch (suspended,
+# not removed, when traffic is off).
+siteBrowser:
+  enabled: true
+  schedule: "*/10 * * * *"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+experiments:
+  # -- Comma-separated variant ids passed to the scheduled experiment run.
+  variantIds: "brief,balanced,contextual"
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
+site:
+  # -- null keeps the site ClusterIP-only (see NOTES.txt for port-forward). Set to expose it:
+  # { className: nginx, host: touchline.example.com, annotations: {} }
+  ingress: null
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
+redis:
+  image:
+    repository: redis
+    tag: "7.4.6"
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      memory: 128Mi
+
+alloy:
+  # -- Runs an in-namespace Grafana Alloy that receives OTLP from every app above (gRPC 4317 /
+  # HTTP 4318), adds Kubernetes resource attributes, and forwards metrics/logs/traces to the
+  # grafanaOtlp secret's endpoint. false leaves the apps sending OTLP nowhere (no collector
+  # Service exists), for consumers who already run a cluster-wide collector; point
+  # OTEL_EXPORTER_OTLP_ENDPOINT at it yourself in that case (not currently a chart value).
+  enabled: true
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi

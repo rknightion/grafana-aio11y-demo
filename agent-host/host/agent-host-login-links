@@ -1,0 +1,9 @@
+#!/bin/bash
+# Manual sign-in fallback: print every developer's gateway verification link and wait for
+# the sign-ins (the login bot's lock is shared, so this waits for a bot run in progress).
+set -Eeuo pipefail
+mapfile -t devs < <(docker ps --filter label=agent-host.role=developer --format '{{.Names}}' | sort)
+for c in "${devs[@]}"; do
+  docker exec "$c" dev-login-link "$@" &
+done
+wait

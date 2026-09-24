@@ -1,0 +1,4 @@
+team: trading
+title: Metro Rockets v Summit Hawks best price CSV
+---
+Pro Basketball League preseason opener, Metro Rockets v Summit Hawks, need a quick price comparison for the moneyline (home/away, no draw obviously). Write a small python3 script that calls the odds tool for that fixture and dumps a CSV with columns bookmaker, home_price, away_price, plus a summary row at the bottom showing the best home price and best away price and which book has each. Save the CSV as rockets-hawks-odds.csv in the current directory. Keep the script itself too in case we want to reuse it for the other preseason game later. No commits, no pushes, don't wander outside this directory.

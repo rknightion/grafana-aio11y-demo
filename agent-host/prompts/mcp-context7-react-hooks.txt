@@ -1,0 +1,4 @@
+team: newsroom
+title: Explain React useEffect cleanup
+---
+Using the context7 MCP server, pull the React docs on useEffect. Write EFFECTS.md for a junior developer: when cleanup runs, why dependency arrays matter, and one common bug with stale closures. Keep it under 20 lines.

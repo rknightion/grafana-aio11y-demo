@@ -1,0 +1,17 @@
+# syntax=docker/dockerfile:1
+# Touchline Times synthetic reader: one headless Chromium session against the site per run
+# (a Kubernetes CronJob). Playwright downloads the headless shell for the build architecture.
+#   docker buildx build --platform linux/amd64,linux/arm64 -f apps/site/Dockerfile.browser apps
+FROM node:22-bookworm-slim
+ENV NODE_ENV=production PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+WORKDIR /app
+COPY site/package.json site/package-lock.json ./
+RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund \
+ && npx playwright install --with-deps --only-shell chromium \
+ && rm -rf node_modules/@opentelemetry node_modules/@grafana node_modules/ioredis \
+ && npm cache clean --force \
+ && rm -rf /var/lib/apt/lists/* \
+ && chmod -R a+rX /ms-playwright
+COPY site/src/browser.mjs site/src/config.mjs ./src/
+USER node
+CMD ["node", "src/browser.mjs"]

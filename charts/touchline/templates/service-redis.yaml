@@ -1,0 +1,18 @@
+{{- $name := printf "%s-redis" (include "touchline.prefix" .) }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "touchline.labels" . | nindent 4 }}
+    {{- include "touchline.selectorLabels" $name | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "touchline.selectorLabels" $name | nindent 4 }}
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: redis
+      protocol: TCP

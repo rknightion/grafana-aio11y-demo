@@ -1,0 +1,177 @@
+# Grafana-managed alert rules for the demo, rendered by grafana-rules.tf with templatefile().
+# Each rule: uid suffix, title, datasource (prom | logs | spend), query, lookback seconds (range,
+# default 600), threshold (op gt unless set), pending period, severity, the dashboard it links to.
+# The first three fire on their own in a healthy running demo; the rest are realistic thresholds
+# that should stay quiet. A literal dollar-brace must be written with a doubled dollar.
+
+- uid: al-guard-deny
+  title: Guard denied a Claude Code prompt
+  datasource: prom
+  expr: |-
+    sum by (rule_id) (increase(agento11y_hook_rule_outcomes_total{rule_id=~"${rule_re}", outcome="deny"}[30m])) or sum by (rule_id) (agento11y_hook_rule_outcomes_total{rule_id=~"${rule_re}", outcome="deny"} unless agento11y_hook_rule_outcomes_total{rule_id=~"${rule_re}", outcome="deny"} offset 30m)
+  threshold: 0
+  severity: warning
+  dashboard: claude-code
+  summary: "Guard {{ $labels.rule_id }} denied {{ humanize $values.A.Value }} request(s) in the last 30m"
+  description: >-
+    An Agent Observability preflight guard blocked a request. In this demo the scheduled PII probe
+    in the developers' traffic mix trips ${pii_guard} on purpose, so this alert fires unattended.
+
+- uid: al-gw-spend
+  title: Developer gateway spend today above ${spend_fraction_pct}% of the organization daily cap
+  datasource: spend
+  expr: |-
+    SELECT COALESCE(pe.email, s.principal) AS email, s.cents / 100.0 AS value FROM spend s LEFT JOIN principal_emails pe ON pe.principal = s.principal WHERE s.period = to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD')
+  threshold: ${spend_threshold}
+  severity: warning
+  dashboard: gateway
+  summary: "{{ $labels.email }} has $${{ humanize $values.A.Value }} of gateway spend today"
+  description: >-
+    Read straight from the gateway's spend table through the PDC Postgres datasource, the same
+    number the gateway enforces its caps against. The threshold is ${spend_fraction_pct}% of the
+    organization daily cap (USD ${spend_cap_usd}), so steady demo traffic crosses it within hours.
+
+- uid: al-guard
+  title: Guard rule warned or blocked an agent action
+  datasource: prom
+  expr: |-
+    sum by (rule_id, outcome) (increase(agento11y_hook_rule_outcomes_total{rule_id=~"${rule_re}", outcome=~"deny|warn"}[30m])) or sum by (rule_id, outcome) (agento11y_hook_rule_outcomes_total{rule_id=~"${rule_re}", outcome=~"deny|warn"} unless agento11y_hook_rule_outcomes_total{rule_id=~"${rule_re}", outcome=~"deny|warn"} offset 30m)
+  threshold: 0
+  severity: warning
+  dashboard: agents
+  summary: "Guard {{ $labels.rule_id }} returned {{ $labels.outcome }} in the last 30m"
+  description: >-
+    An Agent Observability guard (Claude Code or an in-app agent) flagged or denied a prompt, a tool
+    call or a tool result.
+
+- uid: al-cc-spend-today
+  title: Developer Claude Code spend today above $1
+  datasource: prom
+  expr: |-
+    sum by (user_email) (increase(claude_code_cost_usage_USD_total{service_name="claude-code", service_namespace="${prefix}"}[24h]))
+  threshold: 1
+  severity: warning
+  dashboard: claude-code
+  summary: "{{ $labels.user_email }} has spent $${{ humanize $values.A.Value }} on Claude Code in the last 24h"
+  description: >-
+    Demo threshold: any developer over $1 of Claude Code usage in 24h, from Claude Code's own cost
+    metric. In production this would sit at a per-team budget.
+
+- uid: al-cc-cost-hour
+  title: Claude Code burn rate above $0.25 per hour
+  datasource: prom
+  expr: |-
+    sum by (user_email) (increase(claude_code_cost_usage_USD_total{service_name="claude-code", service_namespace="${prefix}"}[1h]))
+  threshold: 0.25
+  for: 1m
+  severity: warning
+  dashboard: claude-code
+  summary: "{{ $labels.user_email }} burned $${{ humanize $values.A.Value }} of Claude Code in the last hour"
+  description: >-
+    Short-window cost burn per developer. Catches runaway agent loops and subagent fan-out before
+    the daily budget does.
+
+- uid: al-gw-errors
+  title: Claude apps gateway returned inference errors
+  datasource: logs
+  range: 1800
+  expr: |-
+    sum by (model, status) (count_over_time(${gateway_audit} | evt="inference" | status >= 400 [30m]))
+  threshold: 0
+  severity: warning
+  dashboard: gateway
+  summary: "Gateway returned {{ $values.A.Value }} HTTP {{ $labels.status }} responses for {{ $labels.model }} in 30m"
+  description: >-
+    Any non-2xx inference response from the demo gateway, from the gateway audit log in Loki.
+
+- uid: al-cc-edit-reject
+  title: Claude Code edit rejected by a developer
+  datasource: prom
+  expr: |-
+    sum by (user_email, tool_name) (increase(claude_code_code_edit_tool_decision_total{service_name="claude-code", service_namespace="${prefix}", decision="reject"}[1h]))
+  threshold: 0
+  severity: info
+  dashboard: claude-code
+  summary: "{{ $labels.user_email }} rejected {{ $labels.tool_name }} edits proposed by Claude Code"
+  description: >-
+    Rejected edits are a quality signal: the agent proposed changes a human refused.
+
+- uid: al-bedrock-throttle
+  title: Bedrock throttling requests
+  datasource: prom
+  expr: |-
+    sum by (dimension_ModelId) (sum_over_time(aws_bedrock_invocation_throttles_sum{dimension_ModelId!=""}[15m]))
+  threshold: 0
+  severity: warning
+  dashboard: bedrock
+  summary: "Bedrock throttled {{ $values.A.Value }} invocations for {{ $labels.dimension_ModelId }} in 15m"
+  description: >-
+    Any Bedrock throttle means a TPM or RPM quota is binding. Request a quota increase or spread
+    load across inference profiles.
+
+- uid: al-bedrock-5xx
+  title: Bedrock server errors
+  datasource: prom
+  expr: |-
+    sum by (dimension_ModelId) (sum_over_time(aws_bedrock_invocation_server_errors_sum{dimension_ModelId!=""}[15m]))
+  threshold: 0
+  for: 1m
+  severity: critical
+  dashboard: bedrock
+  summary: "Bedrock returned {{ $values.A.Value }} server errors for {{ $labels.dimension_ModelId }} in 15m"
+  description: >-
+    Server-side Bedrock failures (5xx) from the AWS/Bedrock metric stream. Usually an AWS regional
+    issue; check the AWS Health dashboard.
+
+- uid: al-bedrock-latency
+  title: Bedrock invocation latency above 30s
+  datasource: prom
+  expr: |-
+    avg by (dimension_ModelId) (avg_over_time(aws_bedrock_invocation_latency_average{dimension_ModelId!=""}[15m]))
+  threshold: 30000
+  for: 5m
+  severity: warning
+  dashboard: bedrock
+  summary: "Bedrock average latency {{ humanize $values.A.Value }}ms for {{ $labels.dimension_ModelId }}"
+  description: >-
+    Average Bedrock invocation latency over 15m. Realistic threshold, expected to stay normal.
+
+- uid: al-gw-ratio
+  title: Gateway error ratio above 20%
+  datasource: logs
+  range: 900
+  expr: |-
+    (sum by (model) (count_over_time(${gateway_audit} | evt="inference" | status >= 400 [15m])) or (0 * sum by (model) (count_over_time(${gateway_audit} | evt="inference" [15m])))) / sum by (model) (count_over_time(${gateway_audit} | evt="inference" [15m]))
+  threshold: 0.2
+  for: 5m
+  severity: critical
+  dashboard: gateway
+  summary: "{{ $labels.model }} gateway error ratio is {{ humanizePercentage $values.A.Value }}"
+  description: >-
+    Sustained share of failed inference requests through the gateway. Realistic SLO-style threshold.
+
+- uid: al-gw-p95
+  title: Gateway p95 latency above 60s
+  datasource: logs
+  expr: |-
+    quantile_over_time(0.95, ${gateway_audit} | evt="inference" | unwrap ms [10m]) by (model)
+  threshold: 60000
+  for: 5m
+  severity: warning
+  dashboard: gateway
+  summary: "{{ $labels.model }} p95 gateway latency is {{ humanize $values.A.Value }}ms"
+  description: >-
+    End-to-end latency through the demo gateway including Bedrock. Realistic threshold.
+
+- uid: al-agents-cost
+  title: In-app agent cost above $2 per hour
+  datasource: prom
+  expr: |-
+    sum by (gen_ai_agent_name) (increase(agento11y_generation_cost_usd_total{gen_ai_agent_name=~"${agents_re}"}[1h]))
+  threshold: 2
+  for: 5m
+  severity: warning
+  dashboard: agents
+  summary: "{{ $labels.gen_ai_agent_name }} cost $${{ humanize $values.A.Value }} in the last hour"
+  description: >-
+    Per-agent LLM cost for the in-app agents. Realistic ceiling, expected to stay normal.

@@ -1,0 +1,81 @@
+#!/bin/bash
+# Fetch the agent-host secret, render the compose project and reconcile it. Run as root by
+# agent-host.service at every boot, by agent-host-refresh.timer every 5 minutes with --refresh,
+# and safe to run by hand.
+#
+#   agent-host-up            always render and `docker compose up`
+#   agent-host-up --refresh  only when the secret (credentials or its `config` knobs) changed
+#
+# Compose recreates only the services whose rendered inputs changed (render.py labels each
+# service with a hash of what it mounts). Images are pulled only when missing, so a mutable tag
+# is never silently re-pulled.
+set -Eeuo pipefail
+umask 077
+
+H=/etc/agent-host
+STATE=/var/lib/agent-host
+vars=$H/host.json
+refresh=0
+[[ "${1:-}" == "--refresh" ]] && refresh=1
+
+log() { echo "agent-host-up: $*" >&2; }
+
+mkdir -p "$STATE"
+exec 9>"$STATE/lock"
+if ((refresh)); then
+  flock -n 9 || { log "another run holds the lock; skipping this refresh"; exit 0; }
+else
+  flock 9
+fi
+
+region=$(jq -r .aws_region "$vars")
+secret_arn=$(jq -r .secret_arn "$vars")
+registry=$(jq -r .images_registry "$vars")
+
+retry() {
+  local n=0 max=$1
+  shift
+  until "$@"; do
+    n=$((n + 1))
+    if ((n >= max)); then log "giving up on: $*"; return 1; fi
+    log "retry $n: $*"
+    sleep 15
+  done
+}
+
+# Fail closed: no container starts unless the dev/pdc network isolation is in place.
+/usr/local/sbin/agent-host-firewall
+
+fetch() {
+  secret=$(aws secretsmanager get-secret-value --region "$region" --secret-id "$secret_arn" \
+    --query SecretString --output text)
+}
+if ((refresh)); then retry 2 fetch; else retry 20 fetch; fi
+
+sum=$(printf '%s' "$secret" | sha256sum | cut -d' ' -f1)
+if ((refresh)) && [[ -s "$STATE/secret.sha256" && "$(cat "$STATE/secret.sha256")" == "$sum" ]]; then
+  exit 0
+fi
+((refresh)) && log "agent-host secret changed; re-rendering"
+
+printf '%s' "$secret" | /usr/bin/python3 /opt/agent-host/render/render.py \
+  --vars "$vars" --secret-stdin --out "$H"
+unset secret
+
+if [[ "$registry" == *.dkr.ecr.*.amazonaws.com* ]]; then
+  ecr_login() {
+    aws ecr get-login-password --region "$region" \
+      | docker login --username AWS --password-stdin "$(cut -d/ -f1 <<<"$registry")"
+  }
+  retry 20 ecr_login
+fi
+
+compose=(docker compose -f "$H/compose.yaml")
+retry 20 "${compose[@]}" pull --quiet --policy missing
+"${compose[@]}" up -d --remove-orphans --pull never
+"${compose[@]}" ps
+# Record what is running, by digest, for the journal.
+"${compose[@]}" images --format json 2>/dev/null \
+  | jq -r '.[]? | "\(.Repository):\(.Tag) \(.ID)"' | sort -u | sed 's/^/agent-host-up: image /' >&2 || true
+
+echo "$sum" >"$STATE/secret.sha256"

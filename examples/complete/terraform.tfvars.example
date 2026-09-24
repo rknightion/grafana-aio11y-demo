@@ -1,0 +1,25 @@
+# Copy to terraform.tfvars (gitignored) and fill in. Never commit the real file.
+
+aws_region   = "eu-west-1"
+cluster_name = "touchline"
+
+# From examples/eks-auto-mode: tofu -chdir=../eks-auto-mode output -raw agent_host_subnet_id
+agent_host_subnet_id = "subnet-0123456789abcdef0"
+
+grafana_cloud_stack_slug = "your-stack"
+grafana_stack_url        = "https://your-stack.grafana.net"
+
+# Tokens: prefer TF_VAR_grafana_cloud_access_policy_token and friends in your shell over this file.
+grafana_cloud_access_policy_token      = "REPLACE_ME"
+grafana_frontend_o11y_api_access_token = "REPLACE_ME"
+grafana_stack_service_account_token    = "REPLACE_ME"
+
+# traffic_enabled                    = true
+# deploy_workloads                   = true
+# bedrock_invocation_logging_enabled = false
+# manage_app_observability           = false
+
+# bedrock_models = {
+#   haiku  = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
+#   sonnet = "us.anthropic.claude-sonnet-4-6"
+# }

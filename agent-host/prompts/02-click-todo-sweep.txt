@@ -1,0 +1,4 @@
+team: trading
+title: Sweep click for TODO/FIXME
+---
+Grab https://github.com/pallets/click (depth 1) and grep the whole src/ tree for TODO, FIXME, and XXX markers. Summarise what you find in a short list - file, line, and a one-sentence guess at what still needs doing. If there's nothing juicy just say so honestly, don't pad it out to look useful. Put the summary in a file called todo-sweep.md next to the clone (current directory, not inside it). Don't edit any files inside the click clone, don't commit, don't push - just reading and grepping. Stay inside the current directory the whole way through.

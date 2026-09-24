@@ -1,0 +1,12 @@
+# Context is apps/: allow only what the agents image needs.
+*
+!agents/package.json
+!agents/package-lock.json
+!agents/.npmrc
+!agents/src
+!agents/experiments
+!agents/config
+!mcp-tools/package.json
+!mcp-tools/src
+**/node_modules
+**/*.test.mjs

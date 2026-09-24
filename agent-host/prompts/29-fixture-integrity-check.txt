@@ -1,0 +1,4 @@
+team: platform
+title: Sanity-check fixture list integrity before deploy
+---
+Before the next site build kicks off I want to make sure the fixture list the build pulls in hasn't got any holes in it. Call the odds tool with no arguments so you get the full fixture listing back, save the raw response to fixtures-raw.json, then write a small python3 script that checks every entry has id, sport, competition, home, away, kickoff and venue all present and non-empty. Grab the current UTC time from the time tool and stamp the report with it, write the result to fixture-check-report.txt with a clear pass or a list of what's missing. Should be quick, maybe 5 minutes of work. Don't commit, don't push, stay in the current directory.

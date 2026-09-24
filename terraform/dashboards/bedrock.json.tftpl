@@ -1,0 +1,1766 @@
+{
+  "apiVersion": "dashboard.grafana.app/v2",
+  "kind": "Dashboard",
+  "metadata": {
+    "name": "${dash_bedrock}"
+  },
+  "spec": {
+    "title": "Observing Bedrock (${prefix})",
+    "description": "What Amazon Bedrock itself records for the demo: invocation logs (opt-in), the app's own OpenTelemetry against the invocation log, and AWS/Bedrock CloudWatch metrics.",
+    "tags": [
+      "${prefix}",
+      "bedrock",
+      "ai-observability"
+    ],
+    "editable": true,
+    "liveNow": false,
+    "preload": false,
+    "cursorSync": "Crosshair",
+    "timeSettings": {
+      "from": "now-3h",
+      "to": "now",
+      "timezone": "browser",
+      "autoRefresh": "1m"
+    },
+    "links": [],
+    "annotations": [],
+    "variables": [],
+    "elements": {
+      "t1-intro": {
+        "kind": "Panel",
+        "spec": {
+          "id": 1,
+          "title": "",
+          "description": "",
+          "links": [],
+          "transparent": true,
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "text",
+            "version": "",
+            "spec": {
+              "options": {
+                "mode": "markdown",
+                "content": "**What Bedrock itself recorded.** When `bedrock_invocation_logging_enabled` is on, every `bedrock-runtime` call in this account and region lands in the Bedrock model invocation log (`${invocation_log_group}`, streamed to Loki by Firehose) with the full prompt, the answer, the token counts and the caller. ${invocation_logging_note} **Attribution:** every in-app agent assumes the same IAM role, so the role alone says nothing. The EKS Pod Identity *session name* carries the pod, so the agent is recoverable, and the **application inference profile** (one per team and model) carries team and model. That is how AWS-side cost gets split per team without a gateway. Logging is account-wide and captures prompt text, so turning it on is a security decision."
+              },
+              "fieldConfig": {
+                "defaults": {},
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "t1-calls": {
+        "kind": "Panel",
+        "spec": {
+          "id": 2,
+          "title": "Invocations",
+          "description": "Rows in the Bedrock invocation log over the dashboard range.",
+          "links": [],
+          "transparent": false,
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "refId": "A",
+                    "hidden": false,
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "${ds_logs}"
+                      },
+                      "spec": {
+                        "expr": "sum(count_over_time(${bedrock_log_selector} [$__range]))",
+                        "queryType": "instant",
+                        "refId": "A"
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "stat",
+            "version": "",
+            "spec": {
+              "options": {
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "colorMode": "background",
+                "graphMode": "none",
+                "justifyMode": "center",
+                "textMode": "value",
+                "orientation": "auto"
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "short",
+                  "color": {
+                    "mode": "fixed",
+                    "fixedColor": "blue"
+                  },
+                  "noValue": "0"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "t1-in": {
+        "kind": "Panel",
+        "spec": {
+          "id": 3,
+          "title": "Input tokens",
+          "description": "inputTokenCount summed over the range.",
+          "links": [],
+          "transparent": false,
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "refId": "A",
+                    "hidden": false,
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "${ds_logs}"
+                      },
+                      "spec": {
+                        "expr": "sum(sum_over_time(${bedrock_log_selector} | json pid=\"modelId\", itok=\"input.inputTokenCount\", otok=\"output.outputTokenCount\", lat=\"output.outputBodyJson.metrics.latencyMs\", region=\"inferenceRegion\", caller=\"identity.arn\", stop=\"output.outputBodyJson.stopReason\", op=\"operation\" | label_format pid=`{{ regexReplaceAll \".*/\" .pid \"\" }}`, agent=`{{ regexReplaceAll \"${agent_caller_re}\" .caller \"$${1}\" }}` | label_format profile=`${profile_chain}` | unwrap itok [$__range]))",
+                        "queryType": "instant",
+                        "refId": "A"
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "stat",
+            "version": "",
+            "spec": {
+              "options": {
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "colorMode": "background",
+                "graphMode": "none",
+                "justifyMode": "center",
+                "textMode": "value",
+                "orientation": "auto"
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "short",
+                  "color": {
+                    "mode": "fixed",
+                    "fixedColor": "purple"
+                  },
+                  "noValue": "0"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "t1-out": {
+        "kind": "Panel",
+        "spec": {
+          "id": 4,
+          "title": "Output tokens",
+          "description": "outputTokenCount summed over the range.",
+          "links": [],
+          "transparent": false,
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "refId": "A",
+                    "hidden": false,
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "${ds_logs}"
+                      },
+                      "spec": {
+                        "expr": "sum(sum_over_time(${bedrock_log_selector} | json pid=\"modelId\", itok=\"input.inputTokenCount\", otok=\"output.outputTokenCount\", lat=\"output.outputBodyJson.metrics.latencyMs\", region=\"inferenceRegion\", caller=\"identity.arn\", stop=\"output.outputBodyJson.stopReason\", op=\"operation\" | label_format pid=`{{ regexReplaceAll \".*/\" .pid \"\" }}`, agent=`{{ regexReplaceAll \"${agent_caller_re}\" .caller \"$${1}\" }}` | label_format profile=`${profile_chain}` | unwrap otok [$__range]))",
+                        "queryType": "instant",
+                        "refId": "A"
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "stat",
+            "version": "",
+            "spec": {
+              "options": {
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "colorMode": "background",
+                "graphMode": "none",
+                "justifyMode": "center",
+                "textMode": "value",
+                "orientation": "auto"
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "short",
+                  "color": {
+                    "mode": "fixed",
+                    "fixedColor": "orange"
+                  },
+                  "noValue": "0"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "t1-p95": {
+        "kind": "Panel",
+        "spec": {
+          "id": 5,
+          "title": "Model latency p95",
+          "description": "output.metrics.latencyMs as Bedrock reports it, all profiles.",
+          "links": [],
+          "transparent": false,
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "refId": "A",
+                    "hidden": false,
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "${ds_logs}"
+                      },
+                      "spec": {
+                        "expr": "quantile_over_time(0.95, ${bedrock_log_selector} | json pid=\"modelId\", itok=\"input.inputTokenCount\", otok=\"output.outputTokenCount\", lat=\"output.outputBodyJson.metrics.latencyMs\", region=\"inferenceRegion\", caller=\"identity.arn\", stop=\"output.outputBodyJson.stopReason\", op=\"operation\" | label_format pid=`{{ regexReplaceAll \".*/\" .pid \"\" }}`, agent=`{{ regexReplaceAll \"${agent_caller_re}\" .caller \"$${1}\" }}` | label_format profile=`${profile_chain}` | unwrap lat [$__range]) by ()",
+                        "queryType": "instant",
+                        "refId": "A"
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "stat",
+            "version": "",
+            "spec": {
+              "options": {
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                },
+                "colorMode": "background",
+                "graphMode": "none",
+                "justifyMode": "center",
+                "textMode": "value",
+                "orientation": "auto"
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "ms",
+                  "color": {
+                    "mode": "fixed",
+                    "fixedColor": "green"
+                  },
+                  "noValue": "-"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "t1-by-profile": {
+        "kind": "Panel",
+        "spec": {
+          "id": 6,
+          "title": "Calls by team / model (inference profile)",
+          "description": "Application inference profile id mapped to team and model.",
+          "links": [],
+          "transparent": false,
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "refId": "A",
+                    "hidden": false,
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "${ds_logs}"
+                      },
+                      "spec": {
+                        "expr": "sum by (profile) (count_over_time(${bedrock_log_selector} | json pid=\"modelId\", itok=\"input.inputTokenCount\", otok=\"output.outputTokenCount\", lat=\"output.outputBodyJson.metrics.latencyMs\", region=\"inferenceRegion\", caller=\"identity.arn\", stop=\"output.outputBodyJson.stopReason\", op=\"operation\" | label_format pid=`{{ regexReplaceAll \".*/\" .pid \"\" }}`, agent=`{{ regexReplaceAll \"${agent_caller_re}\" .caller \"$${1}\" }}` | label_format profile=`${profile_chain}` [$__interval]))",
+                        "queryType": "range",
+                        "refId": "A",
+                        "legendFormat": "{{profile}}"
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "",
+            "spec": {
+              "options": {
+                "legend": {
+                  "displayMode": "table",
+                  "placement": "right",
+                  "calcs": [
+                    "sum"
+                  ]
+                },
+                "tooltip": {
+                  "mode": "multi",
+                  "sort": "desc"
+                }
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "short",
+                  "custom": {
+                    "drawStyle": "bars",
+                    "stacking": {
+                      "mode": "normal"
+                    },
+                    "fillOpacity": 80
+                  }
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "t1-tokens": {
+        "kind": "Panel",
+        "spec": {
+          "id": 7,
+          "title": "Tokens by team / model",
+          "description": "Input + output tokens per profile.",
+          "links": [],
+          "transparent": false,
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "refId": "A",
+                    "hidden": false,
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "${ds_logs}"
+                      },
+                      "spec": {
+                        "expr": "sum by (profile) (sum_over_time(${bedrock_log_selector} | json pid=\"modelId\", itok=\"input.inputTokenCount\", otok=\"output.outputTokenCount\", lat=\"output.outputBodyJson.metrics.latencyMs\", region=\"inferenceRegion\", caller=\"identity.arn\", stop=\"output.outputBodyJson.stopReason\", op=\"operation\" | label_format pid=`{{ regexReplaceAll \".*/\" .pid \"\" }}`, agent=`{{ regexReplaceAll \"${agent_caller_re}\" .caller \"$${1}\" }}` | label_format profile=`${profile_chain}` | unwrap itok [$__interval]))",
+                        "queryType": "range",
+                        "refId": "A",
+                        "legendFormat": "{{profile}} in"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "refId": "B",
+                    "hidden": false,
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "${ds_logs}"
+                      },
+                      "spec": {
+                        "expr": "sum by (profile) (sum_over_time(${bedrock_log_selector} | json pid=\"modelId\", itok=\"input.inputTokenCount\", otok=\"output.outputTokenCount\", lat=\"output.outputBodyJson.metrics.latencyMs\", region=\"inferenceRegion\", caller=\"identity.arn\", stop=\"output.outputBodyJson.stopReason\", op=\"operation\" | label_format pid=`{{ regexReplaceAll \".*/\" .pid \"\" }}`, agent=`{{ regexReplaceAll \"${agent_caller_re}\" .caller \"$${1}\" }}` | label_format profile=`${profile_chain}` | unwrap otok [$__interval]))",
+                        "queryType": "range",
+                        "refId": "B",
+                        "legendFormat": "{{profile}} out"
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "",
+            "spec": {
+              "options": {
+                "legend": {
+                  "displayMode": "table",
+                  "placement": "right",
+                  "calcs": [
+                    "sum"
+                  ]
+                },
+                "tooltip": {
+                  "mode": "multi",
+                  "sort": "desc"
+                }
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "short"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "t1-lat": {
+        "kind": "Panel",
+        "spec": {
+          "id": 8,
+          "title": "Latency p95 by team / model",
+          "description": "Bedrock-reported model latency.",
+          "links": [],
+          "transparent": false,
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "refId": "A",
+                    "hidden": false,
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "${ds_logs}"
+                      },
+                      "spec": {
+                        "expr": "quantile_over_time(0.95, ${bedrock_log_selector} | json pid=\"modelId\", itok=\"input.inputTokenCount\", otok=\"output.outputTokenCount\", lat=\"output.outputBodyJson.metrics.latencyMs\", region=\"inferenceRegion\", caller=\"identity.arn\", stop=\"output.outputBodyJson.stopReason\", op=\"operation\" | label_format pid=`{{ regexReplaceAll \".*/\" .pid \"\" }}`, agent=`{{ regexReplaceAll \"${agent_caller_re}\" .caller \"$${1}\" }}` | label_format profile=`${profile_chain}` | unwrap lat [15m]) by (profile)",
+                        "queryType": "range",
+                        "refId": "A",
+                        "legendFormat": "{{profile}}"
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "",
+            "spec": {
+              "options": {
+                "legend": {
+                  "displayMode": "table",
+                  "placement": "right",
+                  "calcs": [
+                    "mean",
+                    "max"
+                  ]
+                },
+                "tooltip": {
+                  "mode": "multi",
+                  "sort": "desc"
+                }
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "ms"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "t1-region": {
+        "kind": "Panel",
+        "spec": {
+          "id": 9,
+          "title": "Where the call actually ran",
+          "description": "inferenceRegion. The app calls eu-west-1, but the EU cross-region inference profile served it elsewhere in the EU. Data residency is EU, not Ireland.",
+          "links": [],
+          "transparent": false,
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "refId": "A",
+                    "hidden": false,
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "${ds_logs}"
+                      },
+                      "spec": {
+                        "expr": "sum by (region) (count_over_time(${bedrock_log_selector} | json pid=\"modelId\", itok=\"input.inputTokenCount\", otok=\"output.outputTokenCount\", lat=\"output.outputBodyJson.metrics.latencyMs\", region=\"inferenceRegion\", caller=\"identity.arn\", stop=\"output.outputBodyJson.stopReason\", op=\"operation\" | label_format pid=`{{ regexReplaceAll \".*/\" .pid \"\" }}`, agent=`{{ regexReplaceAll \"${agent_caller_re}\" .caller \"$${1}\" }}` | label_format profile=`${profile_chain}` [$__range]))",
+                        "queryType": "instant",
+                        "refId": "A",
+                        "legendFormat": "{{region}}"
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "piechart",
+            "version": "",
+            "spec": {
+              "options": {
+                "legend": {
+                  "displayMode": "table",
+                  "placement": "right",
+                  "values": [
+                    "value",
+                    "percent"
+                  ]
+                },
+                "pieType": "donut",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                }
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "short"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "t1-caller": {
+        "kind": "Panel",
+        "spec": {
+          "id": 10,
+          "title": "Which agent called, and as which team / model",
+          "description": "identity.arn: all in-app agents assume ONE IAM role through EKS Pod Identity; the role session name carries the pod, so the agent is recoverable. Team and model come from the application inference profile.",
+          "links": [],
+          "transparent": false,
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "refId": "A",
+                    "hidden": false,
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "${ds_logs}"
+                      },
+                      "spec": {
+                        "expr": "sum by (agent, profile) (count_over_time(${bedrock_log_selector} | json pid=\"modelId\", itok=\"input.inputTokenCount\", otok=\"output.outputTokenCount\", lat=\"output.outputBodyJson.metrics.latencyMs\", region=\"inferenceRegion\", caller=\"identity.arn\", stop=\"output.outputBodyJson.stopReason\", op=\"operation\" | label_format pid=`{{ regexReplaceAll \".*/\" .pid \"\" }}`, agent=`{{ regexReplaceAll \"${agent_caller_re}\" .caller \"$${1}\" }}` | label_format profile=`${profile_chain}` [$__range]))",
+                        "queryType": "instant",
+                        "refId": "A"
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [
+                {
+                  "id": "reduce",
+                  "options": {
+                    "reducers": [
+                      "lastNotNull"
+                    ],
+                    "labelsToFields": true
+                  }
+                }
+              ],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "table",
+            "version": "",
+            "spec": {
+              "options": {
+                "showHeader": true
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "short"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "t1-stop": {
+        "kind": "Panel",
+        "spec": {
+          "id": 11,
+          "title": "Stop reasons",
+          "description": "output.stopReason. max_tokens would mean truncated answers.",
+          "links": [],
+          "transparent": false,
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "refId": "A",
+                    "hidden": false,
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "${ds_logs}"
+                      },
+                      "spec": {
+                        "expr": "sum by (stop) (count_over_time(${bedrock_log_selector} | json pid=\"modelId\", itok=\"input.inputTokenCount\", otok=\"output.outputTokenCount\", lat=\"output.outputBodyJson.metrics.latencyMs\", region=\"inferenceRegion\", caller=\"identity.arn\", stop=\"output.outputBodyJson.stopReason\", op=\"operation\" | label_format pid=`{{ regexReplaceAll \".*/\" .pid \"\" }}`, agent=`{{ regexReplaceAll \"${agent_caller_re}\" .caller \"$${1}\" }}` | label_format profile=`${profile_chain}` [$__range]))",
+                        "queryType": "instant",
+                        "refId": "A",
+                        "legendFormat": "{{stop}}"
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "piechart",
+            "version": "",
+            "spec": {
+              "options": {
+                "legend": {
+                  "displayMode": "table",
+                  "placement": "right",
+                  "values": [
+                    "value",
+                    "percent"
+                  ]
+                },
+                "pieType": "donut",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                }
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "short"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "t1-logs": {
+        "kind": "Panel",
+        "spec": {
+          "id": 12,
+          "title": "Recent invocations with prompt and answer",
+          "description": "The content boundary: this is the prompt text Bedrock logged.",
+          "links": [],
+          "transparent": false,
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "refId": "A",
+                    "hidden": false,
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "${ds_logs}"
+                      },
+                      "spec": {
+                        "expr": "${bedrock_log_selector} | json pid=\"modelId\", q=\"input.inputBodyJson.messages[0].content[0].text\", a=\"output.outputBodyJson.output.message.content[0].text\", itok=\"input.inputTokenCount\", otok=\"output.outputTokenCount\", region=\"inferenceRegion\" | label_format pid=`{{ regexReplaceAll \".*/\" .pid \"\" }}` | label_format profile=`${profile_chain}` | line_format `[{{.profile}} | {{.region}} | {{.itok}} in / {{.otok}} out]  Q: {{.q}}  A: {{.a}}`",
+                        "queryType": "range",
+                        "refId": "A"
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "logs",
+            "version": "",
+            "spec": {
+              "options": {
+                "showTime": true,
+                "wrapLogMessage": true,
+                "sortOrder": "Descending",
+                "enableLogDetails": true,
+                "dedupStrategy": "none"
+              },
+              "fieldConfig": {
+                "defaults": {},
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "t2-intro": {
+        "kind": "Panel",
+        "spec": {
+          "id": 13,
+          "title": "",
+          "description": "",
+          "links": [],
+          "transparent": true,
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "text",
+            "version": "",
+            "spec": {
+              "options": {
+                "mode": "markdown",
+                "content": "**Two views of the same calls.** The left panel is what the *application* recorded through OpenTelemetry for every agent; the right is what *Bedrock's invocation log* recorded, per team and model. They should agree on volume. Bedrock sees tokens, latency, region and prompt text, but not the conversation, the agent's tool calls or the evaluation scores: those only exist in the app's own telemetry and Agent Observability."
+              },
+              "fieldConfig": {
+                "defaults": {},
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "t2-app": {
+        "kind": "Panel",
+        "spec": {
+          "id": 14,
+          "title": "Generations the app recorded (OTel, per agent)",
+          "description": "gen_ai_client_operation_duration_seconds_count by service over the range.",
+          "links": [],
+          "transparent": false,
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "refId": "A",
+                    "hidden": false,
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "${ds_prom}"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "round(sum by (service_name) (increase(gen_ai_client_operation_duration_seconds_count{service_namespace=\"${prefix}\"}[$__range])))",
+                        "range": false,
+                        "instant": true,
+                        "refId": "A",
+                        "legendFormat": "{{service_name}}"
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "bargauge",
+            "version": "",
+            "spec": {
+              "options": {
+                "orientation": "horizontal",
+                "displayMode": "basic",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                }
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "short"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "t2-bedrock": {
+        "kind": "Panel",
+        "spec": {
+          "id": 15,
+          "title": "Rows Bedrock logged (per team / model)",
+          "description": "Invocation-log rows by application inference profile over the range.",
+          "links": [],
+          "transparent": false,
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "refId": "A",
+                    "hidden": false,
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "loki",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "${ds_logs}"
+                      },
+                      "spec": {
+                        "expr": "sum by (profile) (count_over_time(${bedrock_log_selector} | json pid=\"modelId\", itok=\"input.inputTokenCount\", otok=\"output.outputTokenCount\", lat=\"output.outputBodyJson.metrics.latencyMs\", region=\"inferenceRegion\", caller=\"identity.arn\", stop=\"output.outputBodyJson.stopReason\", op=\"operation\" | label_format pid=`{{ regexReplaceAll \".*/\" .pid \"\" }}`, agent=`{{ regexReplaceAll \"${agent_caller_re}\" .caller \"$${1}\" }}` | label_format profile=`${profile_chain}` [$__range]))",
+                        "queryType": "instant",
+                        "refId": "A",
+                        "legendFormat": "{{profile}}"
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "bargauge",
+            "version": "",
+            "spec": {
+              "options": {
+                "orientation": "horizontal",
+                "displayMode": "basic",
+                "reduceOptions": {
+                  "calcs": [
+                    "lastNotNull"
+                  ],
+                  "fields": "",
+                  "values": false
+                }
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "short"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "t3-intro": {
+        "kind": "Panel",
+        "spec": {
+          "id": 16,
+          "title": "",
+          "description": "",
+          "links": [],
+          "transparent": true,
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "text",
+            "version": "",
+            "spec": {
+              "options": {
+                "mode": "markdown",
+                "content": "**AWS/Bedrock CloudWatch metrics**, streamed into this stack by a CloudWatch metric stream (`${metric_stream_name}`) when `bedrock_metric_stream_enabled` is on. These are AWS's own per-ModelId counters, covering every API path in the account. Metric-stream `_sum` series are per-period values: this dashboard uses `sum_over_time`, never `rate()`."
+              },
+              "fieldConfig": {
+                "defaults": {},
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "t3-inv": {
+        "kind": "Panel",
+        "spec": {
+          "id": 17,
+          "title": "Invocations by ModelId",
+          "description": "aws_bedrock_invocations_sum.",
+          "links": [],
+          "transparent": false,
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "refId": "A",
+                    "hidden": false,
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "${ds_prom}"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "sum by (dimension_ModelId) (sum_over_time(aws_bedrock_invocations_sum[$__interval]))",
+                        "range": true,
+                        "instant": false,
+                        "refId": "A",
+                        "legendFormat": "{{dimension_ModelId}}"
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "",
+            "spec": {
+              "options": {
+                "legend": {
+                  "displayMode": "table",
+                  "placement": "right",
+                  "calcs": [
+                    "sum"
+                  ]
+                },
+                "tooltip": {
+                  "mode": "multi",
+                  "sort": "desc"
+                }
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "short",
+                  "noValue": "metric stream not yet delivering"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "t3-tok": {
+        "kind": "Panel",
+        "spec": {
+          "id": 18,
+          "title": "Input / output tokens by ModelId",
+          "description": "aws_bedrock_input_token_count_sum and aws_bedrock_output_token_count_sum.",
+          "links": [],
+          "transparent": false,
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "refId": "A",
+                    "hidden": false,
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "${ds_prom}"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "sum by (dimension_ModelId) (sum_over_time(aws_bedrock_input_token_count_sum[$__interval]))",
+                        "range": true,
+                        "instant": false,
+                        "refId": "A",
+                        "legendFormat": "{{dimension_ModelId}} in"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "refId": "B",
+                    "hidden": false,
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "${ds_prom}"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "sum by (dimension_ModelId) (sum_over_time(aws_bedrock_output_token_count_sum[$__interval]))",
+                        "range": true,
+                        "instant": false,
+                        "refId": "B",
+                        "legendFormat": "{{dimension_ModelId}} out"
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "",
+            "spec": {
+              "options": {
+                "legend": {
+                  "displayMode": "table",
+                  "placement": "right",
+                  "calcs": [
+                    "sum"
+                  ]
+                },
+                "tooltip": {
+                  "mode": "multi",
+                  "sort": "desc"
+                }
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "short"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "t3-lat": {
+        "kind": "Panel",
+        "spec": {
+          "id": 19,
+          "title": "Invocation latency (average) by ModelId",
+          "description": "aws_bedrock_invocation_latency_average.",
+          "links": [],
+          "transparent": false,
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "refId": "A",
+                    "hidden": false,
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "${ds_prom}"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "avg by (dimension_ModelId) (aws_bedrock_invocation_latency_average)",
+                        "range": true,
+                        "instant": false,
+                        "refId": "A",
+                        "legendFormat": "{{dimension_ModelId}}"
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "",
+            "spec": {
+              "options": {
+                "legend": {
+                  "displayMode": "table",
+                  "placement": "right",
+                  "calcs": [
+                    "mean",
+                    "max"
+                  ]
+                },
+                "tooltip": {
+                  "mode": "multi",
+                  "sort": "desc"
+                }
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "ms"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "t3-err": {
+        "kind": "Panel",
+        "spec": {
+          "id": 20,
+          "title": "Errors and throttles",
+          "description": "Client errors, server errors and throttles.",
+          "links": [],
+          "transparent": false,
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "refId": "A",
+                    "hidden": false,
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "${ds_prom}"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "sum by (dimension_ModelId) (sum_over_time(aws_bedrock_invocation_client_errors_sum[$__interval]))",
+                        "range": true,
+                        "instant": false,
+                        "refId": "A",
+                        "legendFormat": "{{dimension_ModelId}} client"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "refId": "B",
+                    "hidden": false,
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "${ds_prom}"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "sum by (dimension_ModelId) (sum_over_time(aws_bedrock_invocation_server_errors_sum[$__interval]))",
+                        "range": true,
+                        "instant": false,
+                        "refId": "B",
+                        "legendFormat": "{{dimension_ModelId}} server"
+                      }
+                    }
+                  }
+                },
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "refId": "C",
+                    "hidden": false,
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "${ds_prom}"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "sum by (dimension_ModelId) (sum_over_time(aws_bedrock_invocation_throttles_sum[$__interval]))",
+                        "range": true,
+                        "instant": false,
+                        "refId": "C",
+                        "legendFormat": "{{dimension_ModelId}} throttled"
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "",
+            "spec": {
+              "options": {
+                "legend": {
+                  "displayMode": "table",
+                  "placement": "right",
+                  "calcs": [
+                    "sum"
+                  ]
+                },
+                "tooltip": {
+                  "mode": "multi",
+                  "sort": "desc"
+                }
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "short"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      },
+      "t3-quota": {
+        "kind": "Panel",
+        "spec": {
+          "id": 21,
+          "title": "Estimated TPM quota usage",
+          "description": "aws_bedrock_estimated_tpmquota_usage_sum: how close each model is to its tokens-per-minute quota.",
+          "links": [],
+          "transparent": false,
+          "data": {
+            "kind": "QueryGroup",
+            "spec": {
+              "queries": [
+                {
+                  "kind": "PanelQuery",
+                  "spec": {
+                    "refId": "A",
+                    "hidden": false,
+                    "query": {
+                      "kind": "DataQuery",
+                      "group": "prometheus",
+                      "version": "v0",
+                      "datasource": {
+                        "name": "${ds_prom}"
+                      },
+                      "spec": {
+                        "editorMode": "code",
+                        "expr": "sum by (dimension_ModelId) (sum_over_time({__name__=~\"aws_bedrock_estimated_tpm_?quota_usage_sum\"}[$__interval]))",
+                        "range": true,
+                        "instant": false,
+                        "refId": "A",
+                        "legendFormat": "{{dimension_ModelId}}"
+                      }
+                    }
+                  }
+                }
+              ],
+              "transformations": [],
+              "queryOptions": {}
+            }
+          },
+          "vizConfig": {
+            "kind": "VizConfig",
+            "group": "timeseries",
+            "version": "",
+            "spec": {
+              "options": {
+                "legend": {
+                  "displayMode": "table",
+                  "placement": "right",
+                  "calcs": [
+                    "mean",
+                    "max"
+                  ]
+                },
+                "tooltip": {
+                  "mode": "multi",
+                  "sort": "desc"
+                }
+              },
+              "fieldConfig": {
+                "defaults": {
+                  "unit": "short"
+                },
+                "overrides": []
+              }
+            }
+          }
+        }
+      }
+    },
+    "layout": {
+      "kind": "TabsLayout",
+      "spec": {
+        "tabs": [
+          {
+            "kind": "TabsLayoutTab",
+            "spec": {
+              "title": "What Bedrock saw",
+              "layout": {
+                "kind": "GridLayout",
+                "spec": {
+                  "items": [
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 0,
+                        "y": 0,
+                        "width": 24,
+                        "height": 3,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "t1-intro"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 0,
+                        "y": 3,
+                        "width": 6,
+                        "height": 4,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "t1-calls"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 6,
+                        "y": 3,
+                        "width": 6,
+                        "height": 4,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "t1-in"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 12,
+                        "y": 3,
+                        "width": 6,
+                        "height": 4,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "t1-out"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 18,
+                        "y": 3,
+                        "width": 6,
+                        "height": 4,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "t1-p95"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 0,
+                        "y": 7,
+                        "width": 12,
+                        "height": 8,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "t1-by-profile"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 12,
+                        "y": 7,
+                        "width": 12,
+                        "height": 8,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "t1-tokens"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 0,
+                        "y": 15,
+                        "width": 12,
+                        "height": 8,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "t1-lat"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 12,
+                        "y": 15,
+                        "width": 6,
+                        "height": 8,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "t1-region"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 18,
+                        "y": 15,
+                        "width": 6,
+                        "height": 8,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "t1-stop"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 0,
+                        "y": 23,
+                        "width": 24,
+                        "height": 5,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "t1-caller"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 0,
+                        "y": 28,
+                        "width": 24,
+                        "height": 12,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "t1-logs"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "kind": "TabsLayoutTab",
+            "spec": {
+              "title": "App OpenTelemetry vs Bedrock log",
+              "layout": {
+                "kind": "GridLayout",
+                "spec": {
+                  "items": [
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 0,
+                        "y": 0,
+                        "width": 24,
+                        "height": 4,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "t2-intro"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 0,
+                        "y": 4,
+                        "width": 12,
+                        "height": 9,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "t2-app"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 12,
+                        "y": 4,
+                        "width": 12,
+                        "height": 9,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "t2-bedrock"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "kind": "TabsLayoutTab",
+            "spec": {
+              "title": "CloudWatch metrics",
+              "layout": {
+                "kind": "GridLayout",
+                "spec": {
+                  "items": [
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 0,
+                        "y": 0,
+                        "width": 24,
+                        "height": 3,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "t3-intro"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 0,
+                        "y": 3,
+                        "width": 12,
+                        "height": 8,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "t3-inv"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 12,
+                        "y": 3,
+                        "width": 12,
+                        "height": 8,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "t3-tok"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 0,
+                        "y": 11,
+                        "width": 12,
+                        "height": 8,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "t3-lat"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 12,
+                        "y": 11,
+                        "width": 12,
+                        "height": 8,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "t3-err"
+                        }
+                      }
+                    },
+                    {
+                      "kind": "GridLayoutItem",
+                      "spec": {
+                        "x": 0,
+                        "y": 19,
+                        "width": 24,
+                        "height": 8,
+                        "element": {
+                          "kind": "ElementReference",
+                          "name": "t3-quota"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

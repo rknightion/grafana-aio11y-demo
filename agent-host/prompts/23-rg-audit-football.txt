@@ -1,0 +1,4 @@
+team: platform
+title: 18+/RG line audit on football offers
+---
+Legal asked for a quick spot check. Pull the current affiliate offers for the football market and check every single one has both an 18+ (or min_age: 18) marker and a responsible gambling line in the terms or its own field. Write a short compliance-report.md listing each offer id, the bookmaker, and a pass/fail for the 18+ check and the RG-line check separately. If anything is missing or the wording looks off, call it out clearly at the top of the report so it doesn't get buried. Don't modify the offer data itself, this is read-only reporting. No git commits, no pushes, stay in the current directory, and clean up any scratch files you don't need in the final output.

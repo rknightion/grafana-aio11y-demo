@@ -1,0 +1,4 @@
+team: newsroom
+title: Compare commander.js's lint/TS configs
+---
+Clone https://github.com/tj/commander.js --depth 1. Find the eslint config and the tsconfig(s) in the repo - there might be more than one tsconfig, check the whole tree, not just the root - and write a short comparison of what differs between them: rules or compiler options that diverge, anything that looks inconsistent or surprising for a single project. A few bullet points is enough, put it in config-comparison.md in the current directory. Don't edit any of the actual config files inside the clone, don't commit or push, stay in the current dir the whole time.

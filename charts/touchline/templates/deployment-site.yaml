@@ -1,0 +1,83 @@
+{{- $name := printf "%s-site-api" (include "touchline.prefix" .) }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "touchline.labels" . | nindent 4 }}
+    {{- include "touchline.selectorLabels" $name | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "touchline.selectorLabels" $name | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "touchline.selectorLabels" $name | nindent 8 }}
+    spec:
+      serviceAccountName: {{ .Values.serviceAccounts.site }}
+      automountServiceAccountToken: false
+      {{- if .Values.images.pullSecret }}
+      imagePullSecrets:
+        - name: {{ .Values.images.pullSecret }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: site
+          image: "{{ .Values.images.registry }}/site:{{ .Values.images.tag }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "8080"
+            - name: REDIS_URL
+              value: "redis://{{ include "touchline.prefix" . }}-redis:6379"
+            - name: ORCHESTRATOR_URL
+              value: "http://{{ include "touchline.prefix" . }}-orchestrator:8080"
+            - name: CONTENT_CAPTURE
+              value: {{ .Values.contentCapture | quote }}
+            - name: FARO_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.faro }}
+                  key: collector_url
+                  optional: true
+            - name: OTEL_SERVICE_NAME
+              value: {{ $name }}
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: {{ include "touchline.resourceAttributes" (dict "root" .) }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://{{ include "touchline.prefix" . }}-alloy:4318"
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: http/protobuf
+            - name: OTEL_TRACES_SAMPLER
+              value: always_on
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 15
+          resources:
+            {{- toYaml .Values.site.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 10001
+            capabilities:
+              drop:
+                - ALL

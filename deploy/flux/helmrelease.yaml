@@ -1,0 +1,34 @@
+# Flux HelmRelease for the Touchline Times workloads (charts/touchline).
+#
+# Terraform (deploy_workloads = false) owns the namespace, the Secrets and the Pod Identity
+# association. The values come from a ConfigMap built from the module output:
+#
+#   tofu -chdir=examples/complete output -raw chart_values > touchline-values.yaml
+#   kubectl -n touchline create configmap touchline-values \
+#     --from-file=values.yaml=touchline-values.yaml --dry-run=client -o yaml | kubectl apply -f -
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: touchline
+  namespace: touchline
+spec:
+  interval: 10m
+  releaseName: touchline
+  chart:
+    spec:
+      chart: ./charts/touchline
+      reconcileStrategy: Revision
+      sourceRef:
+        kind: GitRepository
+        name: grafana-aio11y-demo
+        namespace: flux-system
+  valuesFrom:
+    - kind: ConfigMap
+      name: touchline-values
+      valuesKey: values.yaml
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3

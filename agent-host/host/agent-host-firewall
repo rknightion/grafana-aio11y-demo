@@ -1,0 +1,102 @@
+#!/bin/bash
+# Network isolation for the agent-host bridges, applied before Docker starts (a docker
+# drop-in runs this as ExecStartPre, so containers Docker restarts at boot never see an open
+# network) and again after it starts and before every compose run. Idempotent: it owns two
+# IPv4 chains and two IPv6 chains, replaces each set atomically and makes sure each is jumped to.
+#
+#   ahcore0 trusted services (gateway, postgres, alloy, one-shots). Full egress, except that only
+#           the gateway (fixed address) may reach IMDS.
+#   ahdev0  developer containers. Only the gateway (fixed address) may reach IMDS; developers
+#           get DNS, the gateway on 443, and the public internet. No IMDS, no link-local, no
+#           private or CGNAT address (VPC, EKS endpoint, other hosts), no host services.
+#   ahpdc0  pdc-agent + postgres. pdc may reach postgres:5432, DNS and the public internet
+#           (Grafana's PDC endpoints); nothing private, no IMDS, no host services.
+#
+# The compose networks are IPv4-only (enable_ipv6: false), and every IPv6 packet from ahdev0 or
+# ahpdc0 is dropped as well, so a future IPv6-enabled bridge cannot bypass the IPv4 rules.
+#
+# Bridge names, the subnets and the gateway addresses must match agent-host/render/render.py.
+set -Eeuo pipefail
+
+CORE=ahcore0
+DEV=ahdev0
+PDC=ahpdc0
+GATEWAY_CORE_IP=172.30.252.2
+GATEWAY_DEV_IP=172.30.253.2
+IMDS=169.254.169.254
+PRIVATE=(10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 100.64.0.0/10 169.254.0.0/16)
+
+ipt() { iptables -w 10 "$@"; }
+ip6t() { ip6tables -w 10 "$@"; }
+
+# Traffic between two containers on one bridge (dev to dev, dev to the gateway's other ports,
+# pdc to postgres's other ports) only reaches iptables with br_netfilter; recent Docker releases
+# no longer load it themselves. Failing here stops Docker from starting.
+modprobe br_netfilter 2>/dev/null || true
+sysctl -qw net.bridge.bridge-nf-call-iptables=1
+
+# DNS resolvers the containers may use: the host's upstreams (Docker's embedded DNS forwards to
+# these from the container's namespace) and the Amazon-provided resolver.
+mapfile -t resolvers < <(
+  { cat /run/systemd/resolve/resolv.conf /etc/resolv.conf 2>/dev/null || true; } \
+    | awk '$1 == "nameserver" && $2 ~ /^[0-9.]+$/ && $2 !~ /^127\./ { print $2 }' | sort -u
+)
+resolvers+=(169.254.169.253)
+
+# Both chains are replaced in one iptables-restore transaction (declaring a chain flushes it), so
+# a re-run never leaves a moment without the rules.
+rules=$(
+  echo "*filter"
+  echo ":AGENT-HOST-FWD - [0:0]"
+  echo ":AGENT-HOST-IN - [0:0]"
+  f() { echo "-A AGENT-HOST-FWD $*"; }
+  f -m conntrack --ctstate RELATED,ESTABLISHED -j RETURN
+  f -i "$CORE" -s "$GATEWAY_CORE_IP" -d "$IMDS" -j RETURN
+  f -i "$CORE" -d "$IMDS" -j DROP
+  f -i "$DEV" -s "$GATEWAY_DEV_IP" -j RETURN
+  f -i "$DEV" -o "$DEV" -d "$GATEWAY_DEV_IP" -p tcp --dport 443 -j RETURN
+  f -i "$DEV" -o "$DEV" -j DROP
+  f -i "$PDC" -o "$PDC" -p tcp --dport 5432 -j RETURN
+  f -i "$PDC" -o "$PDC" -j DROP
+  for br in "$DEV" "$PDC"; do
+    for r in "${resolvers[@]}"; do
+      f -i "$br" -d "$r" -p udp --dport 53 -j RETURN
+      f -i "$br" -d "$r" -p tcp --dport 53 -j RETURN
+    done
+    for net in "${PRIVATE[@]}"; do
+      f -i "$br" -d "$net" -j DROP
+    done
+    # Traffic to the host itself (sshd, chronyd, anything bound to the host's addresses).
+    echo "-A AGENT-HOST-IN -i $br -m conntrack --ctstate RELATED,ESTABLISHED -j RETURN"
+    echo "-A AGENT-HOST-IN -i $br -j DROP"
+  done
+  echo "COMMIT"
+)
+
+# DOCKER-USER runs before Docker's own FORWARD rules; Docker keeps an existing chain.
+ipt -N DOCKER-USER 2>/dev/null || true
+iptables-restore -w 10 --noflush <<<"$rules"
+ipt -C DOCKER-USER -j AGENT-HOST-FWD 2>/dev/null || ipt -I DOCKER-USER 1 -j AGENT-HOST-FWD
+ipt -C INPUT -j AGENT-HOST-IN 2>/dev/null || ipt -I INPUT 1 -j AGENT-HOST-IN
+
+# IPv6: the same transaction style, with chains jumped to from FORWARD and INPUT directly
+# (Docker only creates DOCKER-USER in ip6tables when its own IPv6 support is on). A host with
+# no IPv6 stack has nothing to filter.
+if [[ -d /proc/sys/net/ipv6 ]]; then
+  rules6=$(
+    echo "*filter"
+    echo ":AGENT-HOST-FWD6 - [0:0]"
+    echo ":AGENT-HOST-IN6 - [0:0]"
+    for br in "$DEV" "$PDC"; do
+      echo "-A AGENT-HOST-FWD6 -i $br -j DROP"
+      echo "-A AGENT-HOST-FWD6 -o $br -j DROP"
+      echo "-A AGENT-HOST-IN6 -i $br -j DROP"
+    done
+    echo "COMMIT"
+  )
+  ip6tables-restore -w 10 --noflush <<<"$rules6"
+  ip6t -C FORWARD -j AGENT-HOST-FWD6 2>/dev/null || ip6t -I FORWARD 1 -j AGENT-HOST-FWD6
+  ip6t -C INPUT -j AGENT-HOST-IN6 2>/dev/null || ip6t -I INPUT 1 -j AGENT-HOST-IN6
+fi
+
+echo "agent-host-firewall: isolation rules in place for $CORE, $DEV and $PDC (resolvers: ${resolvers[*]})" >&2

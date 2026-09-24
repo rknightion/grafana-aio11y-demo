@@ -1,0 +1,4 @@
+team: platform
+title: Look for a bug in emoji, patch it locally
+---
+clone https://github.com/carpedm20/emoji --depth 1. have a look through the core module (probably emoji/core.py, check) for something that looks like a real bug - an off-by-one, a wrong default, an exception path that doesnt handle a case it should. if you find something convincing, make the fix locally and show me with git diff at the end. if honestly nothing jumps out after a reasonable look, just say so instead of inventing a fake bug to justify the exercise. either way don't commit or push, this is purely local - stay inside the current directory the whole time.

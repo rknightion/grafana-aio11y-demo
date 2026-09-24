@@ -1,0 +1,90 @@
+[
+  {
+    "home": "Harbour City",
+    "away": "Northgate Rovers",
+    "results": [
+      { "date": "2026-02-01", "home": "Harbour City", "away": "Northgate Rovers", "score": "2-2" },
+      { "date": "2025-09-14", "home": "Northgate Rovers", "away": "Harbour City", "score": "1-0" },
+      { "date": "2025-03-09", "home": "Harbour City", "away": "Northgate Rovers", "score": "0-1" },
+      { "date": "2024-10-27", "home": "Northgate Rovers", "away": "Harbour City", "score": "2-2" },
+      { "date": "2024-02-04", "home": "Harbour City", "away": "Northgate Rovers", "score": "3-1" }
+    ]
+  },
+  {
+    "home": "Kingsbridge United",
+    "away": "Ashford Athletic",
+    "results": [
+      { "date": "2026-01-10", "home": "Ashford Athletic", "away": "Kingsbridge United", "score": "1-2" },
+      { "date": "2025-08-31", "home": "Kingsbridge United", "away": "Ashford Athletic", "score": "2-0" },
+      { "date": "2025-01-25", "home": "Ashford Athletic", "away": "Kingsbridge United", "score": "1-1" },
+      { "date": "2024-11-03", "home": "Kingsbridge United", "away": "Ashford Athletic", "score": "1-1" },
+      { "date": "2024-04-28", "home": "Ashford Athletic", "away": "Kingsbridge United", "score": "0-0" }
+    ]
+  },
+  {
+    "home": "Redvale",
+    "away": "Fellgate Wanderers",
+    "results": [
+      { "date": "2026-03-15", "home": "Fellgate Wanderers", "away": "Redvale", "score": "0-2" },
+      { "date": "2025-11-02", "home": "Redvale", "away": "Fellgate Wanderers", "score": "4-0" },
+      { "date": "2025-04-06", "home": "Fellgate Wanderers", "away": "Redvale", "score": "1-1" },
+      { "date": "2024-11-30", "home": "Redvale", "away": "Fellgate Wanderers", "score": "3-1" },
+      { "date": "2024-05-25", "home": "Fellgate Wanderers", "away": "Redvale", "score": "2-2" }
+    ]
+  },
+  {
+    "home": "Porthaven Town",
+    "away": "Millbrook Lions",
+    "results": [
+      { "date": "2026-02-22", "home": "Millbrook Lions", "away": "Porthaven Town", "score": "1-1" },
+      { "date": "2025-09-28", "home": "Porthaven Town", "away": "Millbrook Lions", "score": "0-1" },
+      { "date": "2025-04-13", "home": "Millbrook Lions", "away": "Porthaven Town", "score": "2-1" },
+      { "date": "2024-11-09", "home": "Porthaven Town", "away": "Millbrook Lions", "score": "1-1" },
+      { "date": "2024-04-27", "home": "Millbrook Lions", "away": "Porthaven Town", "score": "2-0" }
+    ]
+  },
+  {
+    "home": "Stonebridge Saints",
+    "away": "Bramley Rangers",
+    "results": [
+      { "date": "2026-04-19", "home": "Bramley Rangers", "away": "Stonebridge Saints", "score": "2-3" },
+      { "date": "2025-10-26", "home": "Stonebridge Saints", "away": "Bramley Rangers", "score": "1-1" },
+      { "date": "2025-04-27", "home": "Bramley Rangers", "away": "Stonebridge Saints", "score": "0-4" },
+      { "date": "2024-10-26", "home": "Stonebridge Saints", "away": "Bramley Rangers", "score": "0-4" },
+      { "date": "2024-04-21", "home": "Bramley Rangers", "away": "Stonebridge Saints", "score": "3-2" }
+    ]
+  },
+  {
+    "home": "Eastcliff Stars",
+    "away": "Westford City",
+    "results": [
+      { "date": "2026-03-01", "home": "Westford City", "away": "Eastcliff Stars", "score": "1-3" },
+      { "date": "2025-10-25", "home": "Eastcliff Stars", "away": "Westford City", "score": "2-1" },
+      { "date": "2025-02-23", "home": "Westford City", "away": "Eastcliff Stars", "score": "0-3" },
+      { "date": "2024-10-06", "home": "Eastcliff Stars", "away": "Westford City", "score": "3-0" },
+      { "date": "2024-02-25", "home": "Westford City", "away": "Eastcliff Stars", "score": "0-3" }
+    ]
+  },
+  {
+    "home": "Metro Rockets",
+    "away": "Summit Hawks",
+    "results": [
+      { "date": "2026-01-30", "home": "Summit Hawks", "away": "Metro Rockets", "score": "112-108" },
+      { "date": "2025-11-08", "home": "Metro Rockets", "away": "Summit Hawks", "score": "119-115" },
+      { "date": "2025-02-01", "home": "Summit Hawks", "away": "Metro Rockets", "score": "121-99" },
+      { "date": "2024-03-06", "home": "Metro Rockets", "away": "Summit Hawks", "score": "106-96" },
+      { "date": "2023-12-25", "home": "Summit Hawks", "away": "Metro Rockets", "score": "126-115" }
+    ]
+  },
+  {
+    "home": "Bayview Vipers",
+    "away": "Canyon Thunder",
+    "results": [
+      { "date": "2026-02-12", "home": "Canyon Thunder", "away": "Bayview Vipers", "score": "104-113" },
+      { "date": "2025-12-02", "home": "Bayview Vipers", "away": "Canyon Thunder", "score": "120-107" },
+      { "date": "2025-01-19", "home": "Canyon Thunder", "away": "Bayview Vipers", "score": "133-119" },
+      { "date": "2024-03-24", "home": "Bayview Vipers", "away": "Canyon Thunder", "score": "113-103" },
+      { "date": "2023-11-16", "home": "Canyon Thunder", "away": "Bayview Vipers", "score": "126-111" }
+    ]
+  }
+]

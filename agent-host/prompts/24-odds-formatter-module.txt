@@ -1,0 +1,4 @@
+team: trading
+title: Odds formatter module + test
+---
+Small one: write a tiny odds-format.js module with two exports, formatDecimal(price) that returns a string fixed to 2dp, and toFraction(price) that returns an approximate fractional odds string like "6/4". Pull the real odds for Porthaven Town v Millbrook Lions from the odds tool so you've got actual prices to sanity-check the output against rather than made-up numbers. Then write a plain node:test (or just node:assert if that's easier) test file covering both functions with a few of those real prices, and run it with node to confirm it passes. Keep it dependency-free, no npm install needed. Don't commit, don't push, everything stays in the working directory.

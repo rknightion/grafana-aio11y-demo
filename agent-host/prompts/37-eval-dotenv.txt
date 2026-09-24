@@ -1,0 +1,4 @@
+team: platform
+title: Evaluate dotenv for the odds worker
+---
+The odds polling worker currently reads its API keys and bookmaker endpoints from a hand-rolled config loader and I'd rather use something standard. First check https://github.com/motdotla/dotenv is actually up with a git ls-remote, then clone it and skim the README for how it handles multiple env files and whether it supports the expand/interpolation syntax we'd want for the staging vs prod endpoint split. Jot down a short verdict, worth switching or not, in a local notes file. No commits, no pushes, everything else stays local to here too.

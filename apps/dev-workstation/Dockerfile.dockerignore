@@ -1,0 +1,10 @@
+# Used by BuildKit for `docker build -f apps/dev-workstation/Dockerfile .` (repository root).
+*
+!apps/dev-workstation/bin/
+!apps/dev-workstation/entrypoint.sh
+!apps/gateway/claude-install.sh
+!apps/mcp-tools/package.json
+!apps/mcp-tools/package-lock.json
+!apps/mcp-tools/src/
+!agent-host/prompts/
+**/__pycache__

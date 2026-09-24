@@ -1,0 +1,4 @@
+team: newsroom
+title: Build a betting glossary in memory
+---
+Use the memory MCP server to create entities for five betting terms (each-way, accumulator, draw no bet, handicap, over/under) with one observation each defining the term, and relations linking related terms. Then read the graph back and write GLOSSARY.md listing each term with its definition and related terms.

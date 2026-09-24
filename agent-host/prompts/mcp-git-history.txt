@@ -1,0 +1,4 @@
+team: platform
+title: Summarise a repo's recent history
+---
+Clone https://github.com/sindresorhus/is --depth 50 into the current directory. Use the git MCP server (not the Bash git command) to read the log and the diff of the most recent commit. Write HISTORY.md with the last 5 commit subjects and a two-line description of what the latest change did. Never commit or push.

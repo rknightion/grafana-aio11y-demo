@@ -1,0 +1,4 @@
+team: newsroom
+title: Kingsbridge United v Ashford Athletic preview draft
+---
+Drafting the preview for Kingsbridge United v Ashford Athletic this weekend. Pull the latest news for both teams and the head-to-head history between them, then write a ~300 word match preview in our usual style: a short intro line, a form paragraph for each side pulling in one relevant news line each, and a "did you know" stat drawn from the head-to-head record to close it out. Save it as draft-kbu-asa-preview.md. Keep the tone punchy, not dry stats-page copy, this is going on the site. Don't invent injury news or scorelines that aren't in what the tools return. No commits, no pushes, work only in the current directory and don't leave anything else lying around when you're done.

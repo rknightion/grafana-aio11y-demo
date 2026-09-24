@@ -1,0 +1,77 @@
+{{- if .Values.siteBrowser.enabled }}
+{{- $name := printf "%s-site-browser" (include "touchline.prefix" .) }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "touchline.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.siteBrowser.schedule | quote }}
+  # Traffic switch: suspend rather than remove, so re-enabling traffic needs no re-apply beyond
+  # flipping traffic.enabled. This is synthetic reader traffic like loadgen and experiments.
+  suspend: {{ not .Values.traffic.enabled }}
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 300
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 600
+      backoffLimit: 0
+      template:
+        metadata:
+          labels:
+            {{- include "touchline.selectorLabels" $name | nindent 12 }}
+        spec:
+          restartPolicy: Never
+          serviceAccountName: {{ .Values.serviceAccounts.site }}
+          automountServiceAccountToken: false
+          {{- if .Values.images.pullSecret }}
+          imagePullSecrets:
+            - name: {{ .Values.images.pullSecret }}
+          {{- end }}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: site-browser
+              image: "{{ .Values.images.registry }}/site-browser:{{ .Values.images.tag }}"
+              imagePullPolicy: IfNotPresent
+              # apps/site package.json "browser" script; the real Chromium page load picks up the
+              # Faro bundle the site backend serves, so frontend observability needs no FARO_URL
+              # here (that wiring is on the site Deployment, see deployment-site.yaml).
+              command: ["node", "src/browser.mjs"]
+              env:
+                - name: SITE_URL
+                  value: "http://{{ include "touchline.prefix" . }}-site-api:8080/"
+                - name: CONTENT_CAPTURE
+                  value: {{ .Values.contentCapture | quote }}
+              volumeMounts:
+                - name: tmp
+                  mountPath: /tmp
+                - name: dev-shm
+                  mountPath: /dev/shm
+              resources:
+                {{- toYaml .Values.siteBrowser.resources | nindent 16 }}
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                runAsNonRoot: true
+                runAsUser: 10001
+                capabilities:
+                  drop:
+                    - ALL
+          volumes:
+            - name: tmp
+              emptyDir: {}
+            # Headless Chromium needs real shared memory; the default k8s /dev/shm (64Mi tmpfs) is
+            # too small and Chromium falls back to slow/unstable behaviour without this.
+            - name: dev-shm
+              emptyDir:
+                medium: Memory
+                sizeLimit: 256Mi
+{{- end }}

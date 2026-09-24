@@ -1,0 +1,182 @@
+// Host Alloy for the agent host. Ships every compose container's stdout/stderr and host plus
+// container metrics to Grafana Cloud over OTLP. Values come from the compose environment:
+//   OTLP_ENDPOINT, OTLP_USERNAME   Grafana Cloud OTLP gateway and instance id
+//   SERVICE_NAMESPACE              demo prefix (service.namespace on everything)
+//   HOST_SERVICE_NAME              service.name for host metrics and non-gateway containers
+//   COMPOSE_PROJECT                only containers of this compose project are collected
+// Each container's service.name comes from its agent-host.service_name label, so the gateway's
+// audit log lands as <prefix>-gateway and the rest as <prefix>-agent-host.
+
+logging {
+  level  = "info"
+  format = "logfmt"
+}
+
+local.file "otlp_token" {
+  filename  = "/run/secrets/grafana_otlp_token"
+  is_secret = true
+}
+
+otelcol.auth.basic "grafana_cloud" {
+  username = sys.env("OTLP_USERNAME")
+  password = local.file.otlp_token.content
+}
+
+otelcol.exporter.otlphttp "grafana_cloud" {
+  client {
+    endpoint = sys.env("OTLP_ENDPOINT")
+    auth     = otelcol.auth.basic.grafana_cloud.handler
+  }
+}
+
+otelcol.processor.batch "out" {
+  output {
+    metrics = [otelcol.exporter.otlphttp.grafana_cloud.input]
+    logs    = [otelcol.exporter.otlphttp.grafana_cloud.input]
+  }
+}
+
+// --- Container logs ------------------------------------------------------------------------------
+
+discovery.docker "compose" {
+  host = "unix:///var/run/docker.sock"
+
+  filter {
+    name   = "label"
+    values = ["com.docker.compose.project=" + sys.env("COMPOSE_PROJECT")]
+  }
+}
+
+// Docker discovery yields one target per network a container joins. The gateway (core + dev)
+// and postgres (core + pdc) are on two, so keep only their core-network target: one log
+// stream per container.
+discovery.relabel "one_network" {
+  targets = discovery.docker.compose.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service", "__meta_docker_network_name"]
+    regex         = "(gateway;.*-dev|postgres;.*-pdc)"
+    action        = "drop"
+  }
+}
+
+discovery.relabel "containers" {
+  targets = discovery.relabel.one_network.output
+
+  rule {
+    source_labels = ["__meta_docker_container_label_agent_host_service_name"]
+    target_label  = "service_name"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_agent_host_role"]
+    target_label  = "agent_host_role"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "compose_service"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+}
+
+loki.source.docker "containers" {
+  host          = "unix:///var/run/docker.sock"
+  targets       = discovery.relabel.one_network.output
+  relabel_rules = discovery.relabel.containers.rules
+  forward_to    = [loki.process.containers.receiver]
+}
+
+loki.process "containers" {
+  stage.static_labels {
+    values = {
+      service_namespace = sys.env("SERVICE_NAMESPACE"),
+    }
+  }
+
+  forward_to = [otelcol.receiver.loki.containers.receiver]
+}
+
+otelcol.receiver.loki "containers" {
+  output {
+    logs = [otelcol.processor.groupbyattrs.containers.input]
+  }
+}
+
+// The Loki receiver puts labels on each log record. Group records by container so each group
+// gets its own resource, then turn the labels into the resource attributes Grafana Cloud maps to
+// the Loki service_name and service_namespace labels (otherwise everything is unknown_service).
+otelcol.processor.groupbyattrs "containers" {
+  keys = ["service_name", "service_namespace", "compose_service", "container", "agent_host_role"]
+
+  output {
+    logs = [otelcol.processor.transform.containers.input]
+  }
+}
+
+otelcol.processor.transform "containers" {
+  error_mode = "ignore"
+
+  log_statements {
+    context    = "resource"
+    statements = [
+      `set(attributes["service.name"], attributes["service_name"])`,
+      `set(attributes["service.namespace"], attributes["service_namespace"])`,
+      `set(attributes["container.name"], attributes["container"])`,
+      `delete_key(attributes, "service_name")`,
+      `delete_key(attributes, "service_namespace")`,
+      `delete_key(attributes, "container")`,
+    ]
+  }
+
+  output {
+    logs = [otelcol.processor.batch.out.input]
+  }
+}
+
+// --- Host and container metrics -----------------------------------------------------------------
+
+prometheus.exporter.unix "host" {
+  procfs_path = "/host/proc"
+  sysfs_path  = "/host/sys"
+  rootfs_path = "/host/root"
+}
+
+prometheus.exporter.cadvisor "containers" {
+  docker_host      = "unix:///var/run/docker.sock"
+  docker_only      = true
+  storage_duration = "5m"
+}
+
+prometheus.scrape "host" {
+  targets         = array.concat(prometheus.exporter.unix.host.targets, prometheus.exporter.cadvisor.containers.targets)
+  scrape_interval = "60s"
+  forward_to      = [otelcol.receiver.prometheus.host.receiver]
+}
+
+otelcol.receiver.prometheus "host" {
+  output {
+    metrics = [otelcol.processor.transform.host.input]
+  }
+}
+
+otelcol.processor.transform "host" {
+  error_mode = "ignore"
+
+  metric_statements {
+    context    = "resource"
+    statements = [
+      "set(attributes[\"service.name\"], \"" + sys.env("HOST_SERVICE_NAME") + "\")",
+      "set(attributes[\"service.namespace\"], \"" + sys.env("SERVICE_NAMESPACE") + "\")",
+    ]
+  }
+
+  output {
+    metrics = [otelcol.processor.batch.out.input]
+  }
+}

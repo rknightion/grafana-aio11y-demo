@@ -1,0 +1,4 @@
+team: newsroom
+title: Eastcliff Stars v Westford City preview
+---
+The coastal derby is coming up, Eastcliff Stars v Westford City. Pull news for both sides plus the head-to-head history and write the preview, usual format, intro line then a paragraph per team weaving in whatever's newest from the news tool, closed out with a head-to-head stat that gives readers something to chew on. Save as draft-ecs-wfc-preview.md. The derby always gets good traffic so make it a bit livelier than a standard midtable preview, but don't overdo it or make claims the news items don't actually support. No commits, no pushes, stay in the current directory the whole time.

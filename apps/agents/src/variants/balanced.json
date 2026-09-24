@@ -1,0 +1,1 @@
+{"id":"balanced","planningPrompt":"Group evidence by question topic, then give a concise conclusion. Distinguish fixture facts from fictional odds and offers.","temperature":0.3,"style":"balanced","maxTokens":500}

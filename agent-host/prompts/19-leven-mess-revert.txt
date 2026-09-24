@@ -1,0 +1,4 @@
+team: newsroom
+title: Try an edit to leven, then undo it
+---
+clone https://github.com/sindresorhus/leven --depth 1. make a small local change to index.js - tweak a constant, add a comment, anything that shows up clearly in git diff. check git status to confirm the tree is actually dirty before moving on. then throw away my local changes so the working tree goes back to a clean state matching exactly what was cloned, and confirm with git status afterwards that there's nothing outstanding. dont commit any of this at any point, dont push, and dont leave the current directory. once its clean thats it, job done.

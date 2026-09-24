@@ -1,0 +1,159 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "touchline",
+  "description": "Schema for the frozen chart values. additionalProperties stays true everywhere so new keys can be added without a schema change; only the frozen keys are constrained.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["nameOverride", "images", "serviceAccounts", "secrets", "aws", "agents", "contentCapture", "traffic", "site", "alloy"],
+  "properties": {
+    "nameOverride": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Prefix for every object this chart creates. Must equal Terraform's var.name."
+    },
+    "namespace": {
+      "type": "string",
+      "minLength": 1
+    },
+    "images": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["registry", "tag"],
+      "properties": {
+        "registry": { "type": "string", "minLength": 1 },
+        "tag": { "type": "string", "minLength": 1 },
+        "pullSecret": { "type": "string" }
+      }
+    },
+    "serviceAccounts": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["agents", "loadgen", "experiments", "site"],
+      "properties": {
+        "agents": { "type": "string", "minLength": 1 },
+        "loadgen": { "type": "string", "minLength": 1 },
+        "experiments": { "type": "string", "minLength": 1 },
+        "site": { "type": "string", "minLength": 1 }
+      }
+    },
+    "secrets": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["grafanaOtlp", "agento11y", "faro"],
+      "properties": {
+        "grafanaOtlp": { "type": "string", "minLength": 1 },
+        "agento11y": { "type": "string", "minLength": 1 },
+        "faro": { "type": "string", "minLength": 1 },
+        "experiments": {
+          "type": "string",
+          "description": "Optional existing Secret name (keys grafana_url, token). Empty string disables AGENTO11Y_GRAFANA_URL/AGENTO11Y_SERVICE_ACCOUNT_TOKEN on the experiments job."
+        }
+      }
+    },
+    "agentVersion": {
+      "type": "string",
+      "minLength": 1,
+      "description": "AGENT_VERSION on every agent, the load generator and the experiments job. Must match across the orchestrator and the experiments job for the variant-version check to pass."
+    },
+    "aws": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["region"],
+      "properties": {
+        "region": { "type": "string", "minLength": 1 }
+      }
+    },
+    "agents": {
+      "type": "object",
+      "description": "One entry per in-app agent; keys become the Deployment/Service name suffix.",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["modelProfileArn", "team"],
+        "properties": {
+          "modelProfileArn": { "type": "string" },
+          "modelKey": { "type": "string", "description": "MODEL_KEY: the bedrock_models key for this agent's default profile." },
+          "modelName": { "type": "string", "description": "MODEL_NAME: a Bedrock model or inference profile id, normalised to the canonical Claude model name." },
+          "modelProfiles": {
+            "type": "object",
+            "description": "Extra profiles for the orchestrator's x-agent-model routing, rendered as MODEL_PROFILES (JSON). Map key -> {arn, name}.",
+            "additionalProperties": {
+              "type": "object",
+              "required": ["arn"],
+              "properties": {
+                "arn": { "type": "string", "minLength": 1 },
+                "name": { "type": "string" }
+              }
+            }
+          },
+          "team": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "contentCapture": {
+      "type": "boolean"
+    },
+    "traffic": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["enabled", "siteRequestsPerMinute", "experimentsSchedule"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "siteRequestsPerMinute": { "type": "number", "minimum": 0 },
+        "experimentsSchedule": { "type": "string", "minLength": 1 }
+      }
+    },
+    "site": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "ingress": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": true,
+              "required": ["className", "host"],
+              "properties": {
+                "className": { "type": "string", "minLength": 1 },
+                "host": { "type": "string", "minLength": 1 },
+                "annotations": { "type": "object" }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "alloy": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["enabled"],
+      "properties": {
+        "enabled": { "type": "boolean" }
+      }
+    },
+    "loadgen": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "dailyBudgetUsd": { "type": "number", "minimum": 0 },
+        "persistence": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "enabled": { "type": "boolean" }
+          }
+        }
+      }
+    },
+    "siteBrowser": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "schedule": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

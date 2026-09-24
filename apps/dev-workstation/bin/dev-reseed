@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# Reset the developer's user-scope Claude config on the claude-home volume to the known state:
+# onboarding flags, exactly the demo's stdio MCP servers, and a settings.json that keeps only the
+# Agent Observability plugin enablement. Runs at container start (dev-entrypoint) and before every
+# session (dev-loop), so hooks, MCP servers, instructions, agents, commands or skills that one
+# session persisted under ~/.claude are gone before the next one starts. Sign-in state
+# (credentials), the traffic loop's state directory and the memory MCP server's file are kept.
+set -Eeuo pipefail
+
+log() { printf '%s dev-reseed[%s]: %s\n' "$(date -u +%FT%TZ)" "${DEVELOPER_NAME:-?}" "$*" >&2; }
+
+home_cfg="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+mkdir -p "$home_cfg"
+work="$HOME/work"
+mcp_name="${MCP_SERVER_NAME:-touchline}"
+plugin="agento11y-claude-code@agento11y"
+
+# jq output goes to a temp file first, so a failed filter never truncates the real file.
+rewrite() {
+  local file=$1 tmp
+  shift
+  if ! [[ -s "$file" ]] || ! jq -e . "$file" >/dev/null 2>&1; then echo '{}' >"$file"; fi
+  tmp="$(mktemp "$home_cfg/.reseed.XXXXXX")"
+  if ! jq "$@" "$file" >"$tmp"; then rm -f -- "$tmp"; return 1; fi
+  cat "$tmp" >"$file"
+  rm -f -- "$tmp"
+  chmod 600 "$file"
+}
+
+# 1. Global config: onboarding done, the work directory trusted, and the MCP server list replaced
+#    (not merged), including any per-project servers a session registered.
+# shellcheck disable=SC2016 # jq program, not shell
+rewrite "$home_cfg/.claude.json" --arg work "$work" --arg mcp "$mcp_name" --arg mem "$home_cfg/memory.jsonl" '
+  .hasCompletedOnboarding = true
+  | .theme = (.theme // "dark")
+  | .projects = {($work): (((.projects // {})[$work] // {})
+      | del(.mcpServers, .enabledMcpjsonServers, .disabledMcpjsonServers, .allowedTools)
+      | .hasTrustDialogAccepted = true)}
+  | .mcpServers = {
+      ($mcp): {type: "stdio", command: "node", args: ["/opt/mcp-tools/src/server.mjs"],
+               env: {MCP_SERVER_NAME: $mcp}},
+      "time": {type: "stdio", command: "mcp-server-time", args: ["--local-timezone", "Europe/London"], env: {}},
+      "fetch": {type: "stdio", command: "mcp-server-fetch", args: [], env: {}},
+      "git": {type: "stdio", command: "mcp-server-git", args: [], env: {}},
+      "sequential-thinking": {type: "stdio", command: "mcp-server-sequential-thinking", args: [], env: {}},
+      "memory": {type: "stdio", command: "mcp-server-memory", args: [], env: {MEMORY_FILE_PATH: $mem}}
+    }
+'
+
+# 2. User settings: only the plugin enablement that `claude plugin install --scope user` wrote.
+#    Hooks, env, permissions, statusLine, apiKeyHelper and everything else are dropped.
+# shellcheck disable=SC2016 # jq program, not shell
+rewrite "$home_cfg/settings.json" --arg plugin "$plugin" '
+  {enabledPlugins: ((.enabledPlugins // {}) | with_entries(select(.key == $plugin)))}
+  | if .enabledPlugins == {} then {} else . end
+'
+
+# 3. User-scope instructions and extensions this demo never ships.
+rm -rf -- "$home_cfg/CLAUDE.md" "$home_cfg/settings.local.json" "$home_cfg/agents" \
+  "$home_cfg/commands" "$home_cfg/skills" "$home_cfg/output-styles"
+
+log "user config reset: MCP servers $mcp_name time fetch git sequential-thinking memory"

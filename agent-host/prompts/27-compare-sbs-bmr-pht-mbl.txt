@@ -1,0 +1,4 @@
+team: trading
+title: Compare value: Stonebridge Saints-Bramley Rangers vs Porthaven Town-Millbrook Lions
+---
+Pull the odds for both Stonebridge Saints v Bramley Rangers and Porthaven Town v Millbrook Lions and put together a short comparison note. For each fixture work out the overround (implied probability sum across home/draw/away for each book) so we can see which market is priced tighter, and note which single price across the two fixtures looks like the best relative value for our "pick of the day" style content. Write it up as comparison-sbs-bmr-vs-pht-mbl.md, keep the maths shown so an editor can sanity check it, doesn't need to be long. No git commits, no pushes, work only in the current directory and don't leave any stray scratch files behind.

@@ -1,0 +1,4 @@
+team: trading
+title: Summarise loguru's last 20 commits
+---
+Clone https://github.com/Delgan/loguru into the current directory with enough history to see the last 20 commits - a plain --depth 1 clone only gives you the latest commit, so use --depth 30 instead. Run git log -20 --oneline on the default branch and turn that into a short readable summary of what the project's been working on lately - group related commits if there's an obvious pattern, like bugfixes vs features vs docs cleanup. Write it to recent-activity.md in the current directory, keep it to a few short paragraphs. Don't commit or push anything yourself, don't touch any files inside the clone. Stay in the current directory throughout.

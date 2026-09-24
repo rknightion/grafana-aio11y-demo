@@ -1,0 +1,20 @@
+apiVersion: v2
+name: touchline
+description: >-
+  Touchline Times in-cluster demo workloads: the in-app AI agents, the site, a load generator,
+  a scheduled experiments job, and an in-namespace Grafana Alloy collector that forwards
+  telemetry to Grafana Cloud. Part of the grafana-aio11y-demo AI observability demo.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - grafana
+  - opentelemetry
+  - ai-observability
+  - amazon-bedrock
+  - demo
+home: https://github.com/rknightion/grafana-aio11y-demo
+sources:
+  - https://github.com/rknightion/grafana-aio11y-demo
+maintainers:
+  - name: rknightion

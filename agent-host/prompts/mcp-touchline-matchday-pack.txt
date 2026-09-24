@@ -1,0 +1,4 @@
+team: newsroom
+title: Matchday pack from the {{MCP}} tools
+---
+Use the {{MCP}} MCP server for everything in this task, no web lookups. List every football fixture with the odds tool, then for the two Premier Division fixtures pull the latest news for all four clubs and the head-to-head history for each pairing. Write MATCHDAY.md with one short section per fixture: kickoff (use the time MCP server to show it in Europe/London), one news line per club, the head-to-head record in one sentence and the best price for each outcome. Finish with the standard responsible-gambling line (18+, gamble responsibly). Work only in the current directory.

@@ -1,0 +1,4 @@
+team: platform
+title: Check a public status page
+---
+Use the fetch MCP server to read https://www.githubstatus.com/ and write STATUS.md with the current overall status and any listed incidents in one or two lines each. If the page is unreachable, say so in STATUS.md instead of guessing.

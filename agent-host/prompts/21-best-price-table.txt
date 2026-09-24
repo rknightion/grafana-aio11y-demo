@@ -1,0 +1,4 @@
+team: trading
+title: Best price table for Harbour City v Northgate Rovers
+---
+Need a quick best-price comparison for the Harbour City v Northgate Rovers fixture. Pull the odds across all three books we track (home/draw/away) using the odds tool, then build a small markdown table showing each outcome, each bookmaker's price, and which book has the best price highlighted in bold. Save it as best-price-harbour-city-northgate.md in the current directory. Keep the table tidy, three decimal places max, and add a one-line note at the bottom with the fixture kickoff time. This is just for a quick sanity check before we wire it into the site build, nothing fancy. Don't commit anything, don't push, stay in this directory, and don't touch anything outside it.

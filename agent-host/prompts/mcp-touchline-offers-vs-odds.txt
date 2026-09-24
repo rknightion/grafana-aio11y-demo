@@ -1,0 +1,4 @@
+team: trading
+title: Cross-check offers against live prices
+---
+Using the {{MCP}} MCP server, pull all current offers and the odds for every fixture. For each bookmaker that has a football offer, find the fixture where that bookmaker has the best home price and note whether the offer's minimum odds condition in its terms would be met at that price. Write OFFER-CHECK.md as a small table (bookmaker, offer id, fixture, best home price, meets min odds yes/no) and one line of caveats. Do not modify any data. Current directory only.

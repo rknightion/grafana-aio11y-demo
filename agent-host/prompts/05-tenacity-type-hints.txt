@@ -1,0 +1,4 @@
+team: newsroom
+title: Add type hints to a tenacity module
+---
+Clone https://github.com/jd/tenacity --depth 1. Pick one smaller module under tenacity/ that's missing type hints - check a few files first, tenacity/nap.py or tenacity/_utils.py are good candidates - and add reasonable type hints to its function signatures. Don't go overboard, just the public functions, and don't install mypy or any type checker, just eyeball it for sanity against how the rest of the codebase types things. Show the result with git diff at the end. This is local-only exploration: never commit, never push, work only inside the current directory.

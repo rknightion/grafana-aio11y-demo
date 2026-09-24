@@ -1,0 +1,14 @@
+# Flux source for the chart. Pin ref.tag to the same release as the Terraform module source.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: grafana-aio11y-demo
+  namespace: flux-system
+spec:
+  interval: 10m
+  url: https://github.com/rknightion/grafana-aio11y-demo
+  ref:
+    branch: main
+  ignore: |
+    /*
+    !/charts/touchline/

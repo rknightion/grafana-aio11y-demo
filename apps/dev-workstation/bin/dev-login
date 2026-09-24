@@ -1,0 +1,368 @@
+#!/opt/login-venv/bin/python3
+"""Sign this developer in to the Claude apps gateway, unattended.
+
+Claude Code has no non-interactive gateway sign-in, so this drives the real TUI in tmux:
+  1. start `claude` (managed settings force the Cloud gateway screen) and press Enter to connect
+  2. check the TLS trust prompt's fingerprint against the Terraform-issued gateway certificate
+     (and the live certificate against the private CA) before trusting it
+  3. read verification_uri_complete off the screen and complete it in headless Chromium: the
+     gateway /device page (trusting only the gateway's key, by SPKI pin), then the Cognito hosted
+     UI with the developer's password, typed only on the exact Cognito domain
+  4. accept the account confirmation and the managed-settings approval dialog, then /exit
+
+Only the dialogs in DIALOGS are answered, each by its exact option text (checked against the
+Claude Code release in claude_code_version); anything else on screen is left alone until the
+attempt times out.
+
+Idempotent: exits 0 at once when `claude auth status` already shows a session (unless --force).
+Retries with backoff. --manual prints the verification link for a human instead of using the
+browser (the `just login-developers` fallback) and waits for that sign-in to finish.
+
+Holds the per-container claude lock so it never overlaps a traffic session.
+"""
+import argparse
+import base64
+import fcntl
+import hashlib
+import json
+import os
+import re
+import socket
+import ssl
+import subprocess
+import sys
+import time
+from urllib.parse import urlparse
+
+NAME = os.environ.get("DEVELOPER_NAME", "developer")
+GATEWAY_URL = os.environ.get("GATEWAY_URL", "")
+GATEWAY_HOST = os.environ.get("GATEWAY_HOSTNAME") or urlparse(GATEWAY_URL).hostname or ""
+CA_FILE = os.environ.get("CA_FILE", "/etc/agent-host/ca.pem")
+CERT_FILE = os.environ.get("GATEWAY_CERT_FILE", "/etc/agent-host/gateway-cert.pem")
+PASSWORD_FILE = os.environ.get("DEVELOPER_PASSWORD_FILE", "/run/secrets/developer_password")
+LOCK = os.environ.get("CLAUDE_LOCK", "/tmp/claude.lock")
+WORKDIR = os.path.expanduser("~/work")
+TMUX = "dev-login"
+
+URL_RE = re.compile(r"https://[^\s\"'<>│]+/device\?user_code=[A-Za-z0-9-]+")
+DEVICE_RE = re.compile(r"https://[^\s\"'<>│?]+/device\b")
+CODE_RE = re.compile(r"\b[A-Z0-9]{4}-[A-Z0-9]{4}\b")
+CURSOR_RE = re.compile(r"^[\s│]*[❯›▶]\s*")
+
+# The TLS trust prompt: answered only after the fingerprint on screen matches the issued leaf.
+TRUST_MARKERS = ("Trust gateway", "Certificate fingerprint (SHA-256):")
+TRUST_OPTION = "Yes, trust this gateway"
+# (text that identifies the dialog, exact option to choose). Nothing else is ever confirmed.
+DIALOGS = (
+    ("Signed in to Cloud gateway as", "Yes, continue"),
+    ("Managed settings require approval", "Yes, I trust these settings"),
+)
+CONNECT_PROMPT = "Press Enter to connect"
+
+
+def log(msg):
+    print(f"{time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())} dev-login[{NAME}]: {msg}",
+          file=sys.stderr, flush=True)
+
+
+def auth_status():
+    try:
+        out = subprocess.run(["claude", "auth", "status", "--json"], capture_output=True, text=True, timeout=60)
+        return json.loads(out.stdout or "{}")
+    except (subprocess.SubprocessError, json.JSONDecodeError, OSError):
+        return {}
+
+
+def signed_in():
+    s = auth_status()
+    return bool(s.get("loggedIn")), s.get("authMethod", "unknown")
+
+
+def expected_fingerprint():
+    with open(CERT_FILE, encoding="utf-8") as fh:
+        der = ssl.PEM_cert_to_DER_cert(fh.read())
+    return hashlib.sha256(der).hexdigest()
+
+
+def live_fingerprint():
+    """The certificate the gateway serves, validated against the private CA and hostname."""
+    ctx = ssl.create_default_context(cafile=CA_FILE)
+    with socket.create_connection((GATEWAY_HOST, 443), timeout=15) as sock:
+        with ctx.wrap_socket(sock, server_hostname=GATEWAY_HOST) as tls:
+            return hashlib.sha256(tls.getpeercert(binary_form=True)).hexdigest()
+
+
+def tmux(*args, check=True):
+    return subprocess.run(["tmux", *args], capture_output=True, text=True, check=check)
+
+
+def screen():
+    r = tmux("capture-pane", "-p", "-J", "-t", TMUX, "-S", "-120", check=False)
+    return r.stdout if r.returncode == 0 else None
+
+
+def keys(*k):
+    tmux("send-keys", "-t", TMUX, *k, check=False)
+
+
+def choose_option(text, option):
+    """Keys that move the menu cursor to the row reading exactly `option` and press Enter.
+
+    Claude Code menus are arrow-key lists with a cursor mark on the highlighted row (sometimes
+    numbered). Only the block of non-blank lines around the cursor row counts as the menu.
+    Returns None when there is no menu or no such row.
+    """
+    lines = [line.rstrip() for line in text.splitlines()]
+    cur = next((i for i in range(len(lines) - 1, -1, -1) if CURSOR_RE.match(lines[i])), None)
+    if cur is None:
+        return None
+    lo = cur
+    while lo > 0 and lines[lo - 1].strip():
+        lo -= 1
+    hi = cur
+    while hi + 1 < len(lines) and lines[hi + 1].strip():
+        hi += 1
+    for i in range(lo, hi + 1):
+        label = CURSOR_RE.sub("", lines[i]).strip(" │")
+        label = re.sub(r"^\d[.)]\s*", "", label).strip()
+        if label == option:
+            step = "Down" if i > cur else "Up"
+            return [step] * abs(i - cur) + ["Enter"]
+    return None
+
+
+def spki_pin(cert_file):
+    """base64(SHA-256(SubjectPublicKeyInfo)) of a PEM certificate, for Chromium's SPKI allow-list."""
+    pub = subprocess.run(["openssl", "x509", "-in", cert_file, "-noout", "-pubkey"],
+                         capture_output=True, check=True).stdout
+    der = subprocess.run(["openssl", "pkey", "-pubin", "-outform", "DER"],
+                         input=pub, capture_output=True, check=True).stdout
+    return base64.b64encode(hashlib.sha256(der).digest()).decode()
+
+
+def verification_link(text):
+    """verification_uri_complete, or /device plus the user code shown in the code box."""
+    m = URL_RE.search(text)
+    if m:
+        return m.group(0)
+    dev, code = DEVICE_RE.search(text), CODE_RE.search(text)
+    if dev and code and "code" in text.lower():
+        return f"{dev.group(0)}?user_code={code.group(0)}"
+    return None
+
+
+def browser_login(url, password):
+    """Complete the device page and the Cognito hosted UI in headless Chromium."""
+    from playwright.sync_api import sync_playwright
+
+    cognito_host = urlparse(os.environ.get("COGNITO_DOMAIN_URL", "")).hostname
+    if not cognito_host:
+        raise RuntimeError("COGNITO_DOMAIN_URL is not set")
+    with sync_playwright() as p:
+        # Chromium's store does not know the private CA, so trust exactly the gateway's key (the
+        # Terraform-issued leaf, already checked against the CA). Every other host, Cognito
+        # included, keeps normal certificate validation.
+        browser = p.chromium.launch(headless=True, args=[
+            f"--ignore-certificate-errors-spki-list={spki_pin(CERT_FILE)}"])
+        ctx = browser.new_context()
+        page = ctx.new_page()
+        page.set_default_timeout(30000)
+        page.goto(url, wait_until="domcontentloaded")
+        clicked = set()
+        submitted = False
+        deadline = time.time() + 240
+        while time.time() < deadline:
+            page.wait_for_load_state("domcontentloaded")
+            host = urlparse(page.url).hostname or ""
+            if host == cognito_host:
+                err = page.locator("#loginErrorMessage:visible, .error:visible")
+                if submitted and err.count():
+                    raise RuntimeError(f"Cognito rejected the sign-in: {err.first.inner_text().strip()[:120]}")
+                user = page.locator('input[name="username"]:visible')
+                if user.count():
+                    user.first.fill(NAME)
+                    page.locator('input[name="password"]:visible').first.fill(password)
+                    log("submitting the Cognito hosted UI sign-in form")
+                    page.locator('input[name="signInSubmitButton"]:visible, button[type="submit"]:visible').first.click()
+                    submitted = True
+                    page.wait_for_timeout(2000)
+                    continue
+            elif host == GATEWAY_HOST:
+                body = page.inner_text("body")
+                if re.search(r"denied|expired|invalid|could not be completed|not be completed|too many attempts|error", body, re.I):
+                    raise RuntimeError(f"gateway device page error: {' '.join(body.split())[:200]}")
+                if re.search(r"signed in|success|you can (now )?close|return to (your )?(terminal|device)|all set", body, re.I) \
+                        and not page.locator("form button:visible, form input[type=submit]:visible").count():
+                    log(f"gateway reports the device sign-in complete: {' '.join(body.split())[:120]}")
+                    browser.close()
+                    return
+                key = page.url
+                if key not in clicked:
+                    btns = page.locator("button:visible, input[type=submit]:visible")
+                    choice = None
+                    for i in range(btns.count()):
+                        b = btns.nth(i)
+                        label = (b.inner_text() or b.get_attribute("value") or "").strip()
+                        if re.search(r"confirm|continue|approve|allow|sign in|log in|yes|next", label, re.I) \
+                                and not re.search(r"deny|cancel|no\b", label, re.I):
+                            choice = b
+                            break
+                    if choice is None and btns.count():
+                        choice = btns.first
+                    if choice is not None:
+                        log(f"gateway page: clicking '{(choice.inner_text() or choice.get_attribute('value') or '').strip()[:40]}'")
+                        clicked.add(key)
+                        choice.click()
+                        page.wait_for_timeout(1500)
+                        continue
+            page.wait_for_timeout(1000)
+        raise RuntimeError(f"browser sign-in did not finish; last page {page.url}")
+
+
+def attempt(args, want_fp):
+    tmux("kill-session", "-t", TMUX, check=False)
+    os.makedirs(WORKDIR, exist_ok=True)
+    tmux("new-session", "-d", "-s", TMUX, "-x", "250", "-y", "60", "-c", WORKDIR, "claude")
+
+    state = {"url": None, "browser": None, "login_typed": False, "trusted": False, "connected": False,
+             "exit_sent": 0.0}
+    last_action, last_screen = 0.0, ""
+    deadline = time.time() + args.timeout
+    while time.time() < deadline:
+        text = screen()
+        if text is None:  # claude exited
+            ok, method = signed_in()
+            if ok:
+                log(f"signed in ({method})")
+                return True
+            log("claude exited before the sign-in completed; last screen:\n" + last_screen[-1500:])
+            return False
+        changed = text != last_screen
+        last_screen = text
+        now = time.time()
+
+        # Verification link: hand it to the browser (or a human) once.
+        link = verification_link(text)
+        if link and state["url"] != link:
+            state["url"] = link
+            if args.manual:
+                print(f"{NAME}: open {state['url']} and sign in as '{NAME}'", flush=True)
+            else:
+                log(f"verification link captured for {urlparse(state['url']).path}")
+                state["browser"] = subprocess.Popen([sys.executable, __file__, "--browser", state["url"]])
+        b = state["browser"]
+        if b is not None and b.poll() not in (None, 0):
+            log(f"browser step failed (exit {b.returncode})")
+            return False
+
+        if not changed and now - last_action < 4:
+            time.sleep(1)
+            continue
+
+        # TLS trust prompt: the screen shows the first 16 hex of the leaf SHA-256. While the
+        # prompt is up nothing else is answered; a fingerprint that is not ours ends the attempt.
+        if all(m in text for m in TRUST_MARKERS) and not state["trusted"]:
+            shown = re.findall(r"\b[0-9a-f]{16}\b", text.lower())
+            if shown and want_fp[:16] not in shown:
+                log(f"TLS fingerprint on screen {shown} does not match {want_fp[:16]}; refusing")
+                return False
+            seq = choose_option(text, TRUST_OPTION) if shown else None
+            if seq:
+                log(f"TLS fingerprint {want_fp[:16]} matches the issued certificate; trusting it")
+                keys(*seq)
+                state["trusted"] = True
+            last_action = now
+            time.sleep(1)
+            continue
+
+        # The account confirmation only follows a sign-in this attempt started.
+        dialog = next((d for d in DIALOGS if d[0] in text and (state["url"] or d is not DIALOGS[0])), None)
+        if dialog:
+            seq = choose_option(text, dialog[1])
+            if seq:
+                log(f"'{dialog[0]}': choosing '{dialog[1]}'")
+                keys(*seq)
+                last_action = now
+                continue
+        if CONNECT_PROMPT in text and not state["connected"]:
+            keys("Enter")
+            state["connected"] = True
+            last_action = now
+            continue
+
+        low = text.lower()
+        # At the REPL: either sign in, or we are done.
+        at_prompt = "? for shortcuts" in low or re.search(r"^[│\s]*>\s*$", text, re.M)
+        if at_prompt:
+            ok, method = signed_in()
+            if ok and args.force and not state["login_typed"]:
+                log("--force: signing in again with /login")
+                keys("/login", "Enter")
+                state["login_typed"] = True
+            elif ok:
+                if now - state["exit_sent"] > 10:
+                    log(f"signed in ({method}); closing the session")
+                    keys("/exit", "Enter")
+                    state["exit_sent"] = now
+            elif not state["login_typed"]:
+                log("at the prompt without a gateway session; typing /login")
+                keys("/login", "Enter")
+                state["login_typed"] = True
+            last_action = now
+        time.sleep(1)
+
+    log("timed out; last screen:\n" + last_screen[-1500:])
+    return False
+
+
+def main():
+    ap = argparse.ArgumentParser(description="Unattended Claude apps gateway sign-in")
+    ap.add_argument("--force", action="store_true", help="sign in again even with a session")
+    ap.add_argument("--manual", action="store_true", help="print the verification link instead of using the browser")
+    ap.add_argument("--timeout", type=int, default=int(os.environ.get("LOGIN_TIMEOUT_S", "600")))
+    ap.add_argument("--attempts", type=int, default=int(os.environ.get("LOGIN_ATTEMPTS", "4")))
+    ap.add_argument("--browser", metavar="URL", help=argparse.SUPPRESS)
+    args = ap.parse_args()
+
+    if args.browser:
+        try:
+            with open(PASSWORD_FILE, encoding="utf-8") as fh:
+                browser_login(args.browser, fh.read().strip())
+            return 0
+        except Exception as exc:  # noqa: BLE001 - reported to the parent by exit code
+            log(f"browser: {exc}")
+            return 1
+
+    lock = open(LOCK, "a")
+    fcntl.flock(lock, fcntl.LOCK_EX)
+
+    ok, method = signed_in()
+    if ok and not args.force:
+        log(f"already signed in ({method})")
+        return 0
+
+    want = expected_fingerprint()
+    delay = 30
+    for n in range(1, args.attempts + 1):
+        try:
+            live = live_fingerprint()
+            if live != want:
+                log(f"gateway serves certificate {live[:16]}, expected {want[:16]}; refusing to trust it")
+                return 3
+            log(f"attempt {n}/{args.attempts}: starting claude for the gateway sign-in")
+            if attempt(args, want):
+                return 0
+        except (OSError, ssl.SSLError, subprocess.SubprocessError) as exc:
+            log(f"attempt {n} failed: {exc}")
+        finally:
+            tmux("kill-session", "-t", TMUX, check=False)
+        if n < args.attempts:
+            log(f"retrying in {delay}s")
+            time.sleep(delay)
+            delay = min(delay * 2, 600)
+    log("giving up; run `just login-developers` for the manual links")
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

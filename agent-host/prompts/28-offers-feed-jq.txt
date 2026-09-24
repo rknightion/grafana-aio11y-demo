@@ -1,0 +1,4 @@
+team: newsroom
+title: Offers JSON feed + jq validation
+---
+Pull every current affiliate offer (all markets, not just one) and write them out to offers-feed.json in the current directory, same shape as they come back from the offers tool. Then use jq to validate the file: every entry needs a non-empty bookmaker, market, headline and terms, min_age has to equal 18, and responsible_gambling can't be blank. Print a short pass/fail count to the terminal and also drop it into a validation-summary.txt file. If jq isn't installed just say so and fall back to a small python3 check instead, don't get stuck on it. No commits, no pushes, keep everything inside this directory.

@@ -1,0 +1,114 @@
+#!/usr/bin/env bash
+# One unattended Claude Code session through the Claude apps gateway. Everything about telemetry,
+# models, MCP (context7, deepwiki) and the Agent Observability plugin is pushed by the gateway;
+# the container only carries the gateway sign-in settings and the local stdio MCP servers.
+#
+# Picks a prompt (usually one written for this developer's team, sometimes a PII probe that the
+# preflight deny guard should block), a model from SESSION_MODELS, runs `claude -p` with a hard
+# budget and prints one JSON result line on stdout.
+#
+# Usage: dev-session [prompt-file]
+set -Eeuo pipefail
+
+PROMPTS_DIR="${PROMPTS_DIR:-/opt/agent-host/prompts}"
+EFFORT="${SESSION_EFFORT:-low}"
+BUDGET_USD="${SESSION_BUDGET_USD:-0.30}"
+TIMEOUT_S="${SESSION_TIMEOUT_S:-900}"
+PII_PROBE_PERCENT="${PII_PROBE_PERCENT:-20}"
+TEAM="${DEVELOPER_TEAM:-platform}"
+MCP="${MCP_SERVER_NAME:-touchline}"
+STATE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/agent-host"
+mkdir -p "$STATE_DIR"
+
+exec 9>"${CLAUDE_LOCK:-/tmp/claude.lock}"
+flock -w 120 9 || { echo "dev-session: claude is busy (sign-in or another session); skipping" >&2; exit 0; }
+
+# Weighted model choice from "id=weight,id=weight".
+pick_model() {
+  local total=0 spec id w r
+  local -a ids=() weights=()
+  IFS=',' read -r -a specs <<<"${SESSION_MODELS:-claude-haiku-4-5=1}"
+  for spec in "${specs[@]}"; do
+    id=${spec%%=*}; w=${spec##*=}
+    ids+=("$id"); weights+=("$w"); total=$((total + w))
+  done
+  r=$((RANDOM % total))
+  for i in "${!ids[@]}"; do
+    r=$((r - weights[i]))
+    if ((r < 0)); then echo "${ids[i]}"; return; fi
+  done
+  echo "${ids[0]}"
+}
+
+pick_prompt() {
+  local -a pool=()
+  if ((RANDOM % 100 < PII_PROBE_PERCENT)); then
+    mapfile -t pool < <(find "$PROMPTS_DIR" -name 'pii-*.txt')
+  elif ((RANDOM % 100 < 70)); then
+    mapfile -t pool < <(grep -l -x "team: $TEAM" "$PROMPTS_DIR"/*.txt | grep -v '/pii-')
+  fi
+  if ((${#pool[@]} == 0)); then
+    mapfile -t pool < <(find "$PROMPTS_DIR" -name '*.txt' ! -name 'pii-*.txt')
+  fi
+  printf '%s\n' "${pool[@]}" | shuf -n 1
+}
+
+model="${SESSION_MODEL:-$(pick_model)}"
+prompt_file="${1:-$(pick_prompt)}"
+[[ -r "$prompt_file" ]] || { echo "dev-session: no prompt file" >&2; exit 2; }
+# {{MCP}} in a prompt names the demo's own MCP server, registered under MCP_SERVER_NAME.
+title="$(sed -n 's/^title: *//p' "$prompt_file" | head -1 | sed "s/{{MCP}}/$MCP/g")"
+prompt="$(sed '1,/^---$/d' "$prompt_file" | sed "s/{{MCP}}/$MCP/g")"
+[[ -n "$prompt" ]] || { echo "dev-session: empty prompt in $prompt_file" >&2; exit 2; }
+scenario="$(basename "$prompt_file" .txt)"
+
+work="$(mktemp -d "$HOME/work/session.XXXXXX")"
+trap 'rm -rf -- "$work"' EXIT
+cd "$work"
+
+# Auto-approved tools: what the prompts in PROMPTS_DIR need and no more. No curl, rm, npm or npx
+# (fetching goes through the fetch MCP server, clones stay in the session directory, which is
+# deleted afterwards). python3 and node remain for the prompts that write and run small scripts;
+# the container's network isolation (agent-host-firewall) is what bounds them. File edits and
+# writes are approved only under the session directory (an Edit path rule also governs Write);
+# the user-scope config is denied outright, and dev-reseed resets it before every session anyway.
+allowed=(
+  Read "Edit(./**)" Glob Grep "mcp__$MCP" mcp__time mcp__context7 mcp__deepwiki mcp__fetch mcp__git
+  mcp__sequential-thinking mcp__memory
+  "Bash(git clone:*)" "Bash(git ls-remote:*)" "Bash(git log:*)" "Bash(git diff:*)"
+  "Bash(git status:*)" "Bash(git show:*)" "Bash(git reset:*)" "Bash(git checkout:*)"
+  "Bash(git restore:*)" "Bash(ls:*)" "Bash(cat:*)" "Bash(head:*)" "Bash(tail:*)" "Bash(wc:*)"
+  "Bash(grep:*)" "Bash(find:*)" "Bash(sort:*)" "Bash(uniq:*)" "Bash(diff:*)" "Bash(mkdir:*)"
+  "Bash(awk:*)" "Bash(cd:*)" "Bash(jq:*)" "Bash(python3:*)" "Bash(node:*)"
+)
+denied=("Edit(~/.claude/**)" "Read(~/.claude/**)")
+
+started="$(date -u +%FT%TZ)"
+set +e
+result="$(timeout "$TIMEOUT_S" claude -p "$prompt" --model "$model" --effort "$EFFORT" \
+  --max-budget-usd "$BUDGET_USD" \
+  --append-system-prompt "Work only inside the current working directory: clone repositories into it and create files in it. Never commit or push." \
+  --allowedTools "${allowed[@]}" --disallowedTools "${denied[@]}" --output-format json 2>"$STATE_DIR/last-stderr.log" | tail -n 1)"
+rc=$?
+set -e
+
+# A lapsed or revoked gateway session: ask the loop to sign in again before the next run. Only
+# stderr and the text of an error result are checked; a normal answer that happens to mention
+# "401" or "unauthorized" must not trigger a sign-in.
+error_text="$(jq -r 'select(.is_error == true) | .result // empty' <<<"$result" 2>/dev/null || true)"
+if printf '%s\n' "$error_text" | cat "$STATE_DIR/last-stderr.log" - \
+    | grep -qiE 'gateway sign-in|not logged in|run /login|\b401\b|unauthori[sz]ed|session (has )?expired'; then
+  touch "$STATE_DIR/relogin-needed"
+fi
+
+jq -cn --arg started "$started" --arg developer "${DEVELOPER_NAME:-}" --arg team "$TEAM" \
+  --arg scenario "$scenario" --arg title "$title" --arg model "$model" --argjson rc "$rc" \
+  --arg result "$result" --arg stderr "$(tail -c 400 "$STATE_DIR/last-stderr.log" 2>/dev/null)" '
+  ($result | try fromjson catch {}) as $r
+  | {event: "dev_session", started: $started, developer: $developer, team: $team,
+     scenario: $scenario, title: $title, model: $model, rc: $rc,
+     pii_probe: ($scenario | startswith("pii-")),
+     guard_blocked: (($result + $stderr) | test("blocked by hook|policy blocked"; "i")),
+     subtype: $r.subtype, is_error: $r.is_error, cost_usd: $r.total_cost_usd, turns: $r.num_turns,
+     denials: ($r.permission_denials // [] | map(.tool_name)), session_id: $r.session_id,
+     error: (if $rc != 0 or ($r.is_error // false) then ($r.result // $stderr | tostring | .[0:300]) else null end)}'

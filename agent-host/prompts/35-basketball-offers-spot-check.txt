@@ -1,0 +1,4 @@
+team: newsroom
+title: Basketball market offers compliance spot check
+---
+Can you pull the offers tagged for the basketball market and run the same 18+/responsible-gambling check we do for football, just so we've got parity confirmed. While you're at it, compare the wording style against the football market offers too, same terms structure, same RG phrasing conventions, anything inconsistent that a reviewer might flag. Write a short report, offer id by offer id, with a pass/fail on the compliance checks and a note on any wording drift versus the football set. Save it as basketball-offers-check.md. This is read-only, don't change any of the offer data. No commits, no pushes, stay in the current directory.

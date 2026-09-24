@@ -1,0 +1,4 @@
+team: newsroom
+title: Convert kick-off times across timezones
+---
+Use the time MCP server to convert these kick-off times from Europe/London to America/New_York, Australia/Sydney and Asia/Kolkata for today: 12:30, 15:00, 17:30, 20:00. Write KICKOFFS.md as a small markdown table.

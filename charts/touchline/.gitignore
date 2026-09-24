@@ -1,0 +1,5 @@
+# This chart has no chart dependencies (see README: Alloy is a plain Deployment/ConfigMap, not
+# the upstream grafana/alloy chart). This ignore exists only in case one is ever added: never
+# commit the fetched tgz or its lock.
+charts/*.tgz
+Chart.lock

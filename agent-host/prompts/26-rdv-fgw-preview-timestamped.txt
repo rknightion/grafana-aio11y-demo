@@ -1,0 +1,4 @@
+team: newsroom
+title: Redvale v Fellgate Wanderers preview, timestamped
+---
+Working on the Northern Cup preview for Redvale v Fellgate Wanderers. Pull news for both clubs and the head-to-head history, then write it up as a normal match preview, couple hundred words, one paragraph per team plus a closing line on the head-to-head trend. Get the current time in the Europe/Paris timezone and add it as a "last updated" line at the top of the file so the editors know how fresh it is when they pick it up. Save as draft-rdv-fgw-preview.md. Keep the language neutral, not fanboyish either way, this goes out under the site's byline not a fan blog. No commits, no pushes, everything stays in the current directory.

@@ -1,0 +1,4 @@
+team: trading
+title: Plan an odds-comparison feature
+---
+Use the sequential-thinking MCP server to think through, step by step, how you would add a best-price highlight to an odds comparison table (data shape, edge cases like suspended markets, and a test plan). Then write PLAN.md with the final plan in 10-15 bullet points. Do not write any application code.

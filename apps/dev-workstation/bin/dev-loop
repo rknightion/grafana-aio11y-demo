@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# Developer container main loop: keep the gateway session signed in and, when traffic is enabled,
+# run one session every SESSION_INTERVAL_MINUTES on average (uniformly jittered 50-150%).
+set -Eeuo pipefail
+
+log() { printf '%s dev-loop[%s]: %s\n' "$(date -u +%FT%TZ)" "${DEVELOPER_NAME:-?}" "$*" >&2; }
+
+interval_s=$(( ${SESSION_INTERVAL_MINUTES:-20} * 60 ))
+state="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/agent-host"
+mkdir -p "$state"
+plugin_done=0
+backoff=60
+
+ensure_login() {
+  local force=()
+  if [[ -e "$state/relogin-needed" ]]; then force=(--force); fi
+  if dev-login "${force[@]}"; then
+    rm -f "$state/relogin-needed"
+    backoff=60
+    return 0
+  fi
+  return 1
+}
+
+# The gateway policy enables the plugin; installing it explicitly makes the first session's hooks
+# certain rather than depending on managed-settings install timing.
+ensure_plugin() {
+  ((plugin_done)) && return 0
+  if claude plugin list 2>/dev/null | grep -q 'agento11y-claude-code'; then
+    plugin_done=1
+    return 0
+  fi
+  # Same source and release tag as the gateway's managed extraKnownMarketplaces entry.
+  claude plugin marketplace add "${AGENTO11Y_MARKETPLACE:?}" >&2 || true
+  if claude plugin install agento11y-claude-code@agento11y --scope user >&2; then
+    log "installed the agento11y Claude Code plugin"
+    plugin_done=1
+  else
+    log "plugin install failed; will retry before the next session"
+  fi
+}
+
+# Stagger developers so five containers do not all start at once.
+sleep $((RANDOM % 60))
+
+while true; do
+  if ! ensure_login; then
+    log "sign-in failed; next try in ${backoff}s"
+    sleep "$backoff"
+    backoff=$((backoff * 2 > 1800 ? 1800 : backoff * 2))
+    continue
+  fi
+  ensure_plugin
+
+  if [[ "${TRAFFIC_ENABLED:-false}" != "true" ]]; then
+    log "traffic disabled; staying signed in (checking hourly)"
+    sleep 3600
+    continue
+  fi
+
+  # Drop anything the previous session persisted in the user-scope config before the next one.
+  dev-reseed || log "config reset failed with $?"
+  ensure_plugin
+  dev-session || log "session exited with $?"
+  wait_s=$(( interval_s / 2 + RANDOM * interval_s / 32768 ))
+  log "next session in $((wait_s / 60))m"
+  sleep "$wait_s"
+done

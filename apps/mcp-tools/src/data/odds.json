@@ -1,0 +1,40 @@
+{
+  "fx-2026-10-03-hbc-ngr": {
+    "home": { "Crossbar Bet": 2.3, "Halftime Odds": 2.25, "Longshot & Co": 2.35 },
+    "draw": { "Crossbar Bet": 3.4, "Halftime Odds": 3.5, "Longshot & Co": 3.45 },
+    "away": { "Crossbar Bet": 3.1, "Halftime Odds": 3.0, "Longshot & Co": 3.05 }
+  },
+  "fx-2026-10-04-kbu-asa": {
+    "home": { "Crossbar Bet": 1.75, "Halftime Odds": 1.8, "Longshot & Co": 1.78 },
+    "draw": { "Crossbar Bet": 3.9, "Halftime Odds": 3.75, "Longshot & Co": 3.85 },
+    "away": { "Crossbar Bet": 4.6, "Halftime Odds": 4.5, "Longshot & Co": 4.75 }
+  },
+  "fx-2026-10-06-rdv-fgw": {
+    "home": { "Crossbar Bet": 1.65, "Halftime Odds": 1.62, "Longshot & Co": 1.68 },
+    "draw": { "Crossbar Bet": 4.2, "Halftime Odds": 4.1, "Longshot & Co": 4.3 },
+    "away": { "Crossbar Bet": 5.0, "Halftime Odds": 5.25, "Longshot & Co": 4.9 }
+  },
+  "fx-2026-10-08-pht-mbl": {
+    "home": { "Crossbar Bet": 2.6, "Halftime Odds": 2.55, "Longshot & Co": 2.65 },
+    "draw": { "Crossbar Bet": 3.2, "Halftime Odds": 3.25, "Longshot & Co": 3.15 },
+    "away": { "Crossbar Bet": 2.7, "Halftime Odds": 2.75, "Longshot & Co": 2.68 }
+  },
+  "fx-2026-10-10-sbs-bmr": {
+    "home": { "Crossbar Bet": 2.1, "Halftime Odds": 2.05, "Longshot & Co": 2.15 },
+    "draw": { "Crossbar Bet": 3.5, "Halftime Odds": 3.6, "Longshot & Co": 3.55 },
+    "away": { "Crossbar Bet": 3.3, "Halftime Odds": 3.2, "Longshot & Co": 3.25 }
+  },
+  "fx-2026-10-11-ecs-wfc": {
+    "home": { "Crossbar Bet": 1.55, "Halftime Odds": 1.58, "Longshot & Co": 1.53 },
+    "draw": { "Crossbar Bet": 4.4, "Halftime Odds": 4.3, "Longshot & Co": 4.5 },
+    "away": { "Crossbar Bet": 5.75, "Halftime Odds": 6.0, "Longshot & Co": 5.5 }
+  },
+  "fx-2026-10-07-mrk-shk": {
+    "home": { "Crossbar Bet": 1.9, "Halftime Odds": 1.95, "Longshot & Co": 1.88 },
+    "away": { "Crossbar Bet": 1.95, "Halftime Odds": 1.9, "Longshot & Co": 1.98 }
+  },
+  "fx-2026-10-09-bvv-cyt": {
+    "home": { "Crossbar Bet": 1.72, "Halftime Odds": 1.7, "Longshot & Co": 1.75 },
+    "away": { "Crossbar Bet": 2.15, "Halftime Odds": 2.2, "Longshot & Co": 2.1 }
+  }
+}

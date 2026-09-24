@@ -1,0 +1,99 @@
+{{- $name := printf "%s-experiments" (include "touchline.prefix" .) }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "touchline.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.traffic.experimentsSchedule | quote }}
+  # Traffic switch: suspend rather than remove, so re-enabling traffic needs no re-apply beyond
+  # flipping traffic.enabled.
+  suspend: {{ not .Values.traffic.enabled }}
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 300
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 10800
+      backoffLimit: 0
+      template:
+        metadata:
+          labels:
+            {{- include "touchline.selectorLabels" $name | nindent 12 }}
+        spec:
+          restartPolicy: Never
+          serviceAccountName: {{ .Values.serviceAccounts.experiments }}
+          {{- if .Values.images.pullSecret }}
+          imagePullSecrets:
+            - name: {{ .Values.images.pullSecret }}
+          {{- end }}
+          securityContext:
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: experiments
+              image: "{{ .Values.images.registry }}/agents:{{ .Values.images.tag }}"
+              imagePullPolicy: IfNotPresent
+              # Same image as the in-app agents and the loadgen; the experiments entrypoint is
+              # selected by command/args, not by a separate image.
+              command: ["node", "experiments/run-experiment.mjs"]
+              args: ["--scheduled", "--execute", "--variant-ids", {{ .Values.experiments.variantIds | quote }}]
+              env:
+                - name: AGENTO11Y_ENABLE_EXPERIMENTAL_FEATURES
+                  value: "true"
+                # The app names its Lease <SERVICE_NAMESPACE>-experiments; keep it equal to the Role's resourceNames.
+                - name: SERVICE_NAMESPACE
+                  value: {{ include "touchline.prefix" . | quote }}
+                - name: AGENT_VERSION
+                  value: {{ .Values.agentVersion | quote }}
+                - name: ORCHESTRATOR_URL
+                  value: "http://{{ include "touchline.prefix" . }}-orchestrator:8080"
+                - name: NODE_EXTRA_CA_CERTS
+                  value: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+                - name: CONTENT_CAPTURE
+                  value: {{ .Values.contentCapture | quote }}
+                - name: AGENTO11Y_PROTOCOL
+                  value: http
+                - name: AGENTO11Y_AUTH_MODE
+                  value: basic
+                - name: AGENTO11Y_CONTENT_CAPTURE_MODE
+                  value: {{ include "touchline.contentCaptureMode" . }}
+                - name: AGENTO11Y_ENDPOINT
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.secrets.agento11y }}
+                      key: endpoint
+                - name: AGENTO11Y_AUTH_TENANT_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.secrets.agento11y }}
+                      key: tenant_id
+                - name: AGENTO11Y_AUTH_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.secrets.agento11y }}
+                      key: token
+                {{- if .Values.secrets.experiments }}
+                - name: AGENTO11Y_GRAFANA_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.secrets.experiments }}
+                      key: grafana_url
+                - name: AGENTO11Y_SERVICE_ACCOUNT_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.secrets.experiments }}
+                      key: token
+                {{- end }}
+              resources:
+                {{- toYaml .Values.experiments.resources | nindent 16 }}
+              securityContext:
+                allowPrivilegeEscalation: false
+                runAsNonRoot: true
+                capabilities:
+                  drop:
+                    - ALL

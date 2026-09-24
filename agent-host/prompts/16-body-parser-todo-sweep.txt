@@ -1,0 +1,4 @@
+team: platform
+title: Grep body-parser for TODO/FIXME
+---
+Clone https://github.com/expressjs/body-parser --depth 1. Grep the lib/ directory (and anywhere else relevant) for TODO, FIXME and any similar markers, and write a short summary of what's outstanding - file, rough location, and what it seems to be about. If the repo turns out to be squeaky clean just say that plainly rather than manufacturing findings to look thorough. Save the summary to outstanding-work.md in the current directory. Don't edit anything inside the clone, don't commit, don't push, stay in the current directory throughout.

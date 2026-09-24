@@ -1,0 +1,4 @@
+team: newsroom
+title: Count lines of code by type in boltons
+---
+Clone https://github.com/mahmoud/boltons --depth 1. Produce a simple breakdown of lines of code by file extension (.py, .rst, .md, whatever's actually there) across the whole repo - a basic find + wc -l pipeline is fine, you don't need anything fancy or a full tokei-style tool. Present it as a small sorted table (extension, file count, total lines, sorted by total lines descending) in loc-breakdown.txt in the current directory. Don't modify anything inside the clone, don't commit, don't push, stay in the current directory the whole time.

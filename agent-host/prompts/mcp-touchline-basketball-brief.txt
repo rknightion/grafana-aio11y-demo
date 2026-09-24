@@ -1,0 +1,4 @@
+team: platform
+title: Basketball preseason brief via MCP
+---
+Use the {{MCP}} MCP server to get both basketball fixtures, their odds and the news for all four teams, and use the sequential-thinking MCP server to decide which game deserves the homepage slot and why. Write HOMEPAGE.md with the pick, three bullet points of reasoning and the moneyline best prices. Keep it under 15 lines and stay in the current directory.

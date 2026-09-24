@@ -1,0 +1,74 @@
+[
+  {
+    "id": "fx-2026-10-03-hbc-ngr",
+    "sport": "football",
+    "competition": "Premier Division",
+    "home": "Harbour City",
+    "away": "Northgate Rovers",
+    "kickoff": "2026-10-03T15:30:00Z",
+    "venue": "Quayside Stadium"
+  },
+  {
+    "id": "fx-2026-10-04-kbu-asa",
+    "sport": "football",
+    "competition": "Premier Division",
+    "home": "Kingsbridge United",
+    "away": "Ashford Athletic",
+    "kickoff": "2026-10-04T16:00:00Z",
+    "venue": "Riverside Park"
+  },
+  {
+    "id": "fx-2026-10-06-rdv-fgw",
+    "sport": "football",
+    "competition": "Northern Cup",
+    "home": "Redvale",
+    "away": "Fellgate Wanderers",
+    "kickoff": "2026-10-06T19:30:00Z",
+    "venue": "The Old Mill Ground"
+  },
+  {
+    "id": "fx-2026-10-08-pht-mbl",
+    "sport": "football",
+    "competition": "Continental League",
+    "home": "Porthaven Town",
+    "away": "Millbrook Lions",
+    "kickoff": "2026-10-08T19:45:00Z",
+    "venue": "Lighthouse Road"
+  },
+  {
+    "id": "fx-2026-10-10-sbs-bmr",
+    "sport": "football",
+    "competition": "Northern Cup",
+    "home": "Stonebridge Saints",
+    "away": "Bramley Rangers",
+    "kickoff": "2026-10-10T20:00:00Z",
+    "venue": "Chapel Lane"
+  },
+  {
+    "id": "fx-2026-10-11-ecs-wfc",
+    "sport": "football",
+    "competition": "Premier Division",
+    "home": "Eastcliff Stars",
+    "away": "Westford City",
+    "kickoff": "2026-10-11T14:00:00Z",
+    "venue": "Clifftop Arena"
+  },
+  {
+    "id": "fx-2026-10-07-mrk-shk",
+    "sport": "basketball",
+    "competition": "Pro Basketball League Preseason",
+    "home": "Metro Rockets",
+    "away": "Summit Hawks",
+    "kickoff": "2026-10-07T01:30:00Z",
+    "venue": "Metro Dome"
+  },
+  {
+    "id": "fx-2026-10-09-bvv-cyt",
+    "sport": "basketball",
+    "competition": "Pro Basketball League Preseason",
+    "home": "Bayview Vipers",
+    "away": "Canyon Thunder",
+    "kickoff": "2026-10-09T02:00:00Z",
+    "venue": "Bayview Pavilion"
+  }
+]

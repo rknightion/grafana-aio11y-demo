@@ -1,0 +1,4 @@
+team: platform
+title: Evaluate node-cron for odds refresh scheduling
+---
+Looking at whether node-cron is worth pulling in for scheduling our odds refresh jobs instead of the cron wrapper we hacked together last year. Verify the repo is actually live first with git ls-remote against https://github.com/kelektiv/node-cron, then clone it into a scratch folder and have a look through the README for the schedule syntax it supports and whether it handles timezones properly, that's the bit our current setup gets wrong. Write a few lines of notes to a local file on whether it's worth swapping to. No commits, no pushes, keep it all local to here.

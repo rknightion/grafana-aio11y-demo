@@ -1,0 +1,4 @@
+team: platform
+title: Validate the general-market offers feed
+---
+We've got a couple of general-market offers running (the odds boost and the cashback one) alongside the sport-specific ones, and I want a feed file just for those. Pull the offers tool filtered to the general market, write the result to general-offers.json, then use jq to check every entry has a non-empty terms field and that the headline isn't longer than about 100 characters (that's the cutoff before it gets truncated on the offers widget). Flag anything that fails either check. Get the current time and note it at the top of a short summary file so we know when this was last checked. No commits, no pushes, stay in the current directory.

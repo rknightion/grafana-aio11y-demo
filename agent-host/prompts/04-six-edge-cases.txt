@@ -1,0 +1,4 @@
+team: platform
+title: Edge-case review of six's compat shim
+---
+Clone https://github.com/benjaminp/six --depth 1. six.py is a single file so it's not a long read. Pick one non-trivial function - something like six.reraise, six.exec_, or iteritems - and review it for edge cases: empty input, wrong types, None, that kind of thing. Write your findings as a short numbered list in review-notes.txt in the current directory, each item being "what's the edge case, does it actually break, does it matter in practice". Don't modify six.py itself, don't commit or push anything, stay in the current dir the whole time.

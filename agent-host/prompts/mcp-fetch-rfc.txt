@@ -1,0 +1,4 @@
+team: platform
+title: Summarise an HTTP caching RFC section
+---
+Use the fetch MCP server to read https://www.rfc-editor.org/rfc/rfc9111.html (just the sections on freshness). Write CACHING.md with a 10-line summary of how max-age, s-maxage and Expires interact, and one example response header set for a public odds page cached for 30 seconds.

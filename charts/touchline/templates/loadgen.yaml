@@ -1,0 +1,139 @@
+{{- $name := printf "%s-loadgen" (include "touchline.prefix" .) }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $name }}-rate
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "touchline.labels" . | nindent 4 }}
+data:
+  rate.json: |
+    {"requestsPerMinute": {{ .Values.traffic.siteRequestsPerMinute }}, "dailyBudgetUsd": {{ .Values.loadgen.dailyBudgetUsd }}, "enabled": {{ .Values.traffic.enabled }}}
+---
+{{- if .Values.loadgen.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $name }}-state
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "touchline.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  {{- if .Values.loadgen.persistence.storageClassName }}
+  storageClassName: {{ .Values.loadgen.persistence.storageClassName }}
+  {{- end }}
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: {{ .Values.loadgen.persistence.size }}
+---
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "touchline.labels" . | nindent 4 }}
+    {{- include "touchline.selectorLabels" $name | nindent 4 }}
+spec:
+  # Traffic switch: scale to 0 rather than uninstall, so turning traffic back on needs no re-apply
+  # beyond flipping traffic.enabled.
+  replicas: {{ if .Values.traffic.enabled }}1{{ else }}0{{ end }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "touchline.selectorLabels" $name | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "touchline.selectorLabels" $name | nindent 8 }}
+    spec:
+      serviceAccountName: {{ .Values.serviceAccounts.loadgen }}
+      automountServiceAccountToken: false
+      {{- if .Values.images.pullSecret }}
+      imagePullSecrets:
+        - name: {{ .Values.images.pullSecret }}
+      {{- end }}
+      securityContext:
+        fsGroup: 10001
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: loadgen
+          image: "{{ .Values.images.registry }}/agents:{{ .Values.images.tag }}"
+          imagePullPolicy: IfNotPresent
+          # Same image as the in-app agents; the loadgen mode is selected by command, not by a
+          # separate image (matches how the source lab manifests ran it).
+          command: ["npm", "run", "loadgen"]
+          env:
+            - name: ROLE
+              value: loadgen
+            - name: AGENT_VERSION
+              value: {{ .Values.agentVersion | quote }}
+            - name: SITE_URL
+              value: "http://{{ include "touchline.prefix" . }}-site-api:8080"
+            - name: LOADGEN_SETTINGS_FILE
+              value: "/etc/{{ $name }}/rate.json"
+            - name: LOADGEN_STATE_DIR
+              value: /var/lib/loadgen
+            - name: OTEL_SERVICE_NAME
+              value: {{ $name }}
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: {{ include "touchline.resourceAttributes" (dict "root" .) }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://{{ include "touchline.prefix" . }}-alloy:4318"
+            - name: CONTENT_CAPTURE
+              value: {{ .Values.contentCapture | quote }}
+            - name: AGENTO11Y_PROTOCOL
+              value: http
+            - name: AGENTO11Y_AUTH_MODE
+              value: basic
+            - name: AGENTO11Y_CONTENT_CAPTURE_MODE
+              value: {{ include "touchline.contentCaptureMode" . }}
+            - name: AGENTO11Y_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.agento11y }}
+                  key: endpoint
+            - name: AGENTO11Y_AUTH_TENANT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.agento11y }}
+                  key: tenant_id
+            - name: AGENTO11Y_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secrets.agento11y }}
+                  key: token
+          volumeMounts:
+            - name: loadgen-rate
+              mountPath: /etc/{{ $name }}
+              readOnly: true
+            - name: loadgen-state
+              mountPath: /var/lib/loadgen
+          resources:
+            {{- toYaml .Values.loadgen.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 10001
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: loadgen-rate
+          configMap:
+            name: {{ $name }}-rate
+        - name: loadgen-state
+          {{- if .Values.loadgen.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ $name }}-state
+          {{- else }}
+          emptyDir: {}
+          {{- end }}

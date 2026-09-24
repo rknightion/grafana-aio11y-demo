@@ -1,0 +1,4 @@
+team: newsroom
+title: Explain what camelcase actually does
+---
+Clone https://github.com/sindresorhus/camelcase --depth 1. Read through index.js (check package.json first for the actual entry point, it might not be exactly that name) and write a short plain-English explanation of the conversion rules it implements - what happens with acronyms, leading numbers, already-camelCase input, hyphens vs underscores vs spaces, that kind of edge case. A few short paragraphs is plenty, no need to reproduce the code. Save it to explainer.md in the current directory. Don't touch the source inside the clone, don't commit or push, work only in the current directory.

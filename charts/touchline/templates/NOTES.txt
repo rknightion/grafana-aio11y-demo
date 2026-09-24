@@ -1,0 +1,28 @@
+Touchline Times ({{ include "touchline.prefix" . }}) is deployed in namespace {{ .Values.namespace }}.
+
+Traffic is currently {{ if .Values.traffic.enabled }}ENABLED{{ else }}DISABLED (traffic.enabled=false: loadgen is scaled to 0, the experiments CronJob is suspended){{ end }}.
+Content capture (prompts/responses in telemetry) is {{ if .Values.contentCapture }}ON{{ else }}OFF{{ end }}.
+In-namespace Alloy collector is {{ if .Values.alloy.enabled }}ENABLED{{ else }}DISABLED - point every app's OTEL_EXPORTER_OTLP_ENDPOINT at your own collector{{ end }}.
+
+Site (no ingress unless site.ingress is set):
+  kubectl -n {{ .Values.namespace }} port-forward svc/{{ include "touchline.prefix" . }}-site-api 8080:8080
+  open http://localhost:8080
+
+Agents (each is its own ClusterIP Service on :8080):
+{{- $root := . }}
+{{- range $role, $cfg := .Values.agents }}
+  kubectl -n {{ $root.Values.namespace }} port-forward svc/{{ include "touchline.prefix" $root }}-{{ $role }} 8080:8080   # {{ $role }} ({{ $cfg.team }})
+{{- end }}
+
+Check the load generator and experiments schedule:
+  kubectl -n {{ .Values.namespace }} get deploy/{{ include "touchline.prefix" . }}-loadgen
+  kubectl -n {{ .Values.namespace }} get cronjob/{{ include "touchline.prefix" . }}-experiments
+{{- if .Values.siteBrowser.enabled }}
+  kubectl -n {{ .Values.namespace }} get cronjob/{{ include "touchline.prefix" . }}-site-browser
+{{- end }}
+
+Tail the collector forwarding telemetry to Grafana Cloud:
+  kubectl -n {{ .Values.namespace }} logs deploy/{{ include "touchline.prefix" . }}-alloy -f
+
+The Claude apps gateway, its Postgres, and the developer containers run on the EC2 agent host
+(agent-host/), not in this chart. See the repo README and docs/coding-agents.md.

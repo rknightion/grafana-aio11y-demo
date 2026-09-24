@@ -1,0 +1,4 @@
+team: platform
+title: Edge-case review of an axios interceptor
+---
+clone https://github.com/axios/axios --depth 1. find the request/response interceptor manager code (lib/core/InterceptorManager.js is a good starting point) and review one of its methods for edge cases - what happens with a null handler, calling eject twice on the same id, forEach-ing over a manager with everything already ejected, that sort of thing. write up what you find as a short bulleted list in interceptor-review.md, current directory. don't change any files inside the clone, no commit, no push, current directory only the whole time.

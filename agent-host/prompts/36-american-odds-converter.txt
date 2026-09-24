@@ -1,0 +1,4 @@
+team: trading
+title: American odds converter module
+---
+Write a small module (Node or Python, your call) that converts decimal odds to American odds format, positive for underdogs above evens and negative for favourites below evens, standard formula. Pull the real prices for Porthaven Town v Millbrook Lions from the odds tool and run all three home/draw/away prices from each bookmaker through the converter as a sanity check that the output looks right (favourites should come out negative, longer shots positive, no wildly wrong numbers). Add a couple of unit tests covering an even-money case and a heavy-favourite case. Print the converted table to the terminal as the final check. No commits, no pushes, everything stays in the current directory.

@@ -1,0 +1,4 @@
+team: trading
+title: What's lodash been up to lately
+---
+Clone https://github.com/lodash/lodash into the current directory with enough depth to see recent commit history - a shallow depth-1 clone won't show you the log, so grab --depth 30 instead. Run git log and summarise the last 20 commits into a few sentences a teammate could skim in 30 seconds - what kind of work has been landing, any obvious theme (fixes, perf, docs, etc). Write it to activity-summary.md in the current directory. Don't commit or push anything, this is read-only exploration of someone else's repo. Don't wander outside the current directory at any point.

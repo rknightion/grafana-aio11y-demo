@@ -1,0 +1,4 @@
+team: newsroom
+title: Add a test for debug's format handling
+---
+Clone https://github.com/visionmedia/debug --depth 1. Look in src/ and test/ to see how the existing tests are structured, then pick one small formatting edge case for the %s/%o/%O style format handling that doesn't look covered, and write one new test for it matching the existing test style. Try to actually run it - run node directly against the relevant file, no npm and nothing new installed - and note in your final message what happened when you ran it. Show me git diff at the end. Never commit, never push, stay in the current directory the whole time.
