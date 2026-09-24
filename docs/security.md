@@ -114,9 +114,14 @@ acts on the demo's traffic:
 
 - In-app agent rules match the demo's agent names (`touchline-orchestrator` and the four
   specialists).
-- Claude Code rules match agent name `claude-code` and the tag `service.namespace=touchline`,
-  which the gateway sets on the demo developers' plugin. Other Claude Code users of the same stack
-  are not matched.
+- The Claude Code online evaluation rule matches agent name `claude-code` and the tag
+  `service.namespace=touchline`, which the gateway sets on the demo developers' plugin, so other
+  Claude Code users of the same stack are not scored.
+- The Claude Code guards (the hook rules below) match agent name `claude-code` alone. The
+  plugin's prompt and tool guard calls carry no tags (agento11y plugin v0.48.0), so a tag
+  condition would never match. On a shared stack they therefore also act on any other Claude Code
+  user whose plugin sends guard calls to it: the PII gate denies their prompts too. Use a
+  dedicated stack, or remove the Claude Code guard rules, if that matters.
 
 What the guards do:
 
