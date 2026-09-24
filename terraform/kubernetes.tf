@@ -91,6 +91,7 @@ locals {
     namespace    = var.namespace
     images = {
       registry   = var.images.registry
+      namePrefix = var.images.name_prefix
       tag        = var.images.tag
       pullSecret = var.images.pull_secret == null ? "" : var.images.pull_secret
     }

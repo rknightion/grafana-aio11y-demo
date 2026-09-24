@@ -1,6 +1,6 @@
 #cloud-config
 # Agent host bootstrap, rendered by Terraform (terraform/aws-agent-host.tf). user_data is STATIC:
-# only the prefix, region, secret ARN, image registry/tag/digests and the render bundle manifest
+# only the prefix, region, secret ARN, image registry/name prefix/tag/digests and the render bundle manifest
 # (S3 key and SHA-256 of each file under agent-host/ that runs as root: render.py, the host
 # scripts, the Alloy and Postgres configs). Credentials and every mutable knob live in the
 # agent-host secret (its `config` key); agent-host-up reads it at boot and
@@ -21,12 +21,13 @@ write_files:
     permissions: "0644"
     encoding: b64
     content: ${base64encode(jsonencode({
-      name            = name
-      aws_region      = aws_region
-      secret_arn      = secret_arn
-      images_registry = images_registry
-      images_tag      = images_tag
-      images_digests  = jsondecode(images_digests_json)
+      name               = name
+      aws_region         = aws_region
+      secret_arn         = secret_arn
+      images_registry    = images_registry
+      images_name_prefix = images_name_prefix
+      images_tag         = images_tag
+      images_digests     = jsondecode(images_digests_json)
     }))}
 
   - path: /etc/agent-host/bundle.json

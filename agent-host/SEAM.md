@@ -12,7 +12,7 @@ user_data never changes with a knob or a credential; changing it replaces the ho
 | `name` | string | Demo prefix; compose project name, `service.namespace` |
 | `aws_region` | string | Secrets Manager, S3 and Bedrock region |
 | `secret_arn` | string | The agent-host secret below |
-| `images_registry`, `images_tag` | string | `<registry>/gateway:<tag>` and `<registry>/dev-workstation:<tag>`; the tag must be plain |
+| `images_registry`, `images_name_prefix`, `images_tag` | string | `<registry>/<name_prefix>gateway:<tag>` and `<registry>/<name_prefix>dev-workstation:<tag>`; the tag must be plain |
 | `images_digests_json` | JSON | Optional `{gateway: "sha256:...", "dev-workstation": "sha256:..."}`; a pinned image is referenced as `<ref>:<tag>@<digest>` |
 | `bundle_bucket`, `bundle_json` | string, JSON | The render bundle: `{host path: {key, sha256, mode}}` in the module-owned bucket. `agent-host-install-bundle` refuses any file whose SHA-256 differs |
 

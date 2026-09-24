@@ -214,9 +214,10 @@ variable "agento11y_cli_version" {
 }
 
 variable "images" {
-  description = "Container image registry and tag for this repo's images. tag is a plain tag and defaults to this module's release; digests (image name => sha256:...) pins individual images immutably, and verify images with cosign (docs/security.md). Override registry to use a private mirror (see `just images-push`)."
+  description = "Container image registry, name prefix and tag for this repo's images. Every image reference is \"<registry>/<name_prefix><app>:<tag>\" (app in agents, site, site-browser, mcp-tools, gateway, dev-workstation). tag is a plain tag and defaults to this module's release; digests (image name => sha256:...) pins individual images immutably, and verify images with cosign (docs/security.md). Override registry to use a private mirror (see `just images-push`); set name_prefix = \"\" for a mirror whose repositories are already `<registry>/<app>` with no shared prefix."
   type = object({
-    registry    = optional(string, "ghcr.io/rknightion/grafana-aio11y-demo")
+    registry    = optional(string, "ghcr.io/rknightion")
+    name_prefix = optional(string, "grafana-aio11y-demo-")
     tag         = optional(string, "0.1.0") # x-release-please-version
     digests     = optional(map(string), {})
     pull_secret = optional(string)

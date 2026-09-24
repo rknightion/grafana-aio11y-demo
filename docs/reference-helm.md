@@ -15,7 +15,8 @@ kubectl.
 | `nameOverride` | string | `touchline` | Prefix for every object this chart creates. Must equal Terraform's `var.name`. Frozen. |
 | `namespace` | string | `touchline` | Namespace used in resource attributes and object metadata. Set to match the namespace you install into. |
 | `deploymentEnvironment` | string | `demo` | Reported as `deployment.environment` on every signal. |
-| `images.registry` | string | `ghcr.io/rknightion/grafana-aio11y-demo` | Registry for the `agents` and `site` images. Frozen. |
+| `images.registry` | string | `ghcr.io/rknightion` | Registry for the `agents` and `site` images. Frozen. |
+| `images.namePrefix` | string | `grafana-aio11y-demo-` | Prefixed onto every image name, e.g. `registry/namePrefixagents`. `""` for a private mirror whose repositories are already `registry/<app>`. Frozen. |
 | `images.tag` | string | `0.1.0` | Tag for the `agents` and `site` images; defaults to this chart's release. Frozen. |
 | `images.pullSecret` | string | `""` | Name of an existing `imagePullSecret`. Empty means none. |
 | `serviceAccounts.agents` | string | `touchline-agents` | ServiceAccount for the 5 agents only. Bound to the Bedrock IAM role by EKS Pod Identity (by name; no annotation). Frozen. |

@@ -36,7 +36,7 @@ spec:
               type: RuntimeDefault
           containers:
             - name: experiments
-              image: "{{ .Values.images.registry }}/agents:{{ .Values.images.tag }}"
+              image: "{{ include "touchline.image" (dict "root" . "name" "agents") }}"
               imagePullPolicy: IfNotPresent
               # Same image as the in-app agents and the loadgen; the experiments entrypoint is
               # selected by command/args, not by a separate image.

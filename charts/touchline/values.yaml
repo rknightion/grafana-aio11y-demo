@@ -19,7 +19,11 @@ namespace: touchline
 deploymentEnvironment: demo
 
 images:
-  registry: ghcr.io/rknightion/grafana-aio11y-demo
+  registry: ghcr.io/rknightion
+  # -- Prefixed onto every image name below, e.g. registry/<namePrefix>agents. Terraform sets
+  # this from var.images.name_prefix. Set to "" for a private mirror whose repositories are
+  # already <registry>/<app> with no shared prefix.
+  namePrefix: grafana-aio11y-demo-
   # -- Image tag for every image above. Defaults to this chart's own release; Terraform sets it
   # from var.images.tag.
   tag: "0.1.0" # x-release-please-version

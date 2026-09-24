@@ -30,7 +30,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: site
-          image: "{{ .Values.images.registry }}/site:{{ .Values.images.tag }}"
+          image: "{{ include "touchline.image" (dict "root" . "name" "site") }}"
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

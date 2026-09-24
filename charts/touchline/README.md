@@ -99,12 +99,14 @@ here dashboards against.
 ## Shared image, different command
 
 The 5 agent Deployments, the load generator and the experiments `CronJob` all run
-`images.registry/agents:images.tag`. The load generator overrides `command: ["npm", "run",
-"loadgen"]` and the experiments job overrides `command: ["node", "experiments/run-experiment.mjs"]`
-with `args`, running the same agents image in three roles rather than building three separate
-images. `images.registry/site:images.tag` is the site backend; `images.registry/site-browser:images.tag`
-(the `Dockerfile.browser` image, run by the optional `siteBrowser` CronJob) is a third, separate
-image built from the same `apps/site` package.
+`images.registry/images.namePrefix` + `agents:images.tag`. The load generator overrides
+`command: ["npm", "run", "loadgen"]` and the experiments job overrides
+`command: ["node", "experiments/run-experiment.mjs"]` with `args`, running the same agents image
+in three roles rather than building three separate images.
+`images.registry/images.namePrefix` + `site:images.tag` is the site backend;
+`images.registry/images.namePrefix` + `site-browser:images.tag` (the `Dockerfile.browser` image,
+run by the optional `siteBrowser` CronJob) is a third, separate image built from the same
+`apps/site` package.
 
 ## Experiments RBAC
 
@@ -129,7 +131,8 @@ on the agent-host's own developer traffic (a separate switch, `agent-host/`).
 | `nameOverride` | string | `touchline` | Prefix for every object this chart creates. Must equal Terraform's `var.name`. Frozen. |
 | `namespace` | string | `touchline` | Namespace used in resource attributes and object metadata. Set to match the namespace you install into. |
 | `deploymentEnvironment` | string | `demo` | Reported as `deployment.environment` on every signal. |
-| `images.registry` | string | `ghcr.io/rknightion/grafana-aio11y-demo` | Registry for the `agents` and `site` images. Frozen. |
+| `images.registry` | string | `ghcr.io/rknightion` | Registry for the `agents` and `site` images. Frozen. |
+| `images.namePrefix` | string | `grafana-aio11y-demo-` | Prefixed onto every image name, e.g. `registry/namePrefixagents`. `""` for a private mirror whose repositories are already `registry/<app>`. Frozen. |
 | `images.tag` | string | `0.1.0` | Tag for the `agents` and `site` images; defaults to this chart's release. Frozen. |
 | `images.pullSecret` | string | `""` | Name of an existing `imagePullSecret`. Empty means none. |
 | `serviceAccounts.agents` | string | `touchline-agents` | ServiceAccount for the 5 agents only. Bound to the Bedrock IAM role by EKS Pod Identity (by name; no annotation). Frozen. |

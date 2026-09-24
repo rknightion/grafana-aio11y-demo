@@ -176,7 +176,7 @@ Enable it only in a dedicated sandbox account.
     --certificate-identity-regexp '^https://github\.com/rknightion/\.github/\.github/workflows/container-publish\.yml@' \
     --certificate-oidc-issuer https://token.actions.githubusercontent.com \
     --certificate-github-workflow-repository rknightion/grafana-aio11y-demo \
-    ghcr.io/rknightion/grafana-aio11y-demo/gateway:<tag>
+    ghcr.io/rknightion/grafana-aio11y-demo-gateway:<tag>
   ```
 
   `--certificate-github-workflow-repository` ties the signature to builds started from this

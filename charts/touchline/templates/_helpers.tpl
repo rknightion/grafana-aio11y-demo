@@ -15,6 +15,14 @@ are built from that same var.name, not from whatever Helm release name the insta
 {{- end -}}
 
 {{/*
+Full image reference for one of this repo's images: "<registry>/<namePrefix><name>:<tag>".
+Call as (include "touchline.image" (dict "root" $root "name" "agents")).
+*/}}
+{{- define "touchline.image" -}}
+{{- printf "%s/%s%s:%s" .root.Values.images.registry .root.Values.images.namePrefix .name .root.Values.images.tag -}}
+{{- end -}}
+
+{{/*
 Common labels for every object.
 */}}
 {{- define "touchline.labels" -}}

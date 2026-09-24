@@ -21,6 +21,10 @@
       "required": ["registry", "tag"],
       "properties": {
         "registry": { "type": "string", "minLength": 1 },
+        "namePrefix": {
+          "type": "string",
+          "description": "Prefixed onto every image name, e.g. registry/<namePrefix>agents. \"\" for a private mirror whose repositories are already <registry>/<app>."
+        },
         "tag": { "type": "string", "minLength": 1 },
         "pullSecret": { "type": "string" }
       }
