@@ -106,7 +106,8 @@ resource "grafana_asserts_prom_rule_file" "service_graph" {
 
     rule {
       record = "asserts:relation:calls"
-      expr   = <<-EOT
+      # chomp: the API stores the expression without the heredoc's trailing newline.
+      expr = chomp(<<-EOT
         sum by (asserts_env, namespace, service, dst_namespace, dst_service) (
           label_replace(label_replace(
             rate(traces_service_graph_request_total{client_service_namespace="${local.prefix}", server_service_namespace="${local.prefix}", connection_type=""}[30m]),
@@ -114,6 +115,7 @@ resource "grafana_asserts_prom_rule_file" "service_graph" {
           "dst_namespace", "$1", "server_service_namespace", "(.+)")
         )
       EOT
+      )
     }
   }
 }

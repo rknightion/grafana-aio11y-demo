@@ -69,6 +69,8 @@ resource "grafana_rule_group" "recording" {
       data {
         ref_id         = "A"
         datasource_uid = local.grafana_rule_datasources[rule.value.datasource]
+        # The API mirrors a Loki model's queryType here; leaving it unset is a perpetual diff.
+        query_type = rule.value.datasource == "logs" ? "instant" : null
         relative_time_range {
           from = 600
           to   = 0
@@ -124,6 +126,8 @@ resource "grafana_rule_group" "alerts" {
       data {
         ref_id         = "A"
         datasource_uid = local.grafana_rule_datasources[rule.value.datasource]
+        # The API mirrors a Loki model's queryType here; leaving it unset is a perpetual diff.
+        query_type = rule.value.datasource == "logs" ? "instant" : null
         relative_time_range {
           from = lookup(rule.value, "range", 600)
           to   = 0

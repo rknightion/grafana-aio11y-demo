@@ -132,7 +132,11 @@ resource "helm_release" "this" {
   name      = local.prefix
   namespace = kubernetes_namespace_v1.this.metadata[0].name
   chart     = local.chart_path
-  values    = [yamlencode(local.chart_values)]
+  # The chart version never changes between module releases, so hash the chart itself: any
+  # template edit then shows up as a values change and triggers an upgrade.
+  values = [yamlencode(merge(local.chart_values, {
+    chartDigest = sha1(join("", [for f in sort(fileset(local.chart_path, "**")) : filesha1("${local.chart_path}/${f}")]))
+  }))]
 
   wait    = true
   timeout = 600
