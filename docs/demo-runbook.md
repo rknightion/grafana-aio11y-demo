@@ -58,10 +58,9 @@ calls Bedrock for them."
 **Spend-cap moment.** On *Audit log*, filter inference events to status 429. If the capped
 platform developer has hit today's cap, the 429s are there with the blocked message; say "that is
 the cap doing its job, per developer, without touching the laptop." If nobody has hit a cap yet,
-show the caps table and say when it would trip. Do not change caps live in front of an audience:
-an apply to `spend_caps` reaches the host through the agent-host secret and takes up to 5 minutes
-to land (no host replacement, but an unpredictable wait mid-demo), so decide the caps you want to
-show beforehand instead.
+show the caps table and say when it would trip. Set the caps you want to show before the demo,
+not live: an apply to `spend_caps` reaches the host through the agent-host secret and can take up
+to 5 minutes to land. The host is not replaced, but the wait is unpredictable mid-demo.
 
 ### Observing Claude Code
 
@@ -163,3 +162,25 @@ own view to check both against."
 
 Set `traffic_enabled = false` and apply to stop Bedrock spend while keeping everything deployed,
 or destroy it ([teardown.md](teardown.md)).
+
+## Dashboard screenshots
+
+<!--
+Planned screenshots, not yet captured. Add the files under docs/assets/screenshots/ and this
+section is done; the image paths below already point at where they will live.
+
+  dashboards-claude-code.png  - the touchline-claude-code dashboard, OpenTelemetry overview tab
+  dashboards-gateway.png      - the touchline-gateway dashboard, audit log tab
+  dashboards-agents.png       - the touchline-agents dashboard, overview tab
+  dashboards-bedrock.png      - the touchline-bedrock dashboard, CloudWatch metrics tab
+-->
+
+A quick look at each of the four dashboards, for anyone who has not run the demo yet.
+
+![Claude Code dashboard](assets/screenshots/dashboards-claude-code.png)
+
+![Claude apps gateway dashboard](assets/screenshots/dashboards-gateway.png)
+
+![In-app agents dashboard](assets/screenshots/dashboards-agents.png)
+
+![Bedrock dashboard](assets/screenshots/dashboards-bedrock.png)

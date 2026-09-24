@@ -9,14 +9,18 @@ This is a personal demo project, not an official Grafana Labs product.
 
 ## What it demonstrates
 
-**In-app agents on Amazon Bedrock.** The Touchline site has an AI match desk: an orchestrator
+### In-app agents on Amazon Bedrock
+
+The Touchline site has an AI match desk: an orchestrator
 routes a reader question to news, odds, editorial and compliance agents, which call shared tools
 (odds, news, head-to-head history, offers) and answer through Bedrock. Every call is traced with
 OpenTelemetry and recorded as a generation in Grafana Agent Observability, with online
 evaluations (groundedness, PII, responsible-gambling language), a prompt-injection guard on tool
 results and scheduled experiments comparing prompt variants and models.
 
-**Claude Code developers through the Claude apps gateway.** Five developers in three teams
+### Claude Code developers through the Claude apps gateway
+
+Five developers in three teams
 (newsroom, trading, platform) run Claude Code in containers on one EC2 host. They sign in to the
 Claude apps gateway with Amazon Cognito, and the gateway holds the Bedrock credential, decides
 which models each team can use, enforces per-organization, per-team and per-developer spend caps,
@@ -24,17 +28,21 @@ and pushes managed settings: OpenTelemetry export, MCP servers and the Agent Obs
 The plugin sends every prompt and tool call through Cloud guards (a PII deny guard, secret and
 PII redaction, content safety) and makes sessions available to online evaluations.
 
-**Bedrock's own view.** A CloudWatch metric stream sends the `AWS/Bedrock` namespace to Grafana
+### Bedrock's own view
+
+A CloudWatch metric stream sends the `AWS/Bedrock` namespace to Grafana
 Cloud Metrics, and optional model invocation logging sends Bedrock's per-call log to Grafana Cloud
 Logs. Per-team application inference profiles make AWS-side attribution possible without the
 gateway.
 
-**Everything in one Grafana Cloud stack.** Four dashboards (in-app agents, Bedrock, Claude Code,
-the gateway), each tab labelled by the data source behind it; Grafana-managed recording and alert
-rules (spend, guard denies, errors, latency, throttling) on simplified routing to a contact point
-that pages nobody; a spend datasource that reads the gateway's own Postgres through Private Data
-source Connect; Application Observability, Frontend Observability for the site and a Knowledge
-Graph rule that joins the services.
+### Everything in one Grafana Cloud stack
+
+There are four dashboards (in-app agents, Bedrock, Claude Code, the gateway), and each tab is
+labelled by the data source behind it. Grafana-managed recording and alert rules cover spend,
+guard denies, errors, latency and throttling, and route through simplified routing to a contact
+point that pages nobody. A spend datasource reads the gateway's own Postgres through Private Data
+source Connect. Application Observability, Frontend Observability for the site and a Knowledge
+Graph rule that joins the services complete the stack.
 
 ## Architecture
 
@@ -87,18 +95,18 @@ More detail in [docs/architecture.md](docs/architecture.md).
 
 Short version; [docs/prerequisites.md](docs/prerequisites.md) has every scope and switch.
 
-- **Grafana Cloud stack** with Agent Observability enabled and its LLM-judge provider pointed at
+- A Grafana Cloud stack with Agent Observability enabled and its LLM-judge provider pointed at
   Bedrock, the Knowledge Graph initialized, and the simplified-routing and Grafana-managed
   recording rule features available.
-- **Three Grafana credentials:** a Cloud access policy token (access policies, stacks), a Frontend
+- Three Grafana credentials: a Cloud access policy token (access policies, stacks), a Frontend
   Observability token, and an Admin service account token on the stack.
-- **AWS account** with Bedrock model access for the Anthropic models (including Anthropic's one-time
+- An AWS account with Bedrock model access for the Anthropic models (including Anthropic's one-time
   use-case form), cross-region inference profiles allowed by your SCPs, and permission to create
   IAM roles, Cognito, EC2, Secrets Manager, Firehose and CloudWatch resources.
-- **An EKS cluster** with the Pod Identity agent (built in on Auto Mode), or use
+- An EKS cluster with the Pod Identity agent (built in on Auto Mode), or use
   [examples/eks-auto-mode](examples/eks-auto-mode) to create one, plus a subnet with NAT for the
   agent host.
-- **Tools:** OpenTofu 1.8+ or Terraform 1.8+, the AWS CLI with the Session Manager plugin, `helm`,
+- Tools: OpenTofu 1.8+ or Terraform 1.8+, the AWS CLI with the Session Manager plugin, `helm`,
   `kubectl` and [`just`](https://github.com/casey/just).
 
 ## Quickstart
@@ -130,7 +138,7 @@ tofu -chdir=examples/complete apply
 tofu -chdir=examples/complete output dashboards
 ```
 
-**Existing cluster:** skip step 1. Set `cluster_name` and a NAT-routed `agent_host_subnet_id` in
+With an existing cluster, skip step 1. Set `cluster_name` and a NAT-routed `agent_host_subnet_id` in
 `terraform.tfvars`, make sure your AWS credentials can reach the cluster API (the example
 authenticates with `aws eks get-token`), and run step 2.
 
@@ -163,13 +171,13 @@ pricing calculator for your region before relying on them.
 Fixed infrastructure is roughly USD 280 to 340 a month. Bedrock is the variable part and,
 with traffic on all day, usually the biggest.
 
-**Kill switch.** `traffic_enabled = false` stops the developer sessions, the load generator and the
+`traffic_enabled = false` is the kill switch. It stops the developer sessions, the load generator and the
 experiment schedule without removing anything; Bedrock spend then drops to near zero while the
 dashboards keep their history. This knob lives in the agent-host secret, not the host's user data,
 so the host picks it up within 5 minutes without being replaced. `agent_host_enabled = false`
 removes the host.
 
-**Grafana Cloud.** A free stack is enough to try the demo for a short time, but full content
+On Grafana Cloud, a free stack is enough to try the demo for a short time, but full content
 capture (prompts, responses and tool content in logs) and Claude Code's per-session metric series
 grow quickly. For a demo you leave running for days, use a paid or trial stack and watch the
 stack's usage dashboards. Agent Observability, Frontend Observability and Application
@@ -182,8 +190,8 @@ tofu -chdir=examples/complete destroy
 tofu -chdir=examples/eks-auto-mode destroy
 ```
 
-Destroy the demo before the cluster. A few things outlive destroy or behave in ways worth knowing
-(KMS keys pending deletion, invocation logging, Application Observability): see
+Destroy the demo before the cluster. A few things outlive destroy or need a manual check (KMS keys pending deletion, invocation
+logging, Application Observability): see
 [docs/teardown.md](docs/teardown.md).
 
 ## Documentation

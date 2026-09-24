@@ -19,7 +19,7 @@ The chart never creates Secrets, so there are no credentials in any values file.
 
 ## What moves to you
 
-The Helm chart in [charts/touchline](../charts/touchline/README.md), with the values from:
+The Helm chart in [charts/touchline](https://github.com/rknightion/grafana-aio11y-demo/blob/main/charts/touchline/README.md), with the values from:
 
 ```bash
 tofu -chdir=examples/complete output -raw chart_values
@@ -34,9 +34,9 @@ them.
 
 | Path | Files | How values arrive |
 |---|---|---|
-| Argo CD | [deploy/argocd](../deploy/argocd/README.md) | `helm.valuesObject` in the Application |
-| Flux | [deploy/flux](../deploy/flux/README.md) | a ConfigMap referenced by `valuesFrom` |
-| kubectl | [deploy/kubectl](../deploy/kubectl/README.md) | `just render values=...` renders manifests you apply |
+| Argo CD | [deploy/argocd](https://github.com/rknightion/grafana-aio11y-demo/blob/main/deploy/argocd/README.md) | `helm.valuesObject` in the Application |
+| Flux | [deploy/flux](https://github.com/rknightion/grafana-aio11y-demo/blob/main/deploy/flux/README.md) | a ConfigMap referenced by `valuesFrom` |
+| kubectl | [deploy/kubectl](https://github.com/rknightion/grafana-aio11y-demo/blob/main/deploy/kubectl/README.md) | `just render values=...` renders manifests you apply |
 
 ## Order
 

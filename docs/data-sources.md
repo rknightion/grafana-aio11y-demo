@@ -34,7 +34,7 @@ Two points worth making out loud when you present:
 - **The gateway sees who and how much, not what.** It knows every sign-in, every model call, its
   status, latency and cost, and it can push MCP servers to clients. It cannot see tool calls, MCP
   calls, file edits or anything inside a session. Those come from Claude Code's own telemetry.
-- **Bedrock sees content and tokens, not people.** Every in-app agent shares one IAM role and
+- **Bedrock sees content and tokens but not who sent them.** Every in-app agent shares one IAM role and
   every developer arrives as the agent host's role. The per-team application inference profiles
   are what make AWS-side attribution possible. Invocation logging also covers only the
   `bedrock-runtime` API; calls through other Bedrock endpoints appear in the app's telemetry and

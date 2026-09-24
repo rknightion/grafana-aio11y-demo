@@ -31,7 +31,7 @@ prompt-level panels and the content-based evaluators then have nothing to work w
 Terraform generates or receives every credential the demo uses, so they are all in state:
 
 - Grafana Cloud access policy tokens (ingest: metrics, logs, traces and Agent Observability write;
-  Firehose: metrics and logs write), the PDC network token, and an **Admin** service account token
+  Firehose: metrics and logs write), the PDC network token, and an Admin service account token
   for the experiments;
 - the Cognito app client secret and every developer's password;
 - the gateway session signing secret and admin read and write keys, the Postgres passwords;
@@ -43,14 +43,14 @@ is fine for a short demo, and nothing else.
 
 The same values also live in:
 
-- **Kubernetes Secrets** in the demo namespace (`<prefix>-grafana-otlp`, `<prefix>-agento11y`,
-  `<prefix>-faro`, `<prefix>-experiments`). The experiments Secret holds a stack **Admin** service
-  account token; anyone who can read Secrets in that namespace has Admin on the stack. Restrict
-  Secret access in the namespace accordingly. This is a known trade-off, not an oversight: Agent
-  Observability's evaluation and suite writes are Admin-only today, and there is no narrower
-  Grafana role to name. The fix is a custom role scoped to just those permissions once their exact
-  names are confirmed and documented; until then the experiments service account stays Admin.
-- **Secrets Manager** (`<prefix>/agent-host` and the Firehose credentials), readable only by the
+- Kubernetes Secrets in the demo namespace (`<prefix>-grafana-otlp`, `<prefix>-agento11y`,
+  `<prefix>-faro`, `<prefix>-experiments`). The experiments Secret holds a stack Admin service
+  account token, so anyone who can read Secrets in that namespace has Admin on the stack. Restrict
+  Secret access in the namespace accordingly. The experiments account is Admin because Agent
+  Observability's evaluation and suite writes are Admin-only today and there is no narrower Grafana
+  role to name. A custom role scoped to those permissions replaces it once their exact names are
+  confirmed and documented.
+- Secrets Manager (`<prefix>/agent-host` and the Firehose credentials), readable only by the
   agent host role and the Firehose roles. They are created with a zero-day recovery window so
   destroy removes them at once.
 
@@ -71,30 +71,29 @@ The agent host's user data holds no credentials; it reads them from Secrets Mana
   laptop, `just login-tunnel` pins the gateway's leaf key in a throwaway browser profile instead
   (see [coding-agents.md](coding-agents.md)). Never add the CA to a system or browser trust store:
   it has no name constraints and its private key is in Terraform state.
-- The gateway pushes a separate Agent Observability **client** token (`sigil:write`,
+- The gateway pushes a separate Agent Observability client token (`sigil:write`,
   `metrics:write`, `traces:write`) to every signed-in developer as a managed environment variable,
   so any session can read it. It is scoped to the Claude Code plugin's own generations, metrics
   and traces, and shares nothing with the ingest token: the ingest token (metrics, logs and traces
   write for everything else) never leaves the host, used only by the gateway's
   `telemetry.forward_to` export and the host's own Alloy.
-- **Network isolation, not IMDS, is the actual boundary around the developer containers.**
-  Developers run on their own bridge network, kept off everything except DNS, the gateway on 443
-  and the public internet by a host firewall (`agent-host/host/agent-host-firewall`) that runs
-  before Docker starts and before every compose run: it drops instance metadata
-  (`169.254.0.0/16`), every RFC 1918 and CGNAT range, and the host itself, and drops all IPv6
-  from the developer and PDC bridges (the instance's IMDS IPv6 endpoint is also disabled). Only
-  the gateway's own fixed address may reach IMDS, for its Bedrock credentials; that holds on the
-  trusted core bridge too, where the gateway also has a fixed address and every other service is
-  dropped on the way to `169.254.169.254`. A developer container cannot reach IMDS, the VPC or
-  Postgres. Postgres and the PDC agent sit on a third, separate bridge that the developer network
-  has no route to at all.
-- **Developer containers can reach the gateway admin API.** It is served on the same port 443 the
+- The network is the boundary around the developer containers. Developers run on their own bridge
+  network, and a host firewall (`agent-host/host/agent-host-firewall`) keeps that network off
+  everything except DNS, the gateway on 443 and the public internet. The firewall runs before
+  Docker starts and before every compose run. It drops instance metadata (`169.254.0.0/16`), every
+  RFC 1918 and CGNAT range and the host itself, and drops all IPv6 from the developer and PDC
+  bridges; the instance's IMDS IPv6 endpoint is also disabled. Only the gateway's own fixed address
+  may reach IMDS, for its Bedrock credentials. The same holds on the trusted core bridge, where the
+  gateway also has a fixed address and every other service is dropped on the way to
+  `169.254.169.254`. A developer container cannot reach IMDS, the VPC or Postgres. Postgres and the
+  PDC agent sit on a third bridge that the developer network has no route to.
+- Developer containers can reach the gateway admin API. It is served on the same port 443 the
   developers use for inference, so the network does not separate them; the admin endpoints are
   protected only by the admin read and write keys, which never enter a developer container. A
   developer's session JWT should be refused there: confirm in your lab that a request to
   `/v1/organizations/spend_limits/effective` with a session token instead of `x-api-key` gets 401
   or 403 before relying on it.
-- **Residual risk, stated plainly:** each developer session auto-approves `python3`, `node` and
+- Each developer session auto-approves `python3`, `node` and
   `awk` (plus read-only git, file tools, `jq` and the MCP servers) with no `curl`, `rm`, `npm` or
   `npx` - the traffic loop's own scripted prompts need an interpreter to write and run small
   scripts. A prompt that talked a session into running an arbitrary script still runs it inside
@@ -104,9 +103,9 @@ The agent host's user data holds no credentials; it reads them from Secrets Mana
   `python3` and `node` can still write anywhere the container user can, the container re-seeds
   its user-scope Claude config (`settings.json`, the MCP server list, user `CLAUDE.md`, agents,
   commands and skills) on every start and before every session, so anything a session persists
-  there is dropped before the next one runs. Treat the containers as running semi-trusted, scripted demo
-  traffic, not as a sandbox proven safe against adversarial input; the network isolation is the
-  bound on what a misbehaving script can reach, not a claim that nothing here could misbehave.
+  there is dropped before the next one runs. Treat the containers as semi-trusted scripted demo
+  traffic. Nobody has proven them safe against adversarial input, and the network isolation is what
+  limits a misbehaving script.
 
 ## Guards and evaluation scope
 
@@ -115,7 +114,7 @@ acts on the demo's traffic:
 
 - In-app agent rules match the demo's agent names (`touchline-orchestrator` and the four
   specialists).
-- Claude Code rules match agent name `claude-code` **and** the tag `service.namespace=touchline`,
+- Claude Code rules match agent name `claude-code` and the tag `service.namespace=touchline`,
   which the gateway sets on the demo developers' plugin. Other Claude Code users of the same stack
   are not matched.
 
@@ -123,7 +122,7 @@ What the guards do:
 
 | Rule | Phase | Action |
 |---|---|---|
-| `touchline_claude_code_pii_gate` | preflight | **deny**: card number, US SSN or UK National Insurance number in a prompt |
+| `touchline_claude_code_pii_gate` | preflight | deny: card number, US SSN or UK National Insurance number in a prompt |
 | `touchline_claude_code_secrets` | preflight | warn: API keys, tokens, private keys |
 | `touchline_claude_code_redact_api_keys`, `_redact_common_pii` | preflight | redact rules, warn mode |
 | `touchline_claude_code_redact_tool_secrets` | postflight | redacts secrets in tool content |
@@ -138,10 +137,10 @@ redaction behaviour on your own stack before claiming it covers prompts.
 
 `bedrock_invocation_logging_enabled` is off by default, for good reasons:
 
-- The setting is **account- and region-wide**. It captures prompt and completion text for every
+- The setting is account- and region-wide. It captures prompt and completion text for every
   `bedrock-runtime` call in the region, from every workload in the account, not only this demo.
-- It **replaces** any existing invocation logging configuration.
-- On destroy the module **removes** the configuration; it does not restore whatever was there
+- It replaces any existing invocation logging configuration.
+- On destroy the module removes the configuration; it does not restore whatever was there
   before.
 - The log group is KMS-encrypted with 7-day retention, large payloads go to an S3 bucket that
   expires objects after 7 days, and the logs are forwarded to Grafana Cloud Logs.
@@ -150,11 +149,11 @@ Enable it only in a dedicated sandbox account.
 
 ## Other exposure
 
-- The EKS Auto Mode example enables the **public API endpoint**, open to `0.0.0.0/0` unless you
+- The EKS Auto Mode example enables the public API endpoint, open to `0.0.0.0/0` unless you
   set `endpoint_public_access_cidrs`. Narrow it, or run Terraform from inside the VPC.
 - The site has no Ingress by default; you reach it with `kubectl port-forward`. With
   `site_ingress` set, it is as public as your ingress class makes it: read the warning in
-  [apps/site/README.md](../apps/site/README.md) first, because `POST /api/picks` calls the orchestrator
+  [apps/site/README.md](https://github.com/rknightion/grafana-aio11y-demo/blob/main/apps/site/README.md) first, because `POST /api/picks` calls the orchestrator
   (and so Bedrock) with no authentication or rate limiting, so anyone who reaches it spends your
   Bedrock budget.
 - The Faro collector URL is public by design (it is in every page). Without an Ingress, the

@@ -2,7 +2,7 @@
 
 The coding-agent half of the demo is one EC2 instance playing a small engineering team. It runs
 the Claude apps gateway, its Postgres, a PDC agent, a host Alloy and one Claude Code container per
-developer, all under docker compose. [agent-host/README.md](../agent-host/README.md) covers the
+developer, all under docker compose. [agent-host/README.md](https://github.com/rknightion/grafana-aio11y-demo/blob/main/agent-host/README.md) covers the
 boot sequence and the files in detail; this page is the operator's view.
 
 ## What runs where
@@ -130,8 +130,8 @@ developers = [
 - **Keep `newsroom`, `trading` and `platform` in `teams`.** The in-app agents are assigned to those
   three teams and call their inference profiles.
 - The trading team is limited to Haiku at the gateway through `team_model_allowlist` (default
-  `{ trading = ["haiku"] }`), a module variable, not a constant baked into the renderer. A team
-  left out of `team_model_allowlist` gets every `gateway_models` entry.
+  `{ trading = ["haiku"] }`). A team left out of `team_model_allowlist` gets every
+  `gateway_models` entry.
 - The developer list, teams, spend caps and `team_model_allowlist` live in the agent-host secret's
   `config` key, not in the host's user data. An apply that changes them updates the secret; the
   host re-reads it within 5 minutes and recreates only the containers whose settings changed, with
@@ -168,7 +168,7 @@ Bedrock invoice. Each unattended session also has a hard `--max-budget-usd 0.30`
 With `traffic_enabled = true`, each developer runs a scripted session every
 `developer_session_interval_minutes` (20 by default, jittered): usually a prompt written for their
 team, sometimes a general coding task, and about one in five a PII probe that the preflight deny
-guard should block. Prompts are in [agent-host/prompts](../agent-host/prompts). Models are
+guard should block. Prompts are in [agent-host/prompts](https://github.com/rknightion/grafana-aio11y-demo/tree/main/agent-host/prompts). Models are
 weighted towards Haiku within the team's allowed models. Each session writes one JSON result line
 to the container log (`event=dev_session`).
 
