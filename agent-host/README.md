@@ -1,7 +1,7 @@
 # Agent host
 
 One EC2 instance (Amazon Linux 2023, `t4g.xlarge` by default) that plays a small engineering
-team using Claude Code through the Claude apps gateway. Terraform creates it; nothing on it is
+team using Claude Code through the Claude apps gateway. Terraform creates it and nothing on it is
 configured by hand.
 
 ```
@@ -24,10 +24,10 @@ configured by hand.
    compose plugin, and enables `agent-host.service` and `agent-host-refresh.timer`.
 2. Docker starts only after `agent-host-firewall` has isolated the developer and PDC bridges (see
    Networks); the rules are re-applied after Docker starts and before every compose run.
-3. `agent-host.service` applies security updates, then runs `/usr/local/sbin/agent-host-up`: it
-   pipes the agent-host secret from Secrets Manager into `render.py` (host python, as root; no
-   container image ever sees the whole secret) and runs `docker compose up`. Images are pulled only
-   when missing, so a tag is never silently re-pulled.
+3. `agent-host.service` applies security updates, then runs `/usr/local/sbin/agent-host-up`. That
+   pipes the agent-host secret from Secrets Manager into `render.py`, which runs as root on the
+   host's own Python so no container image ever sees the whole secret, then runs
+   `docker compose up`. Images are pulled only when missing, so a tag is never silently re-pulled.
 4. The renderer writes `/etc/agent-host/compose.yaml`, `config/gateway.yaml` (secrets appear only
    as `${file:...}` references), and one 0400 file per secret under `secrets/<consumer>/`, owned by
    the uid of the container that reads it.
@@ -71,10 +71,11 @@ drives the real terminal UI (`apps/dev-workstation/bin/dev-login`):
    the fingerprint on screen with the Terraform-issued certificate, and refuses on a mismatch;
 3. reads the user code, opens `/device?user_code=...` in headless Chromium, confirms the code,
    signs in on the Cognito hosted UI with the developer's generated password;
-4. confirms the signed-in account and accepts the managed-settings approval dialog (telemetry
-   endpoint, Agent Observability settings), then exits.
+4. confirms the signed-in account, accepts the managed-settings approval dialog (telemetry
+   endpoint, Agent Observability settings) and the "Connected to Cloud gateway" notice, then
+   exits.
 
-Only those dialogs are answered, each by its exact option text; any other prompt is left alone
+Only those dialogs are answered, each by its exact option text. Any other prompt is left alone
 and the attempt times out. Chromium trusts only the gateway's key (an SPKI pin of the issued
 leaf); Cognito keeps normal certificate checks, and the password is typed only on the exact
 Cognito domain from `cognito_domain_url`.

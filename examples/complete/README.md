@@ -8,7 +8,8 @@ never configures a provider or reads EKS data sources itself.
 - `kubernetes` and `helm` (provider v3 syntax): the cluster endpoint and CA from
   `data.aws_eks_cluster`, with a fresh `aws eks get-token` on every call.
 - `grafana.cloud`: a Cloud access policy token plus the Frontend Observability token.
-- `grafana.stack`: the stack URL and an Admin service account token.
+- `grafana.stack`: the stack URL, an Admin service account token and the numeric stack id, read
+  from `data.grafana_cloud_stack` through `grafana.cloud` (the Knowledge Graph resources need it).
 
 The required scopes and one-time stack setup are in
 [docs/prerequisites.md](../../docs/prerequisites.md).

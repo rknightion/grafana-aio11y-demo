@@ -25,7 +25,7 @@ kubectl.
 | `serviceAccounts.experiments` | string | `touchline-experiments` | ServiceAccount for the experiments CronJob. No AWS access; bound to the Lease Role instead. Frozen. |
 | `serviceAccounts.site` | string | `touchline-site` | ServiceAccount for the site. No AWS access. Frozen. |
 | `secrets.grafanaOtlp` | string | `touchline-grafana-otlp` | Existing Secret (keys `endpoint`, `username`, `password`) Alloy uses to forward to Grafana Cloud. Frozen. |
-| `secrets.agento11y` | string | `touchline-agento11y` | Existing Secret (keys `endpoint`, `tenant_id`, `token`) for the AI Observability SDK. Frozen. |
+| `secrets.agento11y` | string | `touchline-agento11y` | Existing Secret (keys `endpoint`, `tenant_id`, `token`) for the Agent Observability SDK. Frozen. |
 | `secrets.faro` | string | `touchline-faro` | Existing Secret (key `collector_url`, may be absent/empty) for frontend observability. Frozen. |
 | `secrets.experiments` | string | `""` | Optional existing Secret (keys `grafana_url`, `token`) so the experiments job can publish/read the stored test suite through the Grafana control plane. Empty disables both env vars. |
 | `aws.region` | string | `eu-west-1` | Region passed to the agents as `AWS_REGION`. Frozen. |

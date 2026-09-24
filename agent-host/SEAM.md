@@ -78,4 +78,6 @@ the secret re-renders within 5 minutes and recreates only the services whose inp
   `<prefix>-agent-host`.
 - Developer telemetry through the gateway's `telemetry.forward_to`, with
   `OTEL_RESOURCE_ATTRIBUTES=service.namespace=<prefix>,team.name=<team>` and
-  `AGENTO11Y_TAGS=service.namespace=<prefix>,team=<team>` pushed by the gateway policy.
+  `AGENTO11Y_TAGS=service.namespace=<prefix>,team=<team>` pushed by the gateway policy. The
+  policy also sets `AGENTO11Y_AGENT_NAME=claude-code/<prefix>`, which the Claude Code guards match
+  on because the plugin's guard calls carry no tags.

@@ -50,7 +50,7 @@ secrets:
   # -- Existing Secret (created by Terraform, never by this chart) with keys endpoint/username/
   # password: the Grafana Cloud OTLP gateway the in-namespace Alloy forwards to.
   grafanaOtlp: touchline-grafana-otlp
-  # -- Existing Secret with keys endpoint/tenant_id/token for the Grafana AI Observability SDK.
+  # -- Existing Secret with keys endpoint/tenant_id/token for the Agent Observability SDK.
   agento11y: touchline-agento11y
   # -- Existing Secret with key collector_url (empty when frontend observability is off).
   faro: touchline-faro

@@ -1,7 +1,7 @@
 # mcp-tools
 
 Four deterministic, offline tools over fictional fixture data for Touchline Times, served over
-stdio MCP. Claude Code calls them as an MCP server; the in-app agents import the very same module
+stdio MCP. Claude Code calls them as an MCP server; the in-app agents import the same module
 (`@touchline/mcp-tools/tools`), so both paths share one implementation and one data set.
 
 | Tool | Arguments | Returns |

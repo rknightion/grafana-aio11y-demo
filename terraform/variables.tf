@@ -60,7 +60,7 @@ variable "agent_host_instance_type" {
 # --- Grafana Cloud ------------------------------------------------------------------------------
 
 variable "grafana_cloud_stack_slug" {
-  description = "Slug of the Grafana Cloud stack that receives all telemetry and holds the dashboards, rules and AI Observability objects. The grafana.cloud provider alias must hold a Cloud access policy token that can manage access policies, PDC and the stack; grafana.stack must point at this stack with an Admin service account token."
+  description = "Slug of the Grafana Cloud stack that receives all telemetry and holds the dashboards, rules and Agent Observability objects. The grafana.cloud provider alias must hold a Cloud access policy token that can manage access policies, PDC and the stack; grafana.stack must point at this stack with an Admin service account token."
   type        = string
 }
 
@@ -96,7 +96,7 @@ variable "agent_models" {
 }
 
 variable "judge_model" {
-  description = "bedrock_models key used by the AI Observability LLM-judge evaluators."
+  description = "bedrock_models key used by the Agent Observability LLM-judge evaluators."
   type        = string
   default     = "haiku"
 }
@@ -125,7 +125,7 @@ variable "grafana_aws_endpoints" {
 # --- Developers, teams and the gateway ----------------------------------------------------------
 
 variable "teams" {
-  description = "Teams. Each becomes a Cognito group (gateway policies, per-group spend caps, user.groups in telemetry) and a set of per-team Bedrock application inference profiles."
+  description = "Team names. Each becomes a Cognito group (gateway policies, per-group spend caps, user.groups in telemetry) and a set of per-team Bedrock application inference profiles."
   type        = list(string)
   default     = ["newsroom", "trading", "platform"]
 }
@@ -208,13 +208,13 @@ variable "claude_code_version" {
 }
 
 variable "agento11y_cli_version" {
-  description = "Grafana agento11y CLI version installed in the developer containers (needs the guards-era hook support)."
+  description = "agento11y CLI and Claude Code plugin version for the developer containers. latest keeps the build pinned in the dev-workstation image and a version installs that release; either way the plugin marketplace is pinned to the matching tag."
   type        = string
   default     = "latest"
 }
 
 variable "images" {
-  description = "Container image registry, name prefix and tag for this repo's images. Every image reference is \"<registry>/<name_prefix><app>:<tag>\" (app in agents, site, site-browser, mcp-tools, gateway, dev-workstation). tag is a plain tag and defaults to this module's release; digests (image name => sha256:...) pins individual images immutably, and verify images with cosign (docs/security.md). Override registry to use a private mirror (see `just images-push`); set name_prefix = \"\" for a mirror whose repositories are already `<registry>/<app>` with no shared prefix."
+  description = "Container image registry, name prefix and tag for this repo's images. Every image reference is \"<registry>/<name_prefix><app>:<tag>\" (app in agents, site, site-browser, mcp-tools, gateway, dev-workstation). tag is a plain tag and defaults to this module's release; digests (image name => sha256:...) pins individual images immutably; verify an image with cosign before pinning it (docs/security.md). Override registry to use a private mirror (see `just images-push`); set name_prefix = \"\" for a mirror whose repositories are already `<registry>/<app>` with no shared prefix."
   type = object({
     registry    = optional(string, "ghcr.io/rknightion")
     name_prefix = optional(string, "grafana-aio11y-demo-")
@@ -252,7 +252,7 @@ variable "manage_app_observability" {
 }
 
 variable "manage_knowledge_graph" {
-  description = "Let this module perform Knowledge Graph (Asserts) onboarding: provisions the stack's own Mimir/GCom/assertion-detector tokens, auto-detects datasets and enables the stack (creating a Cloud access policy token and a stack Admin service account token for it, both counted on this variable). It is a stack-wide singleton, the same shape as manage_app_observability: destroy calls the same API the onboarding wizard's disable control uses, which switches Knowledge Graph off for the WHOLE stack, not just this demo's objects. Leave false and onboard by hand (Observability > Knowledge Graph) on a shared stack that already has it on, or where a later destroy must not disable it for other tenants."
+  description = "Let this module perform Knowledge Graph (Asserts) onboarding: it provisions the stack's own Mimir, GCom and assertion-detector tokens, detects datasets and enables the stack, using a Cloud access policy token and a stack Admin service account token that exist only while this is true. Like manage_app_observability it is a stack-wide singleton: destroy calls the API behind the onboarding wizard's disable control, which switches Knowledge Graph off for the whole stack, not only this demo's objects. Leave false and onboard by hand (Observability > Knowledge Graph) on a shared stack that already has it on, or where a later destroy must not switch it off for other users."
   type        = bool
   default     = false
 }

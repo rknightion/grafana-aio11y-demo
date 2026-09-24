@@ -68,14 +68,15 @@ through the `grafana.cloud` alias.
 
 Two independent switches:
 
-- **Onboarding.** Either initialize the Knowledge Graph yourself (Observability > Knowledge
-  Graph, follow the onboarding) before the first apply, or set `manage_knowledge_graph = true`
-  and let the module do it (it creates its own Cloud access policy token and stack Admin service
-  account token to run the onboarding flow, and counts both on the same variable). Onboarding is
-  a stack-wide singleton: destroying it (or applying with `manage_knowledge_graph = false` after
-  it was true) disables Knowledge Graph for the whole stack, not just this demo. Leave it `false`
-  on a shared stack that already has Knowledge Graph on.
-- **This demo's objects.** With `knowledge_graph_enabled = true` (the default), the module adds a
+- Onboarding: either initialize the Knowledge Graph yourself (Observability > Knowledge Graph,
+  follow the onboarding) before the first apply, or set `manage_knowledge_graph = true` and let the
+  module do it. The module then creates its own Cloud access policy token and stack Admin service
+  account token to run the onboarding flow, and removes both when the variable goes back to
+  `false`. Onboarding is a stack-wide singleton: destroying it (or applying with
+  `manage_knowledge_graph = false` after it was true) disables Knowledge Graph for the whole
+  stack, not just this demo. Leave it `false` on a shared stack that already has Knowledge Graph
+  on.
+- This demo's objects: with `knowledge_graph_enabled = true` (the default), the module adds a
   service-graph rule file and a trace configuration scoped to this demo's namespace, once the
   Knowledge Graph is initialized by either route above.
 

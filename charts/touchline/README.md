@@ -80,16 +80,22 @@ credentials. `discovery.kubernetes`'s `namespaces.names` keeps this namespace-sc
 `app.kubernetes.io/name` pod label (which every Deployment/CronJob here sets) is a second layer
 of defence against tailing anything a consumer might install into the same namespace.
 
-`otelcol.receiver.loki` converts every Loki label on a tailed entry into an OTel resource
-attribute of the same name, verbatim (Alloy has no rename option in that conversion). An
-`otelcol.processor.transform` (OTTL) step immediately renames the underscored labels to the
-dotted OTel semantic-convention keys Grafana Cloud's OTLP endpoint promotes to Loki index labels
-on ingest: `service_name` -> `service.name`, `service_namespace` -> `service.namespace` (matching
-`OTEL_SERVICE_NAME`/the `service.namespace` resource attribute every app already sets),
-`namespace` -> `k8s.namespace.name`, `pod` -> `k8s.pod.name`, `container` -> `k8s.container.name`.
-The RBAC for this is the same `Role` as the `k8sattributes` processor above, extended with a
-`pods/log` `get` rule (the kubelet log-tailing endpoint, a separate API subresource from `pods`
-itself) - still namespaced, no `ClusterRole`.
+`otelcol.receiver.loki` puts every Loki label on a tailed entry onto the log record as an
+attribute of the same name, not onto the resource. An `otelcol.processor.transform` (OTTL) step in
+log context copies them onto the resource under the dotted keys Grafana Cloud's OTLP endpoint
+promotes to Loki index labels, then drops the record copies: `service_name` -> `service.name`,
+`service_namespace` -> `service.namespace` (matching `OTEL_SERVICE_NAME` and the
+`service.namespace` every app already sets), `namespace` -> `k8s.namespace.name`, `pod` ->
+`k8s.pod.name`, `container` -> `k8s.container.name`. Without that step the stream lands as
+`service_name="unknown_service"`. The same step sets the record's trace and span IDs from the
+`trace_id`/`span_id` fields in the JSON line, so trace-to-logs works.
+
+The config lives in `templates/_alloy-config.tpl`, and its hash is a pod annotation on the
+Deployment: Alloy does not watch its config file, so a config change restarts the pod.
+
+The RBAC is the same `Role` as the `k8sattributes` processor above plus a `get` rule on
+`pods/log` (the kubelet log endpoint, a separate subresource from `pods`). It is still
+namespaced, with no `ClusterRole`.
 
 A container that exposes more than one port is discovered once per port by `discovery.kubernetes`
 and so is tailed more than once; only this chart's own Alloy container (ports `4317`/`4318`) hits
@@ -102,7 +108,7 @@ The 5 agent Deployments, the load generator and the experiments `CronJob` all ru
 `images.registry/images.namePrefix` + `agents:images.tag`. The load generator keeps the image's
 entrypoint and sets `ROLE=loadgen`, and the experiments job overrides
 `command: ["node", "experiments/run-experiment.mjs"]` with `args`, running the same agents image
-in three roles rather than building three separate images. The images carry no npm CLI, so a
+in three roles from one image. The images carry no npm CLI, so a
 container command must call `node` directly (`just lint` rejects `npm` and `npx`).
 `images.registry/images.namePrefix` + `site:images.tag` is the site backend;
 `images.registry/images.namePrefix` + `site-browser:images.tag` (the `Dockerfile.browser` image,
@@ -121,11 +127,13 @@ yet, so a resourceNames filter is not possible on `create`) plus `get`/`update`/
 ## Traffic switch
 
 `traffic.enabled: false` scales the load generator `Deployment` to 0 replicas and suspends the
-experiments and site-browser `CronJob`s, rather than removing any of them, so flipping it back to
-`true` needs no other change. It does not touch the agents, site or Alloy, and it has no effect
+experiments and site-browser `CronJob`s. Nothing is removed, so flipping it back to `true` needs
+no other change. It does not touch the agents, site or Alloy, and it has no effect
 on the agent-host's own developer traffic (a separate switch, `agent-host/`).
 
 ## Values
+
+Keys marked Frozen are the ones the Terraform module sets; `values.schema.json` checks their shape.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
@@ -142,7 +150,7 @@ on the agent-host's own developer traffic (a separate switch, `agent-host/`).
 | `serviceAccounts.experiments` | string | `touchline-experiments` | ServiceAccount for the experiments CronJob. No AWS access; bound to the Lease Role instead (see "Experiments RBAC"). Frozen. |
 | `serviceAccounts.site` | string | `touchline-site` | ServiceAccount for the site. No AWS access. Frozen. |
 | `secrets.grafanaOtlp` | string | `touchline-grafana-otlp` | Existing Secret (keys `endpoint`, `username`, `password`) Alloy uses to forward to Grafana Cloud. Frozen. |
-| `secrets.agento11y` | string | `touchline-agento11y` | Existing Secret (keys `endpoint`, `tenant_id`, `token`) for the AI Observability SDK. Frozen. |
+| `secrets.agento11y` | string | `touchline-agento11y` | Existing Secret (keys `endpoint`, `tenant_id`, `token`) for the Agent Observability SDK. Frozen. |
 | `secrets.faro` | string | `touchline-faro` | Existing Secret (key `collector_url`, may be absent/empty) for frontend observability. Frozen. |
 | `secrets.experiments` | string | `""` | Optional existing Secret (keys `grafana_url`, `token`) so the experiments job can publish/read the stored test suite through the Grafana control plane (`AGENTO11Y_GRAFANA_URL`/`AGENTO11Y_SERVICE_ACCOUNT_TOKEN`). Empty disables both env vars. |
 | `aws.region` | string | `eu-west-1` | Region passed to the agents as `AWS_REGION`. Frozen. |
@@ -153,7 +161,7 @@ on the agent-host's own developer traffic (a separate switch, `agent-host/`).
 | `agents.orchestrator.modelProfiles` | object | `{}` | Extra `{key: {arn, name}}` profiles rendered as `MODEL_PROFILES` (compact JSON), enabling the orchestrator's per-request `x-agent-model` routing used by the model-comparison experiments. Only meaningful on `orchestrator`. |
 | `agents.<role>.team` | string | see `values.yaml` | Owning team, carried through as `AGENT_TEAM` and a label. |
 | `agentResources` | object | 50m/256Mi request, 512Mi limit | Resource requests/limits shared by all 5 agent Deployments. |
-| `contentCapture` | bool | `true` | Sets `AGENTO11Y_CONTENT_CAPTURE_MODE` (agents/loadgen/experiments) and `CONTENT_CAPTURE` (every app, including site-browser, which has no `AGENTO11Y_*` vars since it does not use the AI Observability SDK). Frozen. See `docs/security.md`. |
+| `contentCapture` | bool | `true` | Sets `AGENTO11Y_CONTENT_CAPTURE_MODE` (agents/loadgen/experiments) and `CONTENT_CAPTURE` (every app, including site-browser, which has no `AGENTO11Y_*` vars since it does not use the Agent Observability SDK). Frozen. See `docs/security.md`. |
 | `traffic.enabled` | bool | `true` | Master switch for the load generator, the experiments schedule and the site-browser schedule. Frozen. |
 | `traffic.siteRequestsPerMinute` | number | `2` | Load generator rate, passed through a ConfigMap (`requestsPerMinute` in the rate file). Frozen. |
 | `traffic.experimentsSchedule` | string | `17 */2 * * *` | Cron schedule for the experiments job. Frozen. |

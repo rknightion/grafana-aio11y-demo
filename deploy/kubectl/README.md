@@ -28,7 +28,7 @@ inference profile ARNs.
 - Re-render and re-apply after any apply that changes models, teams or images.
 - To remove the workloads before destroying the module:
   `kubectl delete -n touchline -f deploy/kubectl/rendered/touchline.yaml`.
-- The chart creates namespaced Roles and RoleBindings only (Alloy's pod-metadata watch and the
-  experiments job's Lease access are both scoped to the release namespace, not cluster-wide), so
-  the identity applying the manifests needs no cluster-scoped RBAC rights, just namespace-scoped
-  access to create Roles, RoleBindings and the rest of the chart's objects.
+- The chart creates namespaced Roles and RoleBindings only: Alloy's pod-metadata watch and the
+  experiments job's Lease access are both scoped to the release namespace. The identity applying
+  the manifests needs namespace-scoped access to create Roles, RoleBindings and the rest of the
+  chart's objects, and no cluster-scoped RBAC.
