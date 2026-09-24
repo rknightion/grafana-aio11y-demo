@@ -7365,7 +7365,7 @@
                       },
                       "spec": {
                         "queryType": "traceql",
-                        "query": "{resource.service.name=\"agento11y\" && resource.service.namespace=\"${prefix}\" && span.gen_ai.agent.name=\"claude-code\" && span.gen_ai.conversation.id=~\"$${session:pipe}\" && span.gen_ai.operation.name=\"generateText\"} | count_over_time()",
+                        "query": "{resource.service.name=\"agento11y\" && span.agento11y.tag.service.namespace=\"${prefix}\" && span.gen_ai.agent.name=\"claude-code\" && span.gen_ai.conversation.id=~\"$${session:pipe}\" && span.gen_ai.operation.name=\"generateText\"} | count_over_time()",
                         "limit": 20,
                         "metricsQueryType": "instant",
                         "refId": "A"
@@ -7452,7 +7452,7 @@
                       },
                       "spec": {
                         "queryType": "traceql",
-                        "query": "{resource.service.name=\"agento11y\" && resource.service.namespace=\"${prefix}\" && span.gen_ai.agent.name=\"claude-code\" && span.gen_ai.conversation.id=~\"$${session:pipe}\" && span.gen_ai.operation.name=\"execute_tool\"} | count_over_time() by (span.gen_ai.tool.name)",
+                        "query": "{resource.service.name=\"agento11y\" && span.agento11y.tag.service.namespace=\"${prefix}\" && span.gen_ai.agent.name=\"claude-code\" && span.gen_ai.conversation.id=~\"$${session:pipe}\" && span.gen_ai.operation.name=\"execute_tool\"} | count_over_time() by (span.gen_ai.tool.name)",
                         "limit": 20,
                         "metricsQueryType": "range",
                         "refId": "A"
@@ -7539,7 +7539,7 @@
                       },
                       "spec": {
                         "queryType": "traceql",
-                        "query": "{resource.service.name=\"agento11y\" && resource.service.namespace=\"${prefix}\" && span.gen_ai.agent.name=\"claude-code\" && span.gen_ai.conversation.id=~\"$${session:pipe}\" && span.gen_ai.operation.name=\"generateText\"} | select(span.gen_ai.conversation.id, span.gen_ai.response.finish_reasons, span.gen_ai.usage.input_tokens, span.gen_ai.usage.output_tokens, span.gen_ai.usage.cache_read_input_tokens)",
+                        "query": "{resource.service.name=\"agento11y\" && span.agento11y.tag.service.namespace=\"${prefix}\" && span.gen_ai.agent.name=\"claude-code\" && span.gen_ai.conversation.id=~\"$${session:pipe}\" && span.gen_ai.operation.name=\"generateText\"} | select(span.gen_ai.conversation.id, span.gen_ai.response.finish_reasons, span.gen_ai.usage.input_tokens, span.gen_ai.usage.output_tokens, span.gen_ai.usage.cache_read_input_tokens)",
                         "limit": 50,
                         "tableType": "spans",
                         "spss": 3,

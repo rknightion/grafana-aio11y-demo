@@ -195,37 +195,36 @@ data:
     }
 
     // Bridges the Loki log-entry format above into the OTel logs pipeline. Every Loki label on
-    // the entry (service_name, service_namespace, namespace, pod, container) becomes an OTel
-    // resource attribute of the same name, verbatim - Alloy has no option to rename or dot these
-    // during the conversion, which is why otelcol.processor.transform below renames them.
+    // the entry (service_name, service_namespace, namespace, pod, container) arrives as a LOG
+    // RECORD attribute, not a resource attribute, plus a loki.attribute.labels hint; each entry
+    // gets its own resource, which is what lets the transform below set resource attributes per
+    // record without mixing services.
     otelcol.receiver.loki "pods" {
     	output {
     		logs = [otelcol.processor.transform.pod_logs.input]
     	}
     }
 
-    // Renames the underscored resource attributes above to the dotted OTel semantic-convention
-    // keys (service.name, service.namespace, k8s.namespace.name, k8s.pod.name, k8s.container.name)
-    // that Grafana Cloud's OTLP endpoint promotes to Loki index labels on ingest. This is what
-    // makes the resulting Loki stream come out with the service_name/service_namespace labels the
-    // dashboards query - the same two attributes, round-tripped through dotted OTel form and back
-    // to underscored Loki labels on the way in.
+    // Moves the underscored record attributes above onto the resource under the dotted OTel
+    // keys (service.name, service.namespace, k8s.*) that Grafana Cloud's OTLP endpoint promotes to
+    // the service_name/service_namespace Loki labels the dashboards query. Left as record
+    // attributes, the stream lands as service_name="unknown_service" with the real name only in
+    // structured metadata. The apps log JSON with trace_id/span_id, which become the record's
+    // trace context so trace-to-logs works.
     otelcol.processor.transform "pod_logs" {
     	error_mode = "ignore"
 
     	log_statements {
-    		context = "resource"
+    		context = "log"
     		statements = [
-    			`set(attributes["service.name"], attributes["service_name"])`,
-    			`delete_key(attributes, "service_name")`,
-    			`set(attributes["service.namespace"], attributes["service_namespace"])`,
-    			`delete_key(attributes, "service_namespace")`,
-    			`set(attributes["k8s.namespace.name"], attributes["namespace"])`,
-    			`delete_key(attributes, "namespace")`,
-    			`set(attributes["k8s.pod.name"], attributes["pod"])`,
-    			`delete_key(attributes, "pod")`,
-    			`set(attributes["k8s.container.name"], attributes["container"])`,
-    			`delete_key(attributes, "container")`,
+    			`set(resource.attributes["service.name"], log.attributes["service_name"])`,
+    			`set(resource.attributes["service.namespace"], log.attributes["service_namespace"])`,
+    			`set(resource.attributes["k8s.namespace.name"], log.attributes["namespace"])`,
+    			`set(resource.attributes["k8s.pod.name"], log.attributes["pod"])`,
+    			`set(resource.attributes["k8s.container.name"], log.attributes["container"])`,
+    			`delete_matching_keys(log.attributes, "^(service_name|service_namespace|namespace|pod|container|loki\\..*)$")`,
+    			`set(log.trace_id.string, ParseJSON(log.body)["trace_id"]) where IsMatch(log.body, "^\\{.*\"trace_id\":\"[0-9a-f]{32}\"")`,
+    			`set(log.span_id.string, ParseJSON(log.body)["span_id"]) where IsMatch(log.body, "^\\{.*\"span_id\":\"[0-9a-f]{16}\"")`,
     		]
     	}
 
