@@ -1,0 +1,61 @@
+# On every push to main, release-please keeps a release PR that accrues changes and bumps the
+# version markers (terraform/variables.tf, the chart, the reference docs). Merging it tags vX.Y.Z
+# and creates the GitHub Release; publish then builds the images at that tag, which is what the
+# module's default images.tag points at.
+#
+# NB: publish runs HERE, gated on release_created, not on the tag push: a tag created with a
+# workflow token does not trigger other workflows.
+name: release-please
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-please
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # exchanged for a tailnet identity and an OpenBao token
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      # Short-lived GitHub App installation token scoped to this repo alone (contents and pull
+      # requests write). Releases depend on camden being up, unsealed and on the tailnet; a
+      # failure here is infrastructure, not the commit.
+      - name: Mint a scoped release token
+        id: bao
+        uses: rknightion/.github/.github/actions/broker-token@bc58399e49a8d8131a379f530fffe8c9659667f9
+        with:
+          permission-set: release-please-grafana-aio11y-demo
+          tailscale-client-id: ${{ secrets.TS_WIF_CLIENT_ID }}
+          tailscale-audience: ${{ secrets.TS_WIF_AUDIENCE }}
+
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        id: release
+        with:
+          token: ${{ steps.bao.outputs.token }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  publish:
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+      attestations: write
+      security-events: write
+    uses: ./.github/workflows/images.yml
+    with:
+      release_tag: ${{ needs.release-please.outputs.tag_name }}
