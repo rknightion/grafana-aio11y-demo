@@ -184,5 +184,5 @@ sudo docker compose exec dev-priya-shah dev-session /opt/agent-host/prompts/21-b
 Per team, through managed settings: Claude Code's OpenTelemetry exporters (the gateway forwards
 client telemetry to the Grafana Cloud OTLP gateway with `telemetry.forward_to`), content logging
 switches (from `content_capture`), resource attributes scoping everything to `service.namespace=touchline`,
-the Agent Observability plugin and its tags, MCP servers, and the model list. The developer
+the Agent Observability plugin with its tags and its agent name (`claude-code/touchline`, which the guards match on), MCP servers, and the model list. The developer
 containers carry only the three managed settings needed to find and sign in to the gateway.

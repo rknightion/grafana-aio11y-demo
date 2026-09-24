@@ -15,7 +15,7 @@ flowchart TB
     orch --> news["touchline-news"] & odds["touchline-odds"] & ed["touchline-editorial"] & comp["touchline-compliance"]
     lg["touchline-loadgen"] --> api
     ex["experiments CronJob"] --> orch
-    col["Alloy (OTLP in, k8s attributes, OTLP out)"]
+    col["Alloy (OTLP in, pod logs, k8s attributes, OTLP out)"]
   end
   subgraph Host["EC2 agent host (docker compose)"]
     d1["dev-alex-morgan ... dev-casey-nguyen"] -->|HTTPS, private CA| gw["Claude apps gateway :443"]
@@ -66,7 +66,9 @@ The Helm chart in [charts/touchline](https://github.com/rknightion/grafana-aio11
 - An experiments CronJob that compares prompt variants and models as Agent Observability
   experiments, scored by the answer-quality evaluator.
 - Alloy, an in-namespace collector that receives OTLP from every app, adds Kubernetes
-  resource attributes and forwards to the Grafana Cloud OTLP gateway.
+  resource attributes and forwards to the Grafana Cloud OTLP gateway. It also tails the
+  namespace's pod logs through the Kubernetes API, under each app's service name; the agents'
+  `event=generation` lines there feed the cost panels.
 
 The chart never creates Secrets. Terraform creates the namespace and the Secrets
 (`<prefix>-grafana-otlp`, `<prefix>-agento11y`, `<prefix>-faro`, `<prefix>-experiments`) and
