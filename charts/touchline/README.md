@@ -67,6 +67,35 @@ Set `alloy.enabled: false` to skip it if you already run a cluster-wide collecto
 point every app's OTLP endpoint at your own collector yourself (not currently exposed as a chart
 value - ask for it if you need it).
 
+### Pod log tailing
+
+The apps write structured JSON log lines to stdout (`{"event":"generation", ...}`) that the
+dashboards query directly in Loki (`| json | event="generation"`); that data never goes over
+OTLP. The same Alloy also tails every pod's stdout in `.Values.namespace` through the Kubernetes
+API (`discovery.kubernetes` + `loki.source.kubernetes`, no privileged container, no DaemonSet, no
+node filesystem access) and feeds it into the same `otelcol.processor.batch` and
+`otelcol.exporter.otlphttp` the OTLP path uses, so it reaches Grafana Cloud with the same
+credentials. `discovery.kubernetes`'s `namespaces.names` keeps this namespace-scoped like the
+`k8sattributes` processor above, and a `discovery.relabel` `keep` rule on the
+`app.kubernetes.io/name` pod label (which every Deployment/CronJob here sets) is a second layer
+of defence against tailing anything a consumer might install into the same namespace.
+
+`otelcol.receiver.loki` converts every Loki label on a tailed entry into an OTel resource
+attribute of the same name, verbatim (Alloy has no rename option in that conversion). An
+`otelcol.processor.transform` (OTTL) step immediately renames the underscored labels to the
+dotted OTel semantic-convention keys Grafana Cloud's OTLP endpoint promotes to Loki index labels
+on ingest: `service_name` -> `service.name`, `service_namespace` -> `service.namespace` (matching
+`OTEL_SERVICE_NAME`/the `service.namespace` resource attribute every app already sets),
+`namespace` -> `k8s.namespace.name`, `pod` -> `k8s.pod.name`, `container` -> `k8s.container.name`.
+The RBAC for this is the same `Role` as the `k8sattributes` processor above, extended with a
+`pods/log` `get` rule (the kubelet log-tailing endpoint, a separate API subresource from `pods`
+itself) - still namespaced, no `ClusterRole`.
+
+A container that exposes more than one port is discovered once per port by `discovery.kubernetes`
+and so is tailed more than once; only this chart's own Alloy container (ports `4317`/`4318`) hits
+this, and the only effect is a few duplicate lines in Alloy's own operational logs, which nothing
+here dashboards against.
+
 ## Shared image, different command
 
 The 5 agent Deployments, the load generator and the experiments `CronJob` all run

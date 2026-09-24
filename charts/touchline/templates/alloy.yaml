@@ -13,6 +13,11 @@ metadata:
 # resolve the sending pod from its connection IP) and replicasets (to walk the pod's
 # ownerReferences up to the owning Deployment for k8s.deployment.name). It never reads namespace
 # objects (no namespace labels/annotations are extracted), so "namespaces" is dropped too.
+#
+# The same pods get/list/watch also serves discovery.kubernetes below, which lists/watches pods
+# in this one namespace to find containers to tail (also namespace-scoped, never cluster-wide).
+# "pods/log" is a separate API subresource (the kubelet log-tailing endpoint proxied through the
+# API server) and needs its own rule; loki.source.kubernetes uses it to stream container stdout.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -24,6 +29,9 @@ rules:
   - apiGroups: [""]
     resources: ["pods"]
     verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
   - apiGroups: ["apps"]
     resources: ["replicasets"]
     verbs: ["get", "list", "watch"]
@@ -105,6 +113,124 @@ data:
     		metrics = [otelcol.processor.batch.apps.input]
     		logs    = [otelcol.processor.batch.apps.input]
     		traces  = [otelcol.processor.batch.apps.input]
+    	}
+    }
+
+    // The apps above only emit OTLP for metrics/traces and a handful of OTel log records; the
+    // structured JSON lines the dashboards actually query in Loki (`| json | event="generation"`)
+    // go to container stdout, not OTLP. This second pipeline tails that stdout directly through
+    // the Kubernetes API (no privileged DaemonSet, no node filesystem access) and feeds it into
+    // the same batch processor and exporter above, so it reaches Grafana Cloud with the same
+    // credentials and the same metrics/logs/traces fan-out.
+    //
+    // Scoped to this release's own namespace only, the same boundary the k8sattributes processor
+    // above uses and the same reason the Role above stays namespaced: discovery.kubernetes with
+    // namespaces.names set calls the namespaced pod list/watch endpoints, never the cluster-wide
+    // ones, so it needs no ClusterRole.
+    discovery.kubernetes "pods" {
+    	role = "pod"
+
+    	namespaces {
+    		names = ["{{ .Values.namespace }}"]
+    	}
+    }
+
+    discovery.relabel "pods" {
+    	targets = discovery.kubernetes.pods.targets
+
+    	// Defence in depth on top of the namespace scoping above: every pod this chart creates
+    	// carries app.kubernetes.io/name (touchline.selectorLabels), so this drops any pod a
+    	// consumer might install into the same namespace outside this chart.
+    	rule {
+    		source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+    		action        = "keep"
+    		regex         = ".+"
+    	}
+
+    	// service_name mirrors OTEL_SERVICE_NAME on every Deployment/CronJob in this chart: both
+    	// are set from the same app.kubernetes.io/name pod label, so a pod's stdout logs and its
+    	// own OTLP telemetry carry the identical service identity.
+    	rule {
+    		source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+    		action        = "replace"
+    		target_label  = "service_name"
+    	}
+
+    	// service_namespace mirrors the service.namespace resource attribute every app sets via
+    	// OTEL_RESOURCE_ATTRIBUTES (touchline.resourceAttributes); it is a static value, not read
+    	// off the pod, so no source_labels are needed.
+    	rule {
+    		target_label = "service_namespace"
+    		replacement  = "{{ .Values.namespace }}"
+    	}
+
+    	rule {
+    		source_labels = ["__meta_kubernetes_namespace"]
+    		action        = "replace"
+    		target_label  = "namespace"
+    	}
+
+    	rule {
+    		source_labels = ["__meta_kubernetes_pod_name"]
+    		action        = "replace"
+    		target_label  = "pod"
+    	}
+
+    	rule {
+    		source_labels = ["__meta_kubernetes_pod_container_name"]
+    		action        = "replace"
+    		target_label  = "container"
+    	}
+    }
+
+    // Tails container stdout/stderr through the Kubernetes API (kubelet log-tailing endpoint,
+    // proxied by the API server) rather than mounting node log directories, so it needs no
+    // privileged container and no DaemonSet - see the "pods/log" RBAC rule above. A container
+    // that exposes more than one port (only this chart's own Alloy container does) is discovered
+    // once per port and so is tailed more than once; the only effect is a few duplicate lines in
+    // Alloy's own operational logs, which nothing here dashboards against.
+    loki.source.kubernetes "pods" {
+    	targets    = discovery.relabel.pods.output
+    	forward_to = [otelcol.receiver.loki.pods.receiver]
+    }
+
+    // Bridges the Loki log-entry format above into the OTel logs pipeline. Every Loki label on
+    // the entry (service_name, service_namespace, namespace, pod, container) becomes an OTel
+    // resource attribute of the same name, verbatim - Alloy has no option to rename or dot these
+    // during the conversion, which is why otelcol.processor.transform below renames them.
+    otelcol.receiver.loki "pods" {
+    	output {
+    		logs = [otelcol.processor.transform.pod_logs.input]
+    	}
+    }
+
+    // Renames the underscored resource attributes above to the dotted OTel semantic-convention
+    // keys (service.name, service.namespace, k8s.namespace.name, k8s.pod.name, k8s.container.name)
+    // that Grafana Cloud's OTLP endpoint promotes to Loki index labels on ingest. This is what
+    // makes the resulting Loki stream come out with the service_name/service_namespace labels the
+    // dashboards query - the same two attributes, round-tripped through dotted OTel form and back
+    // to underscored Loki labels on the way in.
+    otelcol.processor.transform "pod_logs" {
+    	error_mode = "ignore"
+
+    	log_statements {
+    		context = "resource"
+    		statements = [
+    			`set(attributes["service.name"], attributes["service_name"])`,
+    			`delete_key(attributes, "service_name")`,
+    			`set(attributes["service.namespace"], attributes["service_namespace"])`,
+    			`delete_key(attributes, "service_namespace")`,
+    			`set(attributes["k8s.namespace.name"], attributes["namespace"])`,
+    			`delete_key(attributes, "namespace")`,
+    			`set(attributes["k8s.pod.name"], attributes["pod"])`,
+    			`delete_key(attributes, "pod")`,
+    			`set(attributes["k8s.container.name"], attributes["container"])`,
+    			`delete_key(attributes, "container")`,
+    		]
+    	}
+
+    	output {
+    		logs = [otelcol.processor.batch.apps.input]
     	}
     }
 
