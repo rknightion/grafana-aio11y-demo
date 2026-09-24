@@ -57,8 +57,9 @@ data "aws_bedrock_inference_profile" "source" {
 resource "aws_bedrock_inference_profile" "team_model" {
   for_each = local.team_models
 
-  name        = "${local.prefix}-${each.value.team}-${each.value.model}"
-  description = "${local.prefix} ${each.value.team} team, ${each.value.model} (copied from ${each.value.source_profile})"
+  name = "${local.prefix}-${each.value.team}-${each.value.model}"
+  # Bedrock allows only letters, digits, ":" and "." with single space, "_" or "-" separators here.
+  description = "${local.prefix} ${each.value.team} team ${each.value.model} copied from ${each.value.source_profile}"
 
   model_source {
     copy_from = data.aws_bedrock_inference_profile.source[each.value.model].inference_profile_arn
