@@ -23,7 +23,7 @@ RUN set -eu; \
     [ "$fpr" = "$RELEASE_SIGNER_FPR" ] || { echo "release key fingerprint $fpr != $RELEASE_SIGNER_FPR" >&2; exit 1; }; \
     gpg --dearmor < /tmp/key.asc > /claude-code-release.gpg
 
-FROM node:22-bookworm-slim@sha256:43ac6c60b8f89723f746e8a92ce91abd5017e627ce1ddfe4238355d3a30b772c
+FROM node:24-bookworm-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6
 
 # Keep AGENTO11Y_VERSION in step with AGENTO11Y_IMAGE_VERSION in agent-host/render/render.py (the
 # plugin marketplace is pinned to the same release tag). The checksums are that release's
