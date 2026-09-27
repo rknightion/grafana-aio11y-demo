@@ -7,7 +7,7 @@
 # apps/mcp-tools (a local file: dependency, kept as a relative symlink in node_modules):
 #   docker buildx build --platform linux/amd64,linux/arm64 -f apps/agents/Dockerfile apps
 # Pure JavaScript dependencies only, so the same steps build natively on either architecture.
-FROM node:22-alpine AS deps
+FROM node:24-alpine AS deps
 WORKDIR /app
 COPY mcp-tools/package.json mcp-tools/
 COPY mcp-tools/src mcp-tools/src
@@ -17,7 +17,7 @@ RUN cd agents \
  && find node_modules -type f \( -name '*.map' -o -name '*.d.ts' -o -name '*.d.mts' -o -name '*.d.cts' \) -delete \
  && npm cache clean --force
 
-FROM node:22-alpine
+FROM node:24-alpine
 ENV NODE_ENV=production PORT=8080
 WORKDIR /app/agents
 COPY --from=deps /app/mcp-tools /app/mcp-tools
