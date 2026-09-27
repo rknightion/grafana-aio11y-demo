@@ -61,16 +61,16 @@ resource "grafana_rule_group" "recording" {
   dynamic "rule" {
     for_each = local.grafana_recording_rules
     content {
-      uid            = "${local.prefix}-${rule.value.uid}"
-      name           = rule.value.metric
-      condition      = "A"
-      no_data_state  = "NoData"
-      exec_err_state = "Error"
-      labels         = local.grafana_rule_labels
+      # Recording rules take record{} and none of condition / no_data_state / exec_err_state.
+      uid    = "${local.prefix}-${rule.value.uid}"
+      name   = rule.value.metric
+      labels = local.grafana_rule_labels
 
       data {
         ref_id         = "A"
         datasource_uid = local.grafana_rule_datasources[rule.value.datasource]
+        # The API mirrors a Loki model's queryType here; leaving it unset is a perpetual diff.
+        query_type = rule.value.datasource == "logs" ? "instant" : null
         relative_time_range {
           from = 600
           to   = 0
@@ -126,6 +126,8 @@ resource "grafana_rule_group" "alerts" {
       data {
         ref_id         = "A"
         datasource_uid = local.grafana_rule_datasources[rule.value.datasource]
+        # The API mirrors a Loki model's queryType here; leaving it unset is a perpetual diff.
+        query_type = rule.value.datasource == "logs" ? "instant" : null
         relative_time_range {
           from = lookup(rule.value, "range", 600)
           to   = 0

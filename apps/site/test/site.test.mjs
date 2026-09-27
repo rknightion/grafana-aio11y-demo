@@ -41,11 +41,20 @@ function decodeResponse(raw) {
 }
 function rawPost(port, traceId, payload) { return new Promise((resolve, reject) => { const socket = net.connect(port, '127.0.0.1'); const chunks = []; const body = JSON.stringify(payload); socket.on('connect', () => socket.write(`POST /api/picks HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\nContent-Length: ${Buffer.byteLength(body)}\r\nConnection: close\r\ntraceparent: 00-${traceId}-1234567890abcdef-01\r\n\r\n${body}`)); socket.on('data', part => chunks.push(part)); socket.on('end', () => { const raw = Buffer.concat(chunks); const headerEnd = raw.indexOf(Buffer.from('\r\n\r\n')); const headers = raw.subarray(0, headerEnd).toString('latin1'); resolve({ status: Number(headers.match(/^HTTP\/1\.1 (\d+)/)?.[1]), body: decodeResponse(raw) }); }); socket.on('error', reject); }); }
 
+test('every browser session plan finishes inside the CronJob activeDeadlineSeconds of 600', () => {
+  // Worst case per plan: jitter, page load (30s), each answer wait (45s) and the think times.
+  for (let seed = 1; seed <= 2000; seed += 1) {
+    const plan = createSessionPlan(seed);
+    const worst = plan.startDelayMs + 30_000 + plan.questions.length * 45_000 + plan.thinkTimesMs.reduce((a, b) => a + b, 0);
+    assert.ok(worst < 540_000, `seed ${seed}: ${worst}ms leaves under a minute of the 600s deadline`);
+  }
+});
+
 test('browser session plans are seeded, jittered and draw distinct fixture questions', async () => {
   const seed = 20260923;
   const plan = createSessionPlan(seed);
   assert.deepEqual(plan, createSessionPlan(seed));
-  assert.ok(plan.startDelayMs >= 0 && plan.startDelayMs <= 12 * 60 * 1000);
+  assert.ok(plan.startDelayMs >= 0 && plan.startDelayMs <= 4 * 60 * 1000);
   assert.ok(plan.questions.length >= 1 && plan.questions.length <= 3);
   assert.equal(new Set(plan.questions).size, plan.questions.length);
   assert.ok(plan.questions.every(question => FIXTURE_QUESTIONS.includes(question)));

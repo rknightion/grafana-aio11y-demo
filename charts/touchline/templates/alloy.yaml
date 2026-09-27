@@ -13,6 +13,11 @@ metadata:
 # resolve the sending pod from its connection IP) and replicasets (to walk the pod's
 # ownerReferences up to the owning Deployment for k8s.deployment.name). It never reads namespace
 # objects (no namespace labels/annotations are extracted), so "namespaces" is dropped too.
+#
+# The same pods get/list/watch also serves discovery.kubernetes below, which lists/watches pods
+# in this one namespace to find containers to tail (also namespace-scoped, never cluster-wide).
+# "pods/log" is a separate API subresource (the kubelet log-tailing endpoint proxied through the
+# API server) and needs its own rule; loki.source.kubernetes uses it to stream container stdout.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -24,6 +29,9 @@ rules:
   - apiGroups: [""]
     resources: ["pods"]
     verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
   - apiGroups: ["apps"]
     resources: ["replicasets"]
     verbs: ["get", "list", "watch"]
@@ -53,80 +61,7 @@ metadata:
     {{- include "touchline.labels" . | nindent 4 }}
 data:
   config.alloy: |
-    logging {
-    	level  = "info"
-    	format = "logfmt"
-    }
-
-    // Every app in this namespace sends its OTLP here instead of straight to Grafana Cloud, so
-    // one place holds the Grafana Cloud credential and the Kubernetes enrichment rule.
-    otelcol.receiver.otlp "apps" {
-    	grpc {
-    		endpoint = "0.0.0.0:4317"
-    	}
-
-    	http {
-    		endpoint = "0.0.0.0:4318"
-    	}
-
-    	output {
-    		metrics = [otelcol.processor.k8sattributes.apps.input]
-    		logs    = [otelcol.processor.k8sattributes.apps.input]
-    		traces  = [otelcol.processor.k8sattributes.apps.input]
-    	}
-    }
-
-    // Resolves the sending pod from the OTLP connection's source IP and adds its namespace, pod,
-    // node and owning-deployment identity as resource attributes on every signal. Scoped to this
-    // release's own namespace: it never needs to watch pods anywhere else, which is what lets the
-    // RBAC below be a namespaced Role instead of a cluster-wide ClusterRole.
-    otelcol.processor.k8sattributes "apps" {
-    	filter {
-    		namespace = "{{ .Values.namespace }}"
-    	}
-
-    	extract {
-    		metadata = [
-    			"k8s.namespace.name",
-    			"k8s.pod.name",
-    			"k8s.pod.uid",
-    			"k8s.node.name",
-    			"k8s.deployment.name",
-    		]
-    	}
-
-    	pod_association {
-    		source {
-    			from = "connection"
-    		}
-    	}
-
-    	output {
-    		metrics = [otelcol.processor.batch.apps.input]
-    		logs    = [otelcol.processor.batch.apps.input]
-    		traces  = [otelcol.processor.batch.apps.input]
-    	}
-    }
-
-    otelcol.processor.batch "apps" {
-    	output {
-    		metrics = [otelcol.exporter.otlphttp.grafana_cloud.input]
-    		logs    = [otelcol.exporter.otlphttp.grafana_cloud.input]
-    		traces  = [otelcol.exporter.otlphttp.grafana_cloud.input]
-    	}
-    }
-
-    otelcol.auth.basic "grafana_cloud" {
-    	username = sys.env("GRAFANA_CLOUD_OTLP_USERNAME")
-    	password = sys.env("GRAFANA_CLOUD_OTLP_PASSWORD")
-    }
-
-    otelcol.exporter.otlphttp "grafana_cloud" {
-    	client {
-    		endpoint = sys.env("GRAFANA_CLOUD_OTLP_ENDPOINT")
-    		auth     = otelcol.auth.basic.grafana_cloud.handler
-    	}
-    }
+    {{- include "touchline.alloyConfig" . | nindent 4 }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -147,6 +82,8 @@ spec:
     metadata:
       labels:
         {{- include "touchline.selectorLabels" $name | nindent 8 }}
+      annotations:
+        checksum/config: {{ include "touchline.alloyConfig" . | sha256sum }}
     spec:
       serviceAccountName: {{ $name }}
       securityContext:

@@ -5,7 +5,8 @@ namespace: touchline
 deploymentEnvironment: demo
 
 images:
-  registry: ghcr.io/rknightion/grafana-aio11y-demo
+  registry: ghcr.io/rknightion
+  namePrefix: grafana-aio11y-demo-
   tag: "0.1.0"
   pullSecret: ""
 

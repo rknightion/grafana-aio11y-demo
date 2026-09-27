@@ -9,7 +9,7 @@ most apply failures trace back to one of these.
 
 Any Grafana Cloud stack you can administer. Note its slug (the `<slug>` in
 `https://<slug>.grafana.net`) and URL; they become `grafana_cloud_stack_slug` and
-`grafana_stack_url` in [examples/complete](../examples/complete).
+`grafana_stack_url` in [examples/complete](https://github.com/rknightion/grafana-aio11y-demo/tree/main/examples/complete).
 
 A dedicated stack is simplest. On a shared stack the module scopes its objects to the demo (see
 [security.md](security.md#guards-and-evaluation-scope)), but it still creates stack-wide objects
@@ -45,15 +45,19 @@ these scopes added. Pass it as `grafana_frontend_o11y_api_access_token`. Not nee
 ### Admin service account token (the `grafana.stack` alias)
 
 In the stack, Administration > Users and access > Service accounts: create a service account with
-the **Admin** role and a token. Admin is required because Agent Observability evaluator, guard and
+the Admin role and a token. Admin is required because Agent Observability evaluator, guard and
 rule writes are Admin-only by default, and the module also creates a service account (for the
 experiments), a datasource, dashboards and alert rules. Pass it as
 `grafana_stack_service_account_token`.
 
+The `grafana.stack` provider also needs `stack_id` (the numeric stack id): the Knowledge Graph
+resources refuse to plan without it. `examples/complete` reads it from `data.grafana_cloud_stack`
+through the `grafana.cloud` alias.
+
 ### Agent Observability
 
 - Enable the Agent Observability app on the stack (Observability > Agent).
-- **Point its LLM-judge provider at Amazon Bedrock.** The module's `llm_judge` evaluators ask for
+- Point its LLM-judge provider at Amazon Bedrock. The module's `llm_judge` evaluators ask for
   provider `bedrock` and the model in `bedrock_models[judge_model]` (Haiku by default). The judge
   runs in Grafana Cloud, not in your cluster, so configure the provider in the app's settings with
   AWS credentials that can invoke that inference profile in your region. The module does not
@@ -62,9 +66,23 @@ experiments), a datasource, dashboards and alert rules. Pass it as
 
 ### Knowledge Graph
 
-Initialize the Knowledge Graph on the stack (Observability > Knowledge Graph, follow the onboarding)
-before the first apply. The module adds a service-graph rule file for the demo services; set
-`knowledge_graph_enabled = false` if you do not want it.
+Two independent switches:
+
+- Onboarding: either initialize the Knowledge Graph yourself (Observability > Knowledge Graph,
+  follow the onboarding) before the first apply, or set `manage_knowledge_graph = true` and let the
+  module do it. The module then creates its own Cloud access policy token and stack Admin service
+  account token to run the onboarding flow, and removes both when the variable goes back to
+  `false`. Onboarding is a stack-wide singleton: destroying it (or applying with
+  `manage_knowledge_graph = false` after it was true) disables Knowledge Graph for the whole
+  stack, not just this demo. Leave it `false` on a shared stack that already has Knowledge Graph
+  on.
+- This demo's objects: with `knowledge_graph_enabled = true` (the default), the module adds a
+  service-graph rule file and a trace configuration scoped to this demo's namespace, once the
+  Knowledge Graph is initialized by either route above.
+
+The `team` span-metrics dimension used by the agents dashboard stays a manual App Observability
+step either way; it has no Knowledge Graph or Terraform equivalent (see
+[Application Observability](#application-observability) below).
 
 ### Application Observability
 
@@ -79,8 +97,8 @@ resource for this; without it the per-team panels group everything under one emp
 
 ### Alerting features
 
-The rules rely on two alerting features: **simplified routing** (rules name their contact point
-directly) and **Grafana-managed recording rules** (the recording rules write `touchline_*` series
+The rules rely on two alerting features: simplified routing (rules name their contact point
+directly) and Grafana-managed recording rules (the recording rules write `touchline_*` series
 back to the stack's Prometheus datasource). Both are normally on for Grafana Cloud stacks. If a
 rule group apply fails complaining about `notification_settings` or `record`, ask Grafana support
 to enable `alertingSimplifiedRouting` and `grafanaManagedRecordingRules`.
@@ -91,12 +109,12 @@ to enable `alertingSimplifiedRouting` and `grafanaManagedRecordingRules`.
 
 - In the Bedrock console for your region, request access to the Anthropic models you use (Claude
   Haiku 4.5 and Claude Sonnet 4.6 with the defaults). Anthropic models also need the one-time
-  **use-case details form** for the account; until it is approved every call fails with an access
+  use-case details form for the account; until it is approved every call fails with an access
   error.
-- `bedrock_models` names **system cross-region inference profiles** (`eu.`, `us.`, `apac.`,
+- `bedrock_models` names system cross-region inference profiles (`eu.`, `us.`, `apac.`,
   `global.` and so on). The prefix must match the provider region; a plan-time check rejects a
   mismatch. For `us-east-1`, for example, use `us.anthropic.claude-haiku-4-5-20251001-v1:0`.
-- **SCPs:** a cross-region profile serves requests from several regions (an `eu.` profile called
+- SCPs: a cross-region profile serves requests from several regions (an `eu.` profile called
   from `eu-west-1` is often served elsewhere in the EU). An organization SCP that denies Bedrock
   outside your home region breaks these calls in ways that look like intermittent access errors.
   Allow `bedrock:InvokeModel*` in every destination region of the profiles you pick, or use a
@@ -106,8 +124,8 @@ to enable `alertingSimplifiedRouting` and `grafanaManagedRecordingRules`.
 
 ### An EKS cluster
 
-- Bring your own, or create one with [examples/eks-auto-mode](../examples/eks-auto-mode).
-- It needs the **EKS Pod Identity agent** add-on (built in on Auto Mode). The module creates a Pod
+- Bring your own, or create one with [examples/eks-auto-mode](https://github.com/rknightion/grafana-aio11y-demo/tree/main/examples/eks-auto-mode).
+- It needs the EKS Pod Identity agent add-on (built in on Auto Mode). The module creates a Pod
   Identity association for the agents' service account; without the agent the pods get no AWS
   credentials.
 - The identity running Terraform needs enough Kubernetes RBAC to create a namespace, Secrets,
@@ -120,7 +138,7 @@ to enable `alertingSimplifiedRouting` and `grafanaManagedRecordingRules`.
 
 ### A subnet for the agent host
 
-A subnet in the same account and region with **outbound internet** (a NAT gateway or equivalent):
+A subnet in the same account and region with outbound internet (a NAT gateway or equivalent):
 the host pulls container images, downloads Claude Code, reaches SSM, Secrets Manager, S3 (the
 render bundle it fetches on first boot, before anything else starts), Bedrock and Grafana Cloud.
 No inbound access is needed. `examples/eks-auto-mode` outputs a private subnet that fits. Leave

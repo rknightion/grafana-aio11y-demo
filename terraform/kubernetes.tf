@@ -91,8 +91,10 @@ locals {
     namespace    = var.namespace
     images = {
       registry   = var.images.registry
+      namePrefix = var.images.name_prefix
       tag        = var.images.tag
-      pullSecret = coalesce(var.images.pull_secret, "")
+      digests    = var.images.digests
+      pullSecret = var.images.pull_secret == null ? "" : var.images.pull_secret
     }
     serviceAccounts = local.service_accounts
     secrets = {
@@ -131,7 +133,11 @@ resource "helm_release" "this" {
   name      = local.prefix
   namespace = kubernetes_namespace_v1.this.metadata[0].name
   chart     = local.chart_path
-  values    = [yamlencode(local.chart_values)]
+  # The chart version never changes between module releases, so hash the chart itself: any
+  # template edit then shows up as a values change and triggers an upgrade.
+  values = [yamlencode(merge(local.chart_values, {
+    chartDigest = sha1(join("", [for f in sort(fileset(local.chart_path, "**")) : filesha1("${local.chart_path}/${f}")]))
+  }))]
 
   wait    = true
   timeout = 600

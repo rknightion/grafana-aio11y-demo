@@ -1,5 +1,7 @@
-# Build and publish every image multi-arch to ghcr.io/<owner>/grafana-aio11y-demo/<name> through
-# the shared container-publish reusable. Edge builds on main; release_tag set for releases.
+# Build and publish every image multi-arch to ghcr.io/<owner>/grafana-aio11y-demo-<name> (flat
+# names: the shared container-publish reusable derives its uploaded artifact name from
+# image-name and rejects a "/" in it) through the shared container-publish reusable. Edge builds
+# on main; release_tag set for releases.
 name: images
 
 on:
@@ -33,24 +35,31 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { name: agents, context: apps, dockerfile: apps/agents/Dockerfile }
-          - { name: site, context: apps, dockerfile: apps/site/Dockerfile }
-          - { name: site-browser, context: apps, dockerfile: apps/site/Dockerfile.browser }
-          - { name: mcp-tools, context: apps, dockerfile: apps/mcp-tools/Dockerfile }
-          - { name: gateway, context: apps/gateway, dockerfile: apps/gateway/Dockerfile }
-          - { name: dev-workstation, context: ".", dockerfile: apps/dev-workstation/Dockerfile }
+          - { name: agents, context: apps, dockerfile: agents/Dockerfile }
+          - { name: site, context: apps, dockerfile: site/Dockerfile }
+          # site-browser and dev-workstation carry Playwright's/apt's debian OS packages: every
+          # remaining HIGH/CRITICAL there has no fixed version yet (verified against the live
+          # Debian bookworm-slim archive, not just the pinned digest) - see images.yml history.
+          - { name: site-browser, context: apps, dockerfile: site/Dockerfile.browser, trivy-ignore-unfixed: true }
+          - { name: mcp-tools, context: apps, dockerfile: mcp-tools/Dockerfile }
+          # gateway is plain debian:bookworm-slim with no application code: every HIGH/CRITICAL is
+          # an OS package with no fixed version yet upstream.
+          - { name: gateway, context: apps/gateway, dockerfile: Dockerfile, trivy-ignore-unfixed: true }
+          - { name: dev-workstation, context: ".", dockerfile: apps/dev-workstation/Dockerfile, trivy-ignore-unfixed: true }
     permissions:
       contents: write
       packages: write
       id-token: write
       attestations: write
       security-events: write
-    uses: rknightion/.github/.github/workflows/container-publish.yml@8d14adaa295c4a7670b1d4e744b070955b710598 # v1.24.0
+    # The reusable resolves dockerfile relative to context.
+    uses: rknightion/.github/.github/workflows/container-publish.yml@f32275a4a7641f34db5cb005d270db961b54a680 # v1.25.3
     with:
       release-tag: ${{ inputs.release_tag }}
-      image-name: grafana-aio11y-demo/${{ matrix.name }}
+      image-name: grafana-aio11y-demo-${{ matrix.name }}
       context: ${{ matrix.context }}
       dockerfile: ${{ matrix.dockerfile }}
       # Private until published: no code-scanning upload or attestations on this plan yet.
       trivy-upload-sarif: false
+      trivy-ignore-unfixed: ${{ matrix.trivy-ignore-unfixed || false }}
       provenance: false

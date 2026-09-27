@@ -34,7 +34,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: agent
-          image: "{{ $root.Values.images.registry }}/agents:{{ $root.Values.images.tag }}"
+          image: "{{ include "touchline.image" (dict "root" $root "name" "agents") }}"
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

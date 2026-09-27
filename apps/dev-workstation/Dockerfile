@@ -96,6 +96,13 @@ RUN npm ci --prefix /opt/mcp-tools --omit=dev --no-fund --no-audit --ignore-scri
 COPY apps/mcp-tools/src /opt/mcp-tools/src
 RUN test -f /opt/mcp-tools/src/server.mjs
 
+# npm/npx/corepack are unused from here on: the demo prompts deliberately run sample repos with
+# plain `node`, never `npm install` or `npm test` (see agent-host/prompts). Drop the base image's
+# bundled npm CLI so its own vulnerable transitive deps (pacote, sigstore, picomatch, ...) never
+# ship in the image.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+    /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack
+
 COPY apps/gateway/claude-install.sh /usr/local/bin/claude-install
 COPY agent-host/prompts /opt/agent-host/prompts
 COPY apps/dev-workstation/bin/ /opt/agent-host/bin/

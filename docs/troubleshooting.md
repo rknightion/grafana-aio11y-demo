@@ -2,7 +2,7 @@
 
 Start with the tab that is empty, work out which tier feeds it
 ([data-sources.md](data-sources.md)), then check that path. For anything on the agent host,
-[agent-host/README.md](../agent-host/README.md#troubleshooting-ssm) has the SSM commands and a
+[agent-host/README.md](https://github.com/rknightion/grafana-aio11y-demo/blob/main/agent-host/README.md#troubleshooting-ssm) has the SSM commands and a
 symptom table.
 
 ## During apply

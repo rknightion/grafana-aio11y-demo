@@ -9,7 +9,8 @@ import { contentCapture, serviceNamespace } from './config.mjs';
 // page loads, web vitals and browser-to-backend traces without a human visitor.
 
 // Start jitter so scheduled sessions do not all land on the CronJob minute. BROWSER_MAX_START_DELAY_MS=0 disables it.
-const MAX_START_DELAY_MS = Number(process.env.BROWSER_MAX_START_DELAY_MS ?? 12 * 60 * 1000);
+// Kept at 4 minutes so the worst-case session still ends inside the Job's 600s activeDeadlineSeconds.
+const MAX_START_DELAY_MS = Number(process.env.BROWSER_MAX_START_DELAY_MS ?? 4 * 60 * 1000);
 const THINK_TIME_MIN_MS = 5 * 1000;
 const THINK_TIME_MAX_MS = 40 * 1000;
 

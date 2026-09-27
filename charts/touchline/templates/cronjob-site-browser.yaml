@@ -39,7 +39,7 @@ spec:
               type: RuntimeDefault
           containers:
             - name: site-browser
-              image: "{{ .Values.images.registry }}/site-browser:{{ .Values.images.tag }}"
+              image: "{{ include "touchline.image" (dict "root" . "name" "site-browser") }}"
               imagePullPolicy: IfNotPresent
               # apps/site package.json "browser" script; the real Chromium page load picks up the
               # Faro bundle the site backend serves, so frontend observability needs no FARO_URL

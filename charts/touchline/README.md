@@ -12,8 +12,8 @@ Those run on the EC2 agent host built by `terraform/` and `agent-host/` (see the
 the cluster's Kubernetes RBAC boundary.
 
 This chart never creates a Kubernetes `Secret`. It reads existing ones that Terraform already
-created, by name, via `secrets.grafanaOtlp` / `secrets.agento11y` / `secrets.faro` (and optionally
-`secrets.experiments`).
+created, by name, via `secrets.grafanaOtlp` / `secrets.agento11y` / `secrets.faro` (and
+`secrets.experiments`, which the experiments job needs for its score reads).
 
 ## Installing
 
@@ -67,15 +67,53 @@ Set `alloy.enabled: false` to skip it if you already run a cluster-wide collecto
 point every app's OTLP endpoint at your own collector yourself (not currently exposed as a chart
 value - ask for it if you need it).
 
+### Pod log tailing
+
+The apps write structured JSON log lines to stdout (`{"event":"generation", ...}`) that the
+dashboards query directly in Loki (`| json | event="generation"`); that data never goes over
+OTLP. The same Alloy also tails every pod's stdout in `.Values.namespace` through the Kubernetes
+API (`discovery.kubernetes` + `loki.source.kubernetes`, no privileged container, no DaemonSet, no
+node filesystem access) and feeds it into the same `otelcol.processor.batch` and
+`otelcol.exporter.otlphttp` the OTLP path uses, so it reaches Grafana Cloud with the same
+credentials. `discovery.kubernetes`'s `namespaces.names` keeps this namespace-scoped like the
+`k8sattributes` processor above, and a `discovery.relabel` `keep` rule on the
+`app.kubernetes.io/name` pod label (which every Deployment/CronJob here sets) is a second layer
+of defence against tailing anything a consumer might install into the same namespace.
+
+`otelcol.receiver.loki` puts every Loki label on a tailed entry onto the log record as an
+attribute of the same name, not onto the resource. An `otelcol.processor.transform` (OTTL) step in
+log context copies them onto the resource under the dotted keys Grafana Cloud's OTLP endpoint
+promotes to Loki index labels, then drops the record copies: `service_name` -> `service.name`,
+`service_namespace` -> `service.namespace` (matching `OTEL_SERVICE_NAME` and the
+`service.namespace` every app already sets), `namespace` -> `k8s.namespace.name`, `pod` ->
+`k8s.pod.name`, `container` -> `k8s.container.name`. Without that step the stream lands as
+`service_name="unknown_service"`. The same step sets the record's trace and span IDs from the
+`trace_id`/`span_id` fields in the JSON line, so trace-to-logs works.
+
+The config lives in `templates/_alloy-config.tpl`, and its hash is a pod annotation on the
+Deployment: Alloy does not watch its config file, so a config change restarts the pod.
+
+The RBAC is the same `Role` as the `k8sattributes` processor above plus a `get` rule on
+`pods/log` (the kubelet log endpoint, a separate subresource from `pods`). It is still
+namespaced, with no `ClusterRole`.
+
+A container that exposes more than one port is discovered once per port by `discovery.kubernetes`
+and so is tailed more than once; only this chart's own Alloy container (ports `4317`/`4318`) hits
+this, and the only effect is a few duplicate lines in Alloy's own operational logs, which nothing
+here dashboards against.
+
 ## Shared image, different command
 
 The 5 agent Deployments, the load generator and the experiments `CronJob` all run
-`images.registry/agents:images.tag`. The load generator overrides `command: ["npm", "run",
-"loadgen"]` and the experiments job overrides `command: ["node", "experiments/run-experiment.mjs"]`
-with `args`, running the same agents image in three roles rather than building three separate
-images. `images.registry/site:images.tag` is the site backend; `images.registry/site-browser:images.tag`
-(the `Dockerfile.browser` image, run by the optional `siteBrowser` CronJob) is a third, separate
-image built from the same `apps/site` package.
+`images.registry/images.namePrefix` + `agents:images.tag`. The load generator keeps the image's
+entrypoint and sets `ROLE=loadgen`, and the experiments job overrides
+`command: ["node", "experiments/run-experiment.mjs"]` with `args`, running the same agents image
+in three roles from one image. The images carry no npm CLI, so a
+container command must call `node` directly (`just lint` rejects `npm` and `npx`).
+`images.registry/images.namePrefix` + `site:images.tag` is the site backend;
+`images.registry/images.namePrefix` + `site-browser:images.tag` (the `Dockerfile.browser` image,
+run by the optional `siteBrowser` CronJob) is a third, separate image built from the same
+`apps/site` package.
 
 ## Experiments RBAC
 
@@ -89,28 +127,32 @@ yet, so a resourceNames filter is not possible on `create`) plus `get`/`update`/
 ## Traffic switch
 
 `traffic.enabled: false` scales the load generator `Deployment` to 0 replicas and suspends the
-experiments and site-browser `CronJob`s, rather than removing any of them, so flipping it back to
-`true` needs no other change. It does not touch the agents, site or Alloy, and it has no effect
+experiments and site-browser `CronJob`s. Nothing is removed, so flipping it back to `true` needs
+no other change. It does not touch the agents, site or Alloy, and it has no effect
 on the agent-host's own developer traffic (a separate switch, `agent-host/`).
 
 ## Values
+
+Keys marked Frozen are the ones the Terraform module sets; `values.schema.json` checks their shape.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `nameOverride` | string | `touchline` | Prefix for every object this chart creates. Must equal Terraform's `var.name`. Frozen. |
 | `namespace` | string | `touchline` | Namespace used in resource attributes and object metadata. Set to match the namespace you install into. |
 | `deploymentEnvironment` | string | `demo` | Reported as `deployment.environment` on every signal. |
-| `images.registry` | string | `ghcr.io/rknightion/grafana-aio11y-demo` | Registry for the `agents` and `site` images. Frozen. |
-| `images.tag` | string | `0.1.0` | Tag for the `agents` and `site` images; defaults to this chart's release. Frozen. |
+| `images.registry` | string | `ghcr.io/rknightion` | Registry for this chart's images (`agents`, `site`, `site-browser`). Frozen. |
+| `images.namePrefix` | string | `grafana-aio11y-demo-` | Prefixed onto every image name, e.g. `registry/namePrefixagents`. `""` for a private mirror whose repositories are already `registry/<app>`. Frozen. |
+| `images.tag` | string | `0.1.0` | Tag for this chart's images; defaults to this chart's release. Frozen. <!-- x-release-please-version --> |
+| `images.digests` | map | `{}` | Optional digest pins, app name to `sha256:...`; a pinned image is referenced as `<ref>:<tag>@<digest>`. Terraform sets it from `var.images.digests`. |
 | `images.pullSecret` | string | `""` | Name of an existing `imagePullSecret`. Empty means none. |
 | `serviceAccounts.agents` | string | `touchline-agents` | ServiceAccount for the 5 agents only. Bound to the Bedrock IAM role by EKS Pod Identity (by name; no annotation). Frozen. |
 | `serviceAccounts.loadgen` | string | `touchline-loadgen` | ServiceAccount for the load generator. No AWS access, no Kubernetes API access. Frozen. |
 | `serviceAccounts.experiments` | string | `touchline-experiments` | ServiceAccount for the experiments CronJob. No AWS access; bound to the Lease Role instead (see "Experiments RBAC"). Frozen. |
 | `serviceAccounts.site` | string | `touchline-site` | ServiceAccount for the site. No AWS access. Frozen. |
 | `secrets.grafanaOtlp` | string | `touchline-grafana-otlp` | Existing Secret (keys `endpoint`, `username`, `password`) Alloy uses to forward to Grafana Cloud. Frozen. |
-| `secrets.agento11y` | string | `touchline-agento11y` | Existing Secret (keys `endpoint`, `tenant_id`, `token`) for the AI Observability SDK. Frozen. |
+| `secrets.agento11y` | string | `touchline-agento11y` | Existing Secret (keys `endpoint`, `tenant_id`, `token`) for the Agent Observability SDK. Frozen. |
 | `secrets.faro` | string | `touchline-faro` | Existing Secret (key `collector_url`, may be absent/empty) for frontend observability. Frozen. |
-| `secrets.experiments` | string | `""` | Optional existing Secret (keys `grafana_url`, `token`) so the experiments job can publish/read the stored test suite through the Grafana control plane (`AGENTO11Y_GRAFANA_URL`/`AGENTO11Y_SERVICE_ACCOUNT_TOKEN`). Empty disables both env vars. |
+| `secrets.experiments` | string | `""` | Existing Secret (keys `grafana_url`, `token`) for the experiments job's control-plane calls (`AGENTO11Y_GRAFANA_URL`/`AGENTO11Y_SERVICE_ACCOUNT_TOKEN`): publishing the stored test suite, and every read the ingest token is refused, including evaluator scores. Terraform always sets it. Empty omits both env vars, and runs then fail at their first score read. |
 | `aws.region` | string | `eu-west-1` | Region passed to the agents as `AWS_REGION`. Frozen. |
 | `agentVersion` | string | `v1` | `AGENT_VERSION` on every agent, the load generator and the experiments job. Must be identical on the orchestrator and the experiments job: the runner computes each prompt variant's version independently in both processes and compares them. |
 | `agents.<role>.modelProfileArn` | string | `""` | Bedrock application inference profile ARN for that agent (`MODEL_PROFILE_ARN`). Frozen key shape (`agents` map, `modelProfileArn`/`team` fields). |
@@ -119,10 +161,10 @@ on the agent-host's own developer traffic (a separate switch, `agent-host/`).
 | `agents.orchestrator.modelProfiles` | object | `{}` | Extra `{key: {arn, name}}` profiles rendered as `MODEL_PROFILES` (compact JSON), enabling the orchestrator's per-request `x-agent-model` routing used by the model-comparison experiments. Only meaningful on `orchestrator`. |
 | `agents.<role>.team` | string | see `values.yaml` | Owning team, carried through as `AGENT_TEAM` and a label. |
 | `agentResources` | object | 50m/256Mi request, 512Mi limit | Resource requests/limits shared by all 5 agent Deployments. |
-| `contentCapture` | bool | `true` | Sets `AGENTO11Y_CONTENT_CAPTURE_MODE` (agents/loadgen/experiments) and `CONTENT_CAPTURE` (every app, including site-browser, which has no `AGENTO11Y_*` vars since it does not use the AI Observability SDK). Frozen. See `docs/security.md`. |
+| `contentCapture` | bool | `true` | Sets `AGENTO11Y_CONTENT_CAPTURE_MODE` (agents/loadgen/experiments) and `CONTENT_CAPTURE` (every app, including site-browser, which has no `AGENTO11Y_*` vars since it does not use the Agent Observability SDK). Frozen. See `docs/security.md`. |
 | `traffic.enabled` | bool | `true` | Master switch for the load generator, the experiments schedule and the site-browser schedule. Frozen. |
 | `traffic.siteRequestsPerMinute` | number | `2` | Load generator rate, passed through a ConfigMap (`requestsPerMinute` in the rate file). Frozen. |
-| `traffic.experimentsSchedule` | string | `17 */2 * * *` | Cron schedule for the experiments job. Frozen. |
+| `traffic.experimentsSchedule` | string | `17 */2 * * *` | Cron schedule for the experiments job. |
 | `loadgen.dailyBudgetUsd` | number | `5` | Estimated Bedrock spend cap per UTC day, passed through the rate file (`dailyBudgetUsd`); the load generator itself caps this at 30 USD/day regardless. |
 | `loadgen.persistence.enabled` | bool | `false` | Give the load generator a PVC for its spend ledger; `false` uses an `emptyDir` (state resets on restart), needed on clusters with no default StorageClass. |
 | `loadgen.persistence.size` | string | `1Gi` | PVC size. |
@@ -137,7 +179,7 @@ on the agent-host's own developer traffic (a separate switch, `agent-host/`).
 | `site.resources` | object | 50m/128Mi request, 512Mi limit | Site resources. |
 | `redis.image.repository` / `.tag` | string | `redis` / `7.4.6` | Redis image. No persistence: it only caches synthetic demo traffic state. |
 | `redis.resources` | object | 25m/64Mi request, 128Mi limit | Redis resources. |
-| `alloy.enabled` | bool | `true` | Run the in-namespace collector. Frozen. |
+| `alloy.enabled` | bool | `true` | Run the in-namespace collector. |
 | `alloy.resources` | object | 100m/256Mi request, 512Mi limit | Alloy resources. |
 
 See `values.schema.json` for the machine-checked shape of the frozen keys, and `NOTES.txt` for

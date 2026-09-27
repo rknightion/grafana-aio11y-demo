@@ -11,7 +11,12 @@ RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund \
  && rm -rf node_modules/@opentelemetry node_modules/@grafana node_modules/ioredis \
  && npm cache clean --force \
  && rm -rf /var/lib/apt/lists/* \
- && chmod -R a+rX /ms-playwright
+ && chmod -R a+rX /ms-playwright \
+ # npm/npx/corepack are unused after this point (the CMD is plain node); drop the base image's
+ # bundled npm CLI so its own vulnerable transitive deps (pacote, sigstore, picomatch, ...) never
+ # ship in the image.
+ && rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+    /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack
 COPY site/src/browser.mjs site/src/config.mjs ./src/
 USER node
 CMD ["node", "src/browser.mjs"]

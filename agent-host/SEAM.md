@@ -12,7 +12,7 @@ user_data never changes with a knob or a credential; changing it replaces the ho
 | `name` | string | Demo prefix; compose project name, `service.namespace` |
 | `aws_region` | string | Secrets Manager, S3 and Bedrock region |
 | `secret_arn` | string | The agent-host secret below |
-| `images_registry`, `images_tag` | string | `<registry>/gateway:<tag>` and `<registry>/dev-workstation:<tag>`; the tag must be plain |
+| `images_registry`, `images_name_prefix`, `images_tag` | string | `<registry>/<name_prefix>gateway:<tag>` and `<registry>/<name_prefix>dev-workstation:<tag>`; the tag must be plain |
 | `images_digests_json` | JSON | Optional `{gateway: "sha256:...", "dev-workstation": "sha256:..."}`; a pinned image is referenced as `<ref>:<tag>@<digest>` |
 | `bundle_bucket`, `bundle_json` | string, JSON | The render bundle: `{host path: {key, sha256, mode}}` in the module-owned bucket. `agent-host-install-bundle` refuses any file whose SHA-256 differs |
 
@@ -78,4 +78,6 @@ the secret re-renders within 5 minutes and recreates only the services whose inp
   `<prefix>-agent-host`.
 - Developer telemetry through the gateway's `telemetry.forward_to`, with
   `OTEL_RESOURCE_ATTRIBUTES=service.namespace=<prefix>,team.name=<team>` and
-  `AGENTO11Y_TAGS=service.namespace=<prefix>,team=<team>` pushed by the gateway policy.
+  `AGENTO11Y_TAGS=service.namespace=<prefix>,team=<team>` pushed by the gateway policy. The
+  policy also sets `AGENTO11Y_AGENT_NAME=claude-code/<prefix>`, which the Claude Code guards match
+  on because the plugin's guard calls carry no tags.

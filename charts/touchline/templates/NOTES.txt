@@ -1,6 +1,6 @@
 Touchline Times ({{ include "touchline.prefix" . }}) is deployed in namespace {{ .Values.namespace }}.
 
-Traffic is currently {{ if .Values.traffic.enabled }}ENABLED{{ else }}DISABLED (traffic.enabled=false: loadgen is scaled to 0, the experiments CronJob is suspended){{ end }}.
+Traffic is currently {{ if .Values.traffic.enabled }}ENABLED{{ else }}DISABLED (traffic.enabled=false: loadgen is scaled to 0, the experiments and site-browser CronJobs are suspended){{ end }}.
 Content capture (prompts/responses in telemetry) is {{ if .Values.contentCapture }}ON{{ else }}OFF{{ end }}.
 In-namespace Alloy collector is {{ if .Values.alloy.enabled }}ENABLED{{ else }}DISABLED - point every app's OTEL_EXPORTER_OTLP_ENDPOINT at your own collector{{ end }}.
 

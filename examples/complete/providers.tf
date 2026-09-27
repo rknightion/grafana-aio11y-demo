@@ -63,4 +63,11 @@ provider "grafana" {
 
   url  = var.grafana_stack_url
   auth = var.grafana_stack_service_account_token
+  # Knowledge Graph (Asserts) resources need the numeric stack id on the provider itself.
+  stack_id = data.grafana_cloud_stack.this.id
+}
+
+data "grafana_cloud_stack" "this" {
+  provider = grafana.cloud
+  slug     = var.grafana_cloud_stack_slug
 }

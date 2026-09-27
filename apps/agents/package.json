@@ -35,5 +35,8 @@
     "@smithy/signature-v4": "5.2.0",
     "@touchline/mcp-tools": "file:../mcp-tools",
     "yaml": "2.8.3"
+  },
+  "overrides": {
+    "fast-xml-parser": "5.11.1"
   }
 }

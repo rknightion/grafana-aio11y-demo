@@ -7,7 +7,7 @@ invocation on your AWS account. Keep it behind the demo's private networking (no
 ingress, no LoadBalancer Service) unless you have added your own auth and rate limiting in
 front of it.
 
-The Touchline Times reader site. Two images from one package:
+The Touchline Times reader site. It ships as two images from one package:
 
 - **site** (`Dockerfile`): the Node API. `GET /` serves the reader page with runtime config
   injected, `GET /app.js` the Faro-instrumented browser bundle, `POST /api/picks`
@@ -31,7 +31,7 @@ The Touchline Times reader site. Two images from one package:
 | `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_NAME`, `OTEL_RESOURCE_ATTRIBUTES` | site | Standard OTel (service name defaults to `<namespace>-site-api`) |
 | `PORT` | site | Listen port (default `8080`) |
 | `SITE_URL` | site-browser | Page to open (default `http://<namespace>-site-api:8080/`) |
-| `BROWSER_MAX_START_DELAY_MS` | site-browser | Random start jitter ceiling (default 12 minutes, `0` disables) |
+| `BROWSER_MAX_START_DELAY_MS` | site-browser | Random start jitter ceiling (default 4 minutes, so a run fits the Job's 600 s deadline; `0` disables) |
 | `CONTENT_CAPTURE`, `AGENTO11Y_CONTENT_CAPTURE_MODE` | site-browser | When capture is off, logs answer length instead of answer text |
 
 The Faro collector URL is public by design (it is embedded in every page), so it is passed as

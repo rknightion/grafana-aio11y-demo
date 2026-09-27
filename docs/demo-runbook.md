@@ -58,10 +58,11 @@ calls Bedrock for them."
 **Spend-cap moment.** On *Audit log*, filter inference events to status 429. If the capped
 platform developer has hit today's cap, the 429s are there with the blocked message; say "that is
 the cap doing its job, per developer, without touching the laptop." If nobody has hit a cap yet,
-show the caps table and say when it would trip. Do not change caps live in front of an audience:
-an apply to `spend_caps` reaches the host through the agent-host secret and takes up to 5 minutes
-to land (no host replacement, but an unpredictable wait mid-demo), so decide the caps you want to
-show beforehand instead.
+show the caps table and say when it would trip. Set the caps you want to show before the demo,
+not live: an apply to `spend_caps` reaches the host through the agent-host secret and can take up
+to 5 minutes to land. The host is not replaced, but the wait is unpredictable mid-demo.
+
+![Claude apps gateway dashboard, audit log tab: sign-ins, inference requests and managed settings](assets/screenshots/dashboards-gateway.png)
 
 ### Observing Claude Code
 
@@ -75,6 +76,8 @@ show beforehand instead.
 | *OpenTelemetry: traces*, open one | "Each prompt is a trace: model requests and tool calls as child spans, with time to first token." |
 | *OpenTelemetry + Agent Observability plugin* | "The plugin adds a second, independent view: conversations, subagent cost, guard outcomes and evaluation scores." |
 | *Bedrock invocation log: gateway caller* | "From Bedrock's side, every developer is one IAM role. Bedrock knows the tokens and the prompt, not the person." (Empty if invocation logging is off; say that is the default.) |
+
+![Claude Code dashboard, OpenTelemetry overview tab: spend, sessions and tokens per developer and team](assets/screenshots/dashboards-claude-code.png)
 
 ### The PII guard
 
@@ -137,6 +140,8 @@ inference profiles."
 | Experiments: the latest scheduled run, then compare two runs | "The same cases against different prompt variants or models, scored by the same evaluator, with cost and duration per case." |
 | *Traces* tab | "Every conversation links through to its trace." |
 
+![Agentic app dashboard, overview tab: generations, tokens and site traffic per agent](assets/screenshots/dashboards-agents.png)
+
 ### Observing Bedrock
 
 | Click | Say |
@@ -149,6 +154,8 @@ inference profiles."
 caps and cost; Claude Code's telemetry for tools and content; the plugin for guards and
 evaluations. For your own agents: OpenTelemetry plus the Agent Observability SDK. And Bedrock's
 own view to check both against."
+
+![Bedrock dashboard, CloudWatch metrics tab: invocations, tokens and latency per inference profile](assets/screenshots/dashboards-bedrock.png)
 
 ## 25-minute version
 

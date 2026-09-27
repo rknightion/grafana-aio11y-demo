@@ -20,7 +20,8 @@ locals {
   # aws-metric-stream.tf: the invocation-log Firehose stamps these two static Loki labels.
   grafana_bedrock_log_group     = "/aws/bedrock/${local.prefix}-invocations"
   grafana_bedrock_metric_stream = "${local.prefix}-bedrock"
-  grafana_bedrock_log_selector  = "{service_namespace=\"${local.prefix}\", service_name=\"${local.prefix}-bedrock-invocations\"}"
+  # CloudWatch Logs subscriptions also ship non-JSON control messages; drop them so `| json` never errors.
+  grafana_bedrock_log_selector = "{service_namespace=\"${local.prefix}\", service_name=\"${local.prefix}-bedrock-invocations\"} != \"CWL CONTROL MESSAGE\""
 
   # Rule and guard ids shared by dashboards, alert rules and grafana-agento11y.tf.
   grafana_ids = {
@@ -80,8 +81,10 @@ locals {
       )
       profile_chain = local.grafana_profile_chain
       model_chain   = local.grafana_model_chain
-      # Pod Identity role sessions are named eks-<cluster>-<pod>-<uuid>; capture the agent service.
-      agent_caller_re = ".*/eks-.*?-(${local.prefix}-(?:${join("|", sort(keys(local.agent_teams)))}))-.*"
+      # The caller is an STS assumed-role ARN; keep only the role name, which drops the account id.
+      # Pod Identity sessions are eks-<cluster>-<namespace>--<uuid>, with no pod or service in them,
+      # so every in-app agent shows as the one agents role and the gateway as the agent-host role.
+      agent_caller_re = ".*:assumed-role/([^/]+)/.*"
       # The gateway calls Bedrock as the agent host's instance role (L3 names it <prefix>-agent-host...).
       gateway_caller_re = ".*:assumed-role/${local.prefix}-agent-host[^/]*/.*"
     },

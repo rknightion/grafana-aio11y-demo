@@ -133,11 +133,12 @@ locals {
   }) }
 
   agent_host_user_data = base64gzip(templatefile("${local.agent_host_dir}/cloud-init.yaml.tftpl", {
-    name            = local.prefix
-    aws_region      = local.aws_region
-    secret_arn      = aws_secretsmanager_secret.agent_host.arn
-    images_registry = var.images.registry
-    images_tag      = var.images.tag
+    name               = local.prefix
+    aws_region         = local.aws_region
+    secret_arn         = aws_secretsmanager_secret.agent_host.arn
+    images_registry    = var.images.registry
+    images_name_prefix = var.images.name_prefix
+    images_tag         = var.images.tag
     # Optional per-image digest pins ({gateway = "sha256:...", "dev-workstation" = "sha256:..."}).
     images_digests_json = jsonencode(var.images.digests)
     bundle_bucket       = var.agent_host_enabled ? aws_s3_bucket.agent_host_bundle[0].id : ""
@@ -173,7 +174,9 @@ locals {
   }
 
   # ECR pull scope when images come from a private ECR mirror (`just images-push`):
-  # <account>.dkr.ecr.<region>.amazonaws.com[/<path>] -> exactly this repo's two repositories.
+  # <account>.dkr.ecr.<region>.amazonaws.com[/<path>] -> exactly this repo's two repositories,
+  # named <path>/<name_prefix><image> (name_prefix is typically "" for an ECR mirror, whose
+  # repositories are already <registry>/<app>).
   agent_host_ecr = try(regex("^(?P<account>[0-9]+)\\.dkr\\.ecr\\.(?P<region>[a-z0-9-]+)\\.amazonaws\\.com(?:/(?P<path>.+))?$", trimsuffix(var.images.registry, "/")), null)
 
   # Gateway model id from a system profile id: "eu.anthropic.claude-haiku-4-5-20251001-v1:0" ->
@@ -438,8 +441,9 @@ resource "aws_iam_role_policy" "agent_host_ecr" {
         Effect = "Allow"
         Action = ["ecr:BatchGetImage", "ecr:GetDownloadUrlForLayer", "ecr:BatchCheckLayerAvailability"]
         Resource = [for image in ["gateway", "dev-workstation"] : format(
-          "arn:%s:ecr:%s:%s:repository/%s%s", local.aws_partition, local.agent_host_ecr.region,
-          local.agent_host_ecr.account, local.agent_host_ecr.path == null ? "" : "${local.agent_host_ecr.path}/", image
+          "arn:%s:ecr:%s:%s:repository/%s%s%s", local.aws_partition, local.agent_host_ecr.region,
+          local.agent_host_ecr.account, local.agent_host_ecr.path == null ? "" : "${local.agent_host_ecr.path}/",
+          var.images.name_prefix, image
         )]
       },
     ]

@@ -72,3 +72,12 @@ jobs:
         env:
           SCRUB_DENYLIST: ${{ secrets.SCRUB_DENYLIST }}
         run: python3 ../trusted/tools/scrub_check.py
+
+  ci-success:
+    name: ci-success
+    runs-on: ubuntu-24.04
+    if: always()
+    needs: [check, scrub]
+    steps:
+      - if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        run: exit 1

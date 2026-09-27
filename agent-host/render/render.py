@@ -85,7 +85,7 @@ MODEL_FAMILY_WEIGHTS = {"haiku": 75, "sonnet": 20, "opus": 5}
 
 PRIVATE_CIDRS = ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "127.0.0.0/8", "::1/128", "fc00::/7"]
 
-HOST_KEYS = ["name", "aws_region", "images_registry", "images_tag"]
+HOST_KEYS = ["name", "aws_region", "images_registry", "images_name_prefix", "images_tag"]
 CONFIG_KEYS = [
     "gateway_hostname", "claude_code_version", "agento11y_cli_version", "developers", "teams",
     "spend_caps", "gateway_models", "team_model_allowlist", "cognito_issuer", "cognito_client_id",
@@ -133,11 +133,11 @@ def load(vars_path, s):
 
 
 def repo_image(v, image):
-    """<registry>/<image>:<tag>, with @<digest> when images_digests pins this image."""
+    """<registry>/<name_prefix><image>:<tag>, with @<digest> when images_digests pins this image."""
     tag = str(v["images_tag"])
     if "@" in tag:
         fail("images_tag must be a plain tag; pin digests per image with images_digests")
-    ref = f"{v['images_registry'].rstrip('/')}/{image}:{tag}"
+    ref = f"{v['images_registry'].rstrip('/')}/{v['images_name_prefix']}{image}:{tag}"
     digest = (v.get("images_digests") or {}).get(image)
     if digest:
         if not re.fullmatch(r"sha256:[0-9a-f]{64}", digest):
@@ -231,8 +231,11 @@ def gateway_config(v):
         # fails open silently.
         "AGENTO11Y_GUARDS_TIMEOUT_MS": "5000",
         "AGENTO11Y_AUTO_UPDATE": "false",
-        # Guards and evaluation rules select the demo's traffic by this tag.
+        # Evaluation rules select the demo's generations by this tag. Guard calls carry no tags
+        # (plugin v0.48.0), so the guards select the demo by this agent name instead; the plugin
+        # appends /<subagent> for subagents.
         "AGENTO11Y_TAGS": f"service.namespace={name}",
+        "AGENTO11Y_AGENT_NAME": f"claude-code/{name}",
         "AGENTO11Y_CONTENT_CAPTURE_MODE": "full" if content else "metadata_only",
     }
     if content:

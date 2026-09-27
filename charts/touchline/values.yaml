@@ -2,7 +2,7 @@
 #
 # Stable keys (Terraform's chart_values output sets these, so do not rename them): nameOverride,
 # images, serviceAccounts, secrets, aws, agents (per-agent modelProfileArn/team), contentCapture,
-# traffic (enabled/siteRequestsPerMinute/experimentsSchedule), site (ingress), alloy (enabled).
+# traffic (enabled/siteRequestsPerMinute), site (ingress).
 # Everything else here is an addition, free to change.
 
 # -- Prefix used for every object this chart creates (Deployment/Service/CronJob names, the
@@ -19,10 +19,17 @@ namespace: touchline
 deploymentEnvironment: demo
 
 images:
-  registry: ghcr.io/rknightion/grafana-aio11y-demo
+  registry: ghcr.io/rknightion
+  # -- Prefixed onto every image name below, e.g. registry/<namePrefix>agents. Terraform sets
+  # this from var.images.name_prefix. Set to "" for a private mirror whose repositories are
+  # already <registry>/<app> with no shared prefix.
+  namePrefix: grafana-aio11y-demo-
   # -- Image tag for every image above. Defaults to this chart's own release; Terraform sets it
   # from var.images.tag.
   tag: "0.1.0" # x-release-please-version
+  # -- Optional per-image digest pins (app name => sha256:...); a pinned image is referenced as
+  # <ref>:<tag>@<digest>. Terraform sets this from var.images.digests.
+  digests: {}
   # -- Name of an existing imagePullSecret. Empty string means none (the default GHCR images are
   # public once the repo is public).
   pullSecret: ""
@@ -43,14 +50,14 @@ secrets:
   # -- Existing Secret (created by Terraform, never by this chart) with keys endpoint/username/
   # password: the Grafana Cloud OTLP gateway the in-namespace Alloy forwards to.
   grafanaOtlp: touchline-grafana-otlp
-  # -- Existing Secret with keys endpoint/tenant_id/token for the Grafana AI Observability SDK.
+  # -- Existing Secret with keys endpoint/tenant_id/token for the Agent Observability SDK.
   agento11y: touchline-agento11y
   # -- Existing Secret with key collector_url (empty when frontend observability is off).
   faro: touchline-faro
-  # -- Optional existing Secret (keys grafana_url, token) so the experiments job can publish or
-  # read the stored test suite through the Grafana control plane (AGENTO11Y_GRAFANA_URL /
-  # AGENTO11Y_SERVICE_ACCOUNT_TOKEN). Empty string omits both env vars; the experiment runner still
-  # records trial results with the agento11y ingest token in the agento11y secret above.
+  # -- Existing Secret (keys grafana_url, token) for the experiments job's control-plane calls
+  # (AGENTO11Y_GRAFANA_URL / AGENTO11Y_SERVICE_ACCOUNT_TOKEN): publishing the stored test suite and
+  # every read the write-only ingest token is refused, including evaluator scores. Terraform always
+  # sets it. Empty omits both env vars, and runs then fail at their first score read.
   experiments: ""
 
 aws:

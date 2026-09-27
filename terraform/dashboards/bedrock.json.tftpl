@@ -49,7 +49,7 @@
             "spec": {
               "options": {
                 "mode": "markdown",
-                "content": "**What Bedrock itself recorded.** When `bedrock_invocation_logging_enabled` is on, every `bedrock-runtime` call in this account and region lands in the Bedrock model invocation log (`${invocation_log_group}`, streamed to Loki by Firehose) with the full prompt, the answer, the token counts and the caller. ${invocation_logging_note} **Attribution:** every in-app agent assumes the same IAM role, so the role alone says nothing. The EKS Pod Identity *session name* carries the pod, so the agent is recoverable, and the **application inference profile** (one per team and model) carries team and model. That is how AWS-side cost gets split per team without a gateway. Logging is account-wide and captures prompt text, so turning it on is a security decision."
+                "content": "**What Bedrock itself recorded.** When `bedrock_invocation_logging_enabled` is on, every `bedrock-runtime` call in this account and region lands in the Bedrock model invocation log (`${invocation_log_group}`, streamed to Loki by Firehose) with the full prompt, the answer, the token counts and the caller. ${invocation_logging_note} **Attribution:** every in-app agent assumes the same IAM role, and the EKS Pod Identity session name carries only the cluster and namespace, so the caller identifies the role, not the agent. The **application inference profile** (one per team and model) carries team and model. That is how AWS-side cost gets split per team without a gateway. Logging is account-wide and captures prompt text, so turning it on is a security decision."
               },
               "fieldConfig": {
                 "defaults": {},
@@ -633,6 +633,7 @@
               },
               "fieldConfig": {
                 "defaults": {
+                  "displayName": "$${__field.labels.region}",
                   "unit": "short"
                 },
                 "overrides": []
@@ -645,8 +646,8 @@
         "kind": "Panel",
         "spec": {
           "id": 10,
-          "title": "Which agent called, and as which team / model",
-          "description": "identity.arn: all in-app agents assume ONE IAM role through EKS Pod Identity; the role session name carries the pod, so the agent is recoverable. Team and model come from the application inference profile.",
+          "title": "Which IAM role called, and as which team / model",
+          "description": "identity.arn: shown as the IAM role name. All in-app agents assume one role through EKS Pod Identity and the session name carries no agent, so this splits the agents role from the gateway's agent-host role. Team and model come from the application inference profile.",
           "links": [],
           "transparent": false,
           "data": {
@@ -731,7 +732,7 @@
                         "name": "${ds_logs}"
                       },
                       "spec": {
-                        "expr": "sum by (stop) (count_over_time(${bedrock_log_selector} | json pid=\"modelId\", itok=\"input.inputTokenCount\", otok=\"output.outputTokenCount\", lat=\"output.outputBodyJson.metrics.latencyMs\", region=\"inferenceRegion\", caller=\"identity.arn\", stop=\"output.outputBodyJson.stopReason\", op=\"operation\" | label_format pid=`{{ regexReplaceAll \".*/\" .pid \"\" }}`, agent=`{{ regexReplaceAll \"${agent_caller_re}\" .caller \"$${1}\" }}` | label_format profile=`${profile_chain}` [$__range]))",
+                        "expr": "sum by (stop) (count_over_time(${bedrock_log_selector} | json pid=\"modelId\", itok=\"input.inputTokenCount\", otok=\"output.outputTokenCount\", lat=\"output.outputBodyJson.metrics.latencyMs\", region=\"inferenceRegion\", caller=\"identity.arn\", stop=\"output.outputBodyJson.stopReason\", op=\"operation\" | label_format pid=`{{ regexReplaceAll \".*/\" .pid \"\" }}`, agent=`{{ regexReplaceAll \"${agent_caller_re}\" .caller \"$${1}\" }}` | label_format profile=`${profile_chain}`, stop=`{{ or .stop \"none\" }}` [$__range]))",
                         "queryType": "instant",
                         "refId": "A",
                         "legendFormat": "{{stop}}"
@@ -769,6 +770,7 @@
               },
               "fieldConfig": {
                 "defaults": {
+                  "displayName": "$${__field.labels.stop}",
                   "unit": "short"
                 },
                 "overrides": []
