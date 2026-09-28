@@ -3,12 +3,14 @@
 # default 600), threshold (op gt unless set), pending period, severity, the dashboard it links to.
 # The first three fire on their own in a healthy running demo; the rest are realistic thresholds
 # that should stay quiet. A literal dollar-brace must be written with a doubled dollar.
+# The guard rules keep only increases > 0 on the left of `or`: a 0-valued series there would hide
+# the right-hand branch, which catches a counter whose first sample already holds the denies.
 
 - uid: al-guard-deny
   title: Guard denied a Claude Code prompt
   datasource: prom
   expr: |-
-    sum by (rule_id) (increase(agento11y_hook_rule_outcomes_total{rule_id=~"${rule_re}", outcome="deny"}[30m])) or sum by (rule_id) (agento11y_hook_rule_outcomes_total{rule_id=~"${rule_re}", outcome="deny"} unless agento11y_hook_rule_outcomes_total{rule_id=~"${rule_re}", outcome="deny"} offset 30m)
+    (sum by (rule_id) (increase(agento11y_hook_rule_outcomes_total{rule_id=~"${rule_re}", outcome="deny"}[30m])) > 0) or sum by (rule_id) (agento11y_hook_rule_outcomes_total{rule_id=~"${rule_re}", outcome="deny"} unless agento11y_hook_rule_outcomes_total{rule_id=~"${rule_re}", outcome="deny"} offset 30m)
   threshold: 0
   severity: warning
   dashboard: claude-code
@@ -35,7 +37,7 @@
   title: Guard rule warned or blocked an agent action
   datasource: prom
   expr: |-
-    sum by (rule_id, outcome) (increase(agento11y_hook_rule_outcomes_total{rule_id=~"${rule_re}", outcome=~"deny|warn"}[30m])) or sum by (rule_id, outcome) (agento11y_hook_rule_outcomes_total{rule_id=~"${rule_re}", outcome=~"deny|warn"} unless agento11y_hook_rule_outcomes_total{rule_id=~"${rule_re}", outcome=~"deny|warn"} offset 30m)
+    (sum by (rule_id, outcome) (increase(agento11y_hook_rule_outcomes_total{rule_id=~"${rule_re}", outcome=~"deny|warn"}[30m])) > 0) or sum by (rule_id, outcome) (agento11y_hook_rule_outcomes_total{rule_id=~"${rule_re}", outcome=~"deny|warn"} unless agento11y_hook_rule_outcomes_total{rule_id=~"${rule_re}", outcome=~"deny|warn"} offset 30m)
   threshold: 0
   severity: warning
   dashboard: agents

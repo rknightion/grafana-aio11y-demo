@@ -1967,8 +1967,8 @@
                       },
                       "spec": {
                         "editorMode": "code",
-                        "expr": "(sum by (action)(rate(agento11y_hook_evaluations_total{rule_id=\"${guard_injection_rule}\"}[$__rate_interval]))) * 3600",
-                        "legendFormat": "{{action}}",
+                        "expr": "(sum by (outcome)(rate(agento11y_hook_rule_outcomes_total{rule_id=\"${guard_injection_rule}\"}[$__rate_interval]))) * 3600",
+                        "legendFormat": "{{outcome}}",
                         "range": true,
                         "instant": false,
                         "refId": "A"
