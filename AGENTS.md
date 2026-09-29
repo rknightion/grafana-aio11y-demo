@@ -14,7 +14,8 @@ queue. Drive it through the CLI only; `backlog/config.yml` is the one file edite
   section. Use `--append-notes`, `--append-plan`, `--append-final-summary` or `--comment`.
 - Statuses are `To Do`, `In Progress`, `Parked`, `Done`. `Parked` means attempted and blocked,
   with a concrete resume boundary.
-- doc-0001 (fan-out protocol) is generated from a canonical source elsewhere. Never edit it here.
+- This public board deliberately does not carry the fan-out protocol (doc-0001 says why). Never
+  import a copy here.
 
 ## Task interface
 
