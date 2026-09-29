@@ -6,8 +6,8 @@ description: >-
   collector that forwards telemetry to Grafana Cloud. Part of the
   grafana-cloud-agento11y-demo AI observability demo.
 type: application
-version: 0.2.0
-appVersion: 0.2.0
+version: 0.3.0
+appVersion: 0.3.0
 keywords:
   - grafana
   - opentelemetry

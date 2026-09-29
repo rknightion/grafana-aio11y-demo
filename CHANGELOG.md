@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0](https://github.com/rknightion/grafana-cloud-agento11y-demo/compare/v0.2.0...v0.3.0) (2026-09-29)
+
+
+### Features
+
+* rename the project to grafana-cloud-agento11y-demo ([981dfe5](https://github.com/rknightion/grafana-cloud-agento11y-demo/commit/981dfe5e545c0b34654cc542d87c416bca96ef8c))
+
+
+### Build & CI
+
+* **dev-workstation:** let Renovate keep the agento11y CLI and plugin current ([33ce015](https://github.com/rknightion/grafana-cloud-agento11y-demo/commit/33ce015b3cb8001f7bd271ad0a248e90cf9694f2))
+
 ## [0.2.0](https://github.com/rknightion/grafana-aio11y-demo/compare/v0.1.1...v0.2.0) (2026-09-29)
 
 
