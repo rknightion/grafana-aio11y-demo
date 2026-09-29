@@ -37,6 +37,6 @@
     "yaml": "2.9.1"
   },
   "overrides": {
-    "fast-xml-parser": "5.11.1"
+    "fast-xml-parser": "5.11.2"
   }
 }
