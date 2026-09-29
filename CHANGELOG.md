@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.0](https://github.com/rknightion/grafana-cloud-agento11y-demo/compare/v0.3.0...v0.4.0) (2026-09-29)
+
+
+### Features
+
+* more Agent Observability: tool guards in tiers, new evals and five test suites ([7d92497](https://github.com/rknightion/grafana-cloud-agento11y-demo/commit/7d92497a62b86dd3c340d820481813b3454d8978))
+
+
+### Documentation
+
+* describe pre-rename image names without the old literal ([da6552f](https://github.com/rknightion/grafana-cloud-agento11y-demo/commit/da6552fd28006e69e04e8f18fe8313586d70ccc1))
+
 ## [0.3.0](https://github.com/rknightion/grafana-cloud-agento11y-demo/compare/v0.2.0...v0.3.0) (2026-09-29)
 
 
