@@ -7,7 +7,7 @@ status: In Progress
 assignee:
   - '@claude'
 created_date: '2026-09-29 11:39'
-updated_date: '2026-09-29 12:20'
+updated_date: '2026-09-29 13:05'
 labels:
   - agento11y
   - claude-code
@@ -65,4 +65,6 @@ Evidence: guard-policy suite run touchline-manual-guards-20260929T1149-policy ha
 Open: AC #5 needs a release. The hourly 70% schedule, suite rotation, trigger prompts and seed decoys ship in images, and the consumer is pinned to v0.3.0, which lacks these objects: a full apply there before a v0.4.0 bump would remove them. The existing prompt platform-codeowners-check's follow-up edit of CODEOWNERS is now denied, which is intended demo traffic.
 
 v0.4.0 released (release PR #26 merged, all six images published at 0.4.0). Lab consumer bumped to v0.4.0 and applied: agent host replaced, Helm release updated, cluster pods and the experiments CronJob on gc-agento11y-agents:0.4.0 with schedule '17 * * * *'. The 12:17Z job was spawned from the previous 0.2.0 template before the upgrade; the first 0.4.0 slot is 13:17Z. AC #5 still needs the Overview to show more than one suite within 24h.
+
+Lab demo torn down after the demo (enabled=false, 156 destroyed). AC #5 can only be proven on the next deploy: the Experiments Overview should show more than one suite within 24h of bringing it back.
 <!-- SECTION:NOTES:END -->
