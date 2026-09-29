@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@claude'
 created_date: '2026-09-29 09:25'
-updated_date: '2026-09-29 10:45'
+updated_date: '2026-09-29 11:11'
 labels:
   - naming
 dependencies: []
@@ -21,17 +21,17 @@ The demo is about Grafana Cloud Agent Observability, and the product name is age
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 The GitHub repository is rknightion/grafana-cloud-agento11y-demo and the local checkout's remote points at it
-- [ ] #2 No tracked file outside CHANGELOG.md history entries and backlog/ contains grafana-aio11y or aio11y, checked with git grep
-- [ ] #3 The previously published grafana-aio11y-demo-<app> images remain pullable
+- [x] #1 The GitHub repository is rknightion/grafana-cloud-agento11y-demo and the local checkout's remote points at it
+- [x] #2 No tracked file outside CHANGELOG.md history entries and backlog/ contains grafana-aio11y or aio11y, checked with git grep
+- [x] #3 The previously published grafana-aio11y-demo-<app> images remain pullable
 - [ ] #4 The docs site builds under the new name and the docs-sync roster lists the new repository
-- [ ] #5 The images workflow publishes ghcr.io/rknightion/gc-agento11y-<app> for a release, and the image defaults in terraform/variables.tf, the chart and the images-push recipe point at them
-- [ ] #6 The private lab consumer stack sources the module from the new repository URL at a released tag and plans cleanly
+- [x] #5 The images workflow publishes ghcr.io/rknightion/gc-agento11y-<app> for a release, and the image defaults in terraform/variables.tf, the chart and the images-push recipe point at them
+- [x] #6 The private lab consumer stack sources the module from the new repository URL at a released tag and plans cleanly
 <!-- AC:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->
-- [ ] #1 just check
+- [x] #1 just check
 <!-- DOD:END -->
 
 ## Implementation Plan
@@ -58,4 +58,15 @@ Amended (Rob): images are the exception to the one-name rule. Publish them as gh
 
 Decided (Rob, pickup): Claude merges the 0.3.0 release PR; the lab consumer stack gets a plan only, Rob applies; new gc-agento11y-<app> GHCR packages are made public if they come up private; the local checkout directory is renamed at the end and the Claude Code memory path rekeyed.
 In-repo rename staged (not committed): 30 files, just check green. The rename commit waits for the new OpenBao permission set, because pushing it before the rename would point release-please at a set that cannot mint yet.
+
+Done so far (2026-09-29):
+- OpenBao: new permission sets, policies and roles release-please-grafana-cloud-agento11y-demo, renovate-repair-grafana-cloud-agento11y-demo (both repositories=grafana-cloud-agento11y-demo) and role docs-sync-grafana-cloud-agento11y-demo. Roles bind repository_id, which the rename kept.
+- Repo renamed; remote repointed. Rename commit 981dfe5; the broker token opened release PR #25 (new permission set proven) and the Trigger Documentation Sync trigger-sync job succeeded (new role proven). v0.3.0 released from e3df39b.
+- renovate-repair derives renovate-repair-<repo-name>, so its repos.txt, repair.md and lock followed (0110a5c). Its lock carries gh-aw-actions setup v0.90.0 from Renovate while its justfile pins the v0.89.21 compiler; only the repo line and frontmatter hash were changed, the pin drift is left.
+- Docs hub: roster, slug, icon pair, social card and a 301 from /grafana-aio11y-demo/* (b6453f1). The renamed site builds strict in isolation; the full hub deploy has been red since 2026-09-28 on an unrelated broken anchor in another project's docs, so the new docs path 404s until that is fixed. Repo homepage URL left on the old path until then.
+- New gc-agento11y-<app> GHCR packages came up public; anonymous pull works for all six, and all six old grafana-aio11y-demo-<app> packages still pull anonymously.
+- Lab consumer: module source moved to the new URL at v0.3.0 and pushed; plan with -var enabled=true: 2 add, 1 change, 2 destroy (agent host and the render.py bundle object replaced, helm release updated to gc-agento11y- and 0.3.0). Not applied.
+
+Verified: v0.3.0 publish run 36559350905 success; all six gc-agento11y-<app>:0.3.0 and grafana-aio11y-demo-<app>:0.2.0 manifests return 200 anonymously. AC #2: git grep -i aio11y outside backlog/ and CHANGELOG.md returns nothing. just check green after the release. Old OpenBao release-please, renovate-repair and docs-sync entries for the old name deleted; only the new-name entries remain.
+AC #4 stays open: the roster lists the new repository and the site builds strict through the hub's own build-fleet in isolation, but the live hub deploy is red on an unrelated broken anchor in another project, so the new docs path is not served yet. Close it once a hub deploy succeeds, and then point the repository homepage at the new docs path.
 <!-- SECTION:NOTES:END -->
