@@ -1,9 +1,11 @@
 ---
 id: AIO-0001
 title: Make the demo synthetic traffic read like real customer usage
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@claude'
 created_date: '2026-09-29 08:46'
+updated_date: '2026-09-29 10:37'
 labels:
   - traffic
 dependencies: []
@@ -27,3 +29,15 @@ Viewers of the dashboards and Agent Observability conversation lists can tell th
 <!-- DOD:BEGIN -->
 - [ ] #1 just check
 <!-- DOD:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+Lanes in one checkout, disjoint files, frozen seams (reader corpus apps/corpus/, prompt file format with '--- followup' turns, agent-host/codebase/seed-repo). Lane A: .01+.04 (loadgen, site-browser, corpus). Lane B1: .03+.05 (dev-session mechanism). Lane B2: .02 + PII prompt content (codebase, prompts). Lane C: .06 (corpus generator). Main thread wires, runs just check, commits per subtask, releases, bumps the lab consumer stack, then checks the live ACs.
+<!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+All subtask code shipped in v0.2.0 and deployed to the lab 2026-09-29. Open: AC2 (30-minute no-duplicate sample) not sampled at Rob's request; AIO-0001.05 AC3 waits for the first live multi-turn session. Follow-on: renovate.json now tracks the agento11y CLI/plugin (33ce015).
+<!-- SECTION:NOTES:END -->
