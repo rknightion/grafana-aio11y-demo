@@ -38,6 +38,7 @@ Home = "index.md"
 [[site.nav]]
 Guides = [
     { "Demo Runbook" = "demo-runbook.md" },
+    { Screenshots = "screenshots.md" },
     { "Coding Agents and the Gateway" = "coding-agents.md" },
     { "Growing the Traffic Corpus" = "traffic-corpus.md" },
     { "Deploy Alternatives" = "deploy-alternatives.md" },

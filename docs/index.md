@@ -118,6 +118,7 @@ More detail, including per-component diagrams, in [Architecture](architecture.md
 - [Architecture](architecture.md): components, data paths, naming
 - [Data source tiers](data-sources.md): what each telemetry tier sees, mapped to dashboard tabs
 - [Demo runbook](demo-runbook.md): a presenter flow with what to click and what to say
+- [Screenshots](screenshots.md): a gallery of the dashboards and Grafana Cloud app pages the demo fills
 - [Coding agents and the gateway](coding-agents.md): the agent host, sign-in, developers, teams and spend caps
 - [Deploy alternatives](deploy-alternatives.md): Argo CD, Flux or kubectl for the workloads
 - [Security](security.md): content capture, tokens in state, exposure, guard scope

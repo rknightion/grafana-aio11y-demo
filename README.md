@@ -204,6 +204,7 @@ logging, Application Observability): see
 - [Prerequisites](docs/prerequisites.md): Grafana Cloud, AWS and tool setup in detail
 - [Data sources](docs/data-sources.md): what each telemetry tier sees, mapped to dashboard tabs
 - [Demo runbook](docs/demo-runbook.md): a presenter flow with what to click and what to say
+- [Screenshots](docs/screenshots.md): a gallery of the dashboards and Grafana Cloud app pages the demo fills
 - [Coding agents](docs/coding-agents.md): the agent host, sign-in, developers, teams and spend caps
 - [Deploy alternatives](docs/deploy-alternatives.md): Argo CD, Flux or kubectl for the workloads
 - [Security](docs/security.md): content capture, tokens in state, exposure, guard scope
