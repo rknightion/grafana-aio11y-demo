@@ -73,7 +73,7 @@ contentCapture: true
 traffic:
   enabled: true
   siteRequestsPerMinute: 2
-  experimentsSchedule: "17 */2 * * *"
+  experimentsSchedule: "17 * * * *"
 
 loadgen:
   dailyBudgetUsd: 5

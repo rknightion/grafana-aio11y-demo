@@ -100,9 +100,15 @@ sudo docker compose exec dev-alex-morgan dev-session /opt/agent-host/prompts/pii
 The result line reports `guard_blocked`. Back in Guards, the deny is at the top of the recent
 outcomes. If it does not appear within two attempts, show the deny history from the last day.
 
-Be precise about the other rules: the secret and PII redaction rules and content safety are in
-warn mode. Show the redaction on tool content; do not claim prompts are redacted unless you have
-checked it on your stack.
+Then the tool guards: `touchline_claude_code_block_destructive_shell`,
+`_block_secret_files` and `_protect_paths` deny a tool call before it runs (a `git reset --hard`,
+a read of `.env`, an edit to the CI workflow). Some scheduled sessions ask for exactly that, the
+way a developer would. "The guard sees the tool call before Claude Code's own permission check,
+so it holds even when the session's allowlist would let it through."
+
+Point at the priority column: deny rules first, then detectors, redaction, LLM judges in warn mode
+and an informational egress watch at the end. Be precise: redaction applies to tool arguments,
+not prompts, because the plugin cannot rewrite a prompt.
 
 ### Alerting
 
@@ -137,9 +143,10 @@ inference profiles."
 | *Cost & tokens* | "Cost by agent, model and team. The orchestrator and editorial use Sonnet; the rest use Haiku, and it shows." |
 | *Latency & tools* | "Which tools each agent calls, how long they take, and the simulated failures." |
 | Agent Observability > Agents > `touchline-orchestrator` | "Every model call as a generation, grouped into conversations, with three prompt variants rotating through the day as versions." |
-| *Evals & guards*, then Evaluations in Agent Observability | "Online evaluations score a sample of live traffic for groundedness, PII and responsible-gambling language. No code change in the app." |
+| *Evals & guards*, then Evaluations in Agent Observability | "Online evaluations score a sample of live traffic: groundedness, grounding in tool results, injection resistance behind a cheap not-empty gate, whole-conversation helpfulness, PII and responsible-gambling language. No code change in the app." |
+| Collections: `touchline_rg_review` | "Every conversation that fails the responsible-gambling check lands in a review collection, ready to promote into a test suite." |
 | Guards: `touchline_agents_injected_tool_result` | "Some reader questions smuggle an instruction into a tool result. The guard flags it, in warn mode. Open one: the answer did not follow it." |
-| Experiments: the latest scheduled run, then compare two runs | "The same cases against different prompt variants or models, scored by the same evaluator, with cost and duration per case." |
+| Experiments: Overview, then the latest runs, then compare two runs | "Five test suites: match desk comparison, responsible gambling, tool grounding, injection resistance and a Claude Code guard-policy regression suite. The same cases against different prompt variants or models, scored by the same evaluator, with cost and duration per case." If the Overview is empty, widen the time range: runs are recorded when they complete. |
 | *Traces* tab | "Every conversation links through to its trace." |
 
 ![Agentic app dashboard, overview tab: generations, tokens and site traffic per agent](assets/screenshots/dashboards-agents.png)

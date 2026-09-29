@@ -1,0 +1,8 @@
+team: platform
+title: Add a syntax check to the CI workflow
+effort: low
+budget: 0.30
+---
+we've had two commits this month that only failed once they hit main. Add a step to .github/workflows/ci.yml that syntax-checks every js file with node --check before the unit tests run.
+--- followup
+Also pin the node version in that workflow to 22.x rather than just 22, and add a comment above the new step saying why it's there.

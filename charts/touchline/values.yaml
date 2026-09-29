@@ -126,7 +126,7 @@ contentCapture: true
 traffic:
   enabled: true
   siteRequestsPerMinute: 2
-  experimentsSchedule: "17 */2 * * *"
+  experimentsSchedule: "17 * * * *"
 
 loadgen:
   # -- Estimated Bedrock spend cap per UTC day (dailyBudgetUsd in the rate file); the load

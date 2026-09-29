@@ -1,12 +1,19 @@
 #!/usr/bin/env node
-// Agent Observability experiment runner for the orchestrator.
+// Agent Observability experiment runner.
 //
-// Two candidate sets, both against the live orchestrator over HTTP:
-//   models    one run per model key in the suite (x-agent-model), current rotating variant
-//   variants  one run per shipped prompt variant (x-agent-variant), pinned to one model
-// Each run records one trial per suite case, asks the stack's answer-quality evaluator to score
-// it, and finalizes. --scheduled is the CronJob mode: random delay, random skip, random set, a
-// UTC daily run cap and a Kubernetes Lease so overlapping Jobs never double-create runs.
+// Suites live in config/suites/*.yaml. Each has a target:
+//   orchestrator  (default) asks the live orchestrator over HTTP. The match desk suite is a
+//                 comparison suite with two candidate sets:
+//                   models    one run per model key in the suite (x-agent-model), current rotating variant
+//                   variants  one run per shipped prompt variant (x-agent-variant), pinned to one model
+//                 Every other orchestrator suite runs one candidate, its variant_candidate.
+//   guards        calls the hook evaluation API directly, with no model calls, and checks each
+//                 decision against the case's expected action.
+// Each run records one trial per suite case. Orchestrator trials are scored by the suite's stored
+// final evaluator (a number against pass_threshold, or a boolean that must be true) plus its
+// diagnostic evaluators. --scheduled is the CronJob mode: random delay, random skip, one weighted
+// suite per slot, a UTC daily run cap and a Kubernetes Lease so overlapping Jobs never
+// double-create runs.
 //
 // Environment (the SDK's own names):
 //   AGENTO11Y_ENDPOINT, AGENTO11Y_AUTH_TENANT_ID, AGENTO11Y_AUTH_TOKEN   experiment ingest
@@ -14,21 +21,27 @@
 //   AGENTO11Y_GRAFANA_URL, AGENTO11Y_SERVICE_ACCOUNT_TOKEN              optional: publish the
 //       stored test suite when it is missing, and read the control plane if ingest auth is refused
 //   ORCHESTRATOR_BASE_URL or ORCHESTRATOR_URL   scheduled mode target (default http://<namespace>-orchestrator:8080)
-//   EXPERIMENTS_SET, EXPERIMENTS_DELAY_MS, EXPERIMENTS_PROBABILITY      schedule overrides
+//   EXPERIMENTS_SET, EXPERIMENTS_SUITE, EXPERIMENTS_DELAY_MS, EXPERIMENTS_PROBABILITY   schedule overrides
 //   EXPERIMENTS_DAILY_RUN_CAP (default 12), EXPERIMENTS_EVALUATOR_ID, EXPERIMENTS_EVALUATOR_VERSION
+//       (the last two override the final evaluator of a suite whose final is <prefix>_answer_quality)
 import { createHash } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir, stat } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import { parse } from 'yaml';
+import { createAgento11yClient } from '@grafana/agento11y';
 import { ExperimentsClient, Experiment, Trial, TestSuitesClient } from '@grafana/agento11y/experiments';
 import { VARIANT_IDS, variantVersion } from '../src/variants.mjs';
 import { agentName, serviceNamespace } from '../src/config.mjs';
 import { withScheduledLease } from './lease.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const defaultConfigPath = resolve(here, '../config/experiment-suite.yaml');
-const expectedCategories = ['happy', 'edge', 'adversarial'];
+const defaultSuitesDir = resolve(here, '../config/suites');
+const defaultConfigPath = resolve(defaultSuitesDir, 'match-desk.yaml');
+const categories = ['happy', 'edge', 'adversarial'];
+const targets = ['orchestrator', 'guards'];
+// Share of hourly slots that run an experiment.
+const FIRE_PROBABILITY = 0.7;
 const ID = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/;
 
 export function dailyRunCap(env = process.env) {
@@ -44,11 +57,30 @@ export function resolveSuite(raw, env = process.env) {
   const fill = (value) => typeof value === 'string' ? value.replaceAll('{prefix}', idPrefix(env)) : value;
   const suite = structuredClone(raw ?? {});
   suite.suite_id = fill(suite.suite_id);
-  suite.online_evaluator = { ...suite.online_evaluator, evaluator_id: fill(env.EXPERIMENTS_EVALUATOR_ID ?? suite.online_evaluator?.evaluator_id) };
-  const version = env.EXPERIMENTS_EVALUATOR_VERSION ?? suite.online_evaluator.version;
-  if (version === undefined || version === null || version === '') delete suite.online_evaluator.version;
-  else suite.online_evaluator.version = String(version);
-  if (suite.candidate) suite.candidate.agent_name = agentName(suite.candidate.agent_role ?? 'orchestrator', env);
+  suite.target = suite.target ?? 'orchestrator';
+  if (suite.scoring && typeof suite.scoring === 'object') {
+    suite.scoring.final = fill(suite.scoring.final);
+    if (Array.isArray(suite.scoring.diagnostic)) suite.scoring.diagnostic = suite.scoring.diagnostic.map(fill);
+    else suite.scoring.diagnostic = suite.scoring.diagnostic ?? [];
+    // The env overrides retarget the answer-quality evaluator only, never another suite's judge.
+    if (suite.scoring.final === `${idPrefix(env)}_answer_quality`) {
+      suite.scoring.final = env.EXPERIMENTS_EVALUATOR_ID ?? suite.scoring.final;
+      suite.scoring.final_version = env.EXPERIMENTS_EVALUATOR_VERSION ?? suite.scoring.final_version;
+    }
+    const version = suite.scoring.final_version;
+    if (version === undefined || version === null || version === '') delete suite.scoring.final_version;
+    else suite.scoring.final_version = String(version);
+  }
+  if (suite.candidate) {
+    suite.candidate.agent_name = suite.target === 'guards'
+      ? `claude-code/${serviceNamespace(env)}/guard-suite`
+      : agentName(suite.candidate.agent_role ?? 'orchestrator', env);
+  }
+  for (const testCase of Array.isArray(suite.cases) ? suite.cases : []) {
+    if (testCase?.expected && typeof testCase.expected === 'object' && typeof testCase.expected.rule_id === 'string') {
+      testCase.expected = { ...testCase.expected, rule_id: fill(testCase.expected.rule_id) };
+    }
+  }
   return suite;
 }
 
@@ -59,8 +91,11 @@ export function validateSuite(suite) {
   }
   if (!ID.test(suite.suite_id)) throw new Error('suite_id must be a short stable identifier');
   if (!Array.isArray(suite.tags) || !suite.tags.length || suite.tags.some((tag) => typeof tag !== 'string' || !tag.trim())) throw new Error('suite tags must be a non-empty list of strings');
-  if (suite.candidate?.agent_role !== 'orchestrator' || suite.candidate.model_provider !== 'anthropic') {
-    throw new Error('candidate must identify the Anthropic orchestrator agent');
+  const target = suite.target ?? 'orchestrator';
+  if (!targets.includes(target)) throw new Error(`suite target must be ${targets.join(' or ')}`);
+  const guards = target === 'guards';
+  if (suite.candidate?.agent_role !== (guards ? 'guards' : 'orchestrator') || suite.candidate.model_provider !== 'anthropic') {
+    throw new Error(guards ? 'candidate must identify the guards agent' : 'candidate must identify the Anthropic orchestrator agent');
   }
   if (!Array.isArray(suite.candidates) || !suite.candidates.length) throw new Error('suite must define at least one model candidate');
   const ids = suite.candidates.map((candidate) => candidate?.id);
@@ -71,34 +106,92 @@ export function validateSuite(suite) {
     }
   }
   if (!ids.includes(suite.variant_candidate)) throw new Error('variant_candidate must name one of the candidates');
-  if (!ID.test(suite.online_evaluator?.evaluator_id ?? '')) throw new Error('suite must reference an online evaluator id');
-  if (!Array.isArray(suite.cases) || suite.cases.length !== expectedCategories.length) throw new Error('suite must define exactly three test cases');
-  const categories = suite.cases.map((testCase) => testCase?.category);
-  if (new Set(categories).size !== expectedCategories.length || expectedCategories.some((category) => !categories.includes(category))) {
-    throw new Error(`suite cases must cover ${expectedCategories.join(', ')}`);
+  if (suite.comparison !== undefined && typeof suite.comparison !== 'boolean') throw new Error('comparison must be true or false');
+  if (suite.comparison && (guards || suite.candidates.length < 2)) throw new Error('a comparison suite needs the orchestrator target and at least two candidates');
+  if (suite.run_slug !== undefined && !ID.test(suite.run_slug)) throw new Error('run_slug must be a short stable identifier');
+  if (!suite.comparison && !ID.test(suite.run_slug ?? '')) throw new Error('a suite without comparison needs a run_slug');
+  if (suite.weight !== undefined && !(Number.isFinite(suite.weight) && suite.weight > 0)) throw new Error('weight must be a positive number');
+  const scoring = suite.scoring;
+  if (!scoring || typeof scoring !== 'object' || Array.isArray(scoring)) throw new Error('suite must define scoring');
+  if (!ID.test(scoring.final ?? '')) throw new Error('scoring.final must be an evaluator id');
+  if (!Array.isArray(scoring.diagnostic) || scoring.diagnostic.some((id) => !ID.test(id ?? '') || id === scoring.final)) {
+    throw new Error('scoring.diagnostic must be a list of evaluator ids other than scoring.final');
   }
+  if (!Number.isFinite(scoring.pass_threshold) || scoring.pass_threshold < 0 || scoring.pass_threshold > 1) throw new Error('scoring.pass_threshold must be a number from 0 to 1');
+  if (!Array.isArray(suite.cases) || !suite.cases.length) throw new Error('suite must define at least one test case');
   const caseIds = new Set();
   for (const testCase of suite.cases) {
-    const caseId = testCase.test_case_id;
+    const caseId = testCase?.test_case_id;
     if (!ID.test(caseId ?? '')) throw new Error('each case needs a short stable test_case_id');
     if (caseIds.has(caseId)) throw new Error(`duplicate case id ${caseId}`);
     caseIds.add(caseId);
+    if (!categories.includes(testCase.category)) throw new Error(`${caseId}: category must be one of ${categories.join(', ')}`);
     if (typeof testCase.name !== 'string' || !testCase.name.trim()) throw new Error(`${caseId}: name is required`);
     if (typeof testCase.description !== 'string' || !testCase.description.trim()) throw new Error(`${caseId}: description is required`);
     if (!Array.isArray(testCase.tags) || !testCase.tags.length) throw new Error(`${caseId}: tags are required`);
     if (!testCase.input || typeof testCase.input !== 'object' || Array.isArray(testCase.input)) throw new Error(`${caseId}: input must be a mapping`);
-    if (typeof testCase.input.question !== 'string' || !testCase.input.question.trim() || testCase.input.question.length > 2000) throw new Error(`${caseId}: input.question must be 1 to 2000 characters`);
-    if (typeof testCase.input.userId !== 'string' || !testCase.input.userId.trim()) throw new Error(`${caseId}: input.userId is required`);
-    if (typeof testCase.expected !== 'string' || !testCase.expected.trim()) throw new Error(`${caseId}: expected is required`);
+    if (guards) validateGuardCase(caseId, testCase);
+    else {
+      if (typeof testCase.input.question !== 'string' || !testCase.input.question.trim() || testCase.input.question.length > 2000) throw new Error(`${caseId}: input.question must be 1 to 2000 characters`);
+      if (typeof testCase.input.userId !== 'string' || !testCase.input.userId.trim()) throw new Error(`${caseId}: input.userId is required`);
+      if (typeof testCase.expected !== 'string' || !testCase.expected.trim()) throw new Error(`${caseId}: expected is required`);
+    }
   }
   return suite;
+}
+
+function validateGuardCase(caseId, testCase) {
+  const { input, expected } = testCase;
+  if (!['preflight', 'postflight'].includes(input.phase)) throw new Error(`${caseId}: input.phase must be preflight or postflight`);
+  if (input.phase === 'preflight') {
+    if (typeof input.prompt !== 'string' || !input.prompt.trim()) throw new Error(`${caseId}: a preflight case needs input.prompt`);
+  } else if (typeof input.tool_name !== 'string' || !input.tool_name.trim() ||
+      !input.tool_input || typeof input.tool_input !== 'object' || Array.isArray(input.tool_input)) {
+    throw new Error(`${caseId}: a postflight case needs input.tool_name and an input.tool_input mapping`);
+  }
+  if (!expected || typeof expected !== 'object' || !['allow', 'deny'].includes(expected.action)) throw new Error(`${caseId}: expected.action must be allow or deny`);
+  if (expected.rule_id !== undefined && !ID.test(expected.rule_id)) throw new Error(`${caseId}: expected.rule_id must be a rule id`);
 }
 
 export async function loadSuite(path = defaultConfigPath, env = process.env) {
   return validateSuite(resolveSuite(parse(await readFile(path, 'utf8')), env));
 }
 
+/** Every suite under a directory (sorted by file name), or the one suite a file holds. */
+export async function loadSuites(path = defaultSuitesDir, env = process.env) {
+  if (!(await stat(path)).isDirectory()) return [await loadSuite(path, env)];
+  const files = (await readdir(path)).filter((name) => /\.ya?ml$/.test(name)).sort();
+  if (!files.length) throw new Error(`no suite files in ${path}`);
+  const suites = await Promise.all(files.map((name) => loadSuite(resolve(path, name), env)));
+  const seen = new Set();
+  for (const suite of suites) {
+    if (seen.has(suite.suite_id)) throw new Error(`duplicate suite_id ${suite.suite_id}`);
+    seen.add(suite.suite_id);
+  }
+  return suites;
+}
+
+/** One suite for a scheduled slot, chosen by weight (default 1); a named suite id wins. */
+export function pickSuite(suites, { random = Math.random, suiteId } = {}) {
+  if (suiteId !== undefined) {
+    const named = suites.find((suite) => suite.suite_id === suiteId || suite.suite_id.endsWith(`_${suiteId}`));
+    if (!named) throw new Error(`no suite matches ${suiteId}`);
+    return named;
+  }
+  const total = suites.reduce((sum, suite) => sum + (suite.weight ?? 1), 0);
+  let draw = random() * total;
+  for (const suite of suites) {
+    draw -= suite.weight ?? 1;
+    if (draw < 0) return suite;
+  }
+  return suites.at(-1);
+}
+
 export function selectCandidates(suite, set = 'models', variantIds = VARIANT_IDS) {
+  if (!suite.comparison) {
+    const only = suite.candidates.find((candidate) => candidate.id === suite.variant_candidate);
+    return [{ ...only, header_value: only.id }];
+  }
   if (set === 'models') return suite.candidates.map((candidate) => ({ ...candidate, header_value: candidate.id }));
   if (set !== 'variants') throw new Error('candidate set must be models or variants');
   if (variantIds.length !== VARIANT_IDS.length || new Set(variantIds).size !== VARIANT_IDS.length ||
@@ -127,15 +220,16 @@ export function candidateHeaders(candidate) {
 export function scheduledPlan(suite, { now = new Date(), random = Math.random, variantIds = VARIANT_IDS,
   candidateSet, immediate = false, existingRuns, delayMsOverride, probabilityOverride, env = process.env } = {}) {
   const delayMs = immediate ? 0 : delayMsOverride ?? Math.floor(random() * 50 * 60_000);
-  const fires = immediate || random() < (probabilityOverride ?? 0.4);
-  const set = candidateSet ?? (random() < 0.5 ? 'variants' : 'models');
+  const fires = immediate || random() < (probabilityOverride ?? FIRE_PROBABILITY);
+  // Only the comparison suite chooses between model and variant runs; the others have one candidate.
+  const set = suite.comparison ? candidateSet ?? (random() < 0.5 ? 'variants' : 'models') : suite.run_slug;
   const candidates = selectCandidates(suite, set, variantIds);
   const at = new Date(now.getTime() + delayMs);
   const stamp = at.toISOString().slice(0, 16).replace(/[-:]/g, '');
   const day = at.toISOString().slice(0, 10).replace(/-/g, '');
   const capChecked = Array.isArray(existingRuns);
   const used = capChecked ? existingRuns.filter((id) => id.startsWith(schedPrefix(env)) && id.slice(-13, -5) === day && /-\d{8}T\d{4}$/.test(id)).length : null;
-  return { delayMs, fires, set, candidates, runIds: candidates.map((candidate) => `${schedPrefix(env)}${set}-${candidate.id}-${stamp}`),
+  return { suiteId: suite.suite_id, delayMs, fires, set, candidates, runIds: candidates.map((candidate) => `${schedPrefix(env)}${set}-${candidate.id}-${stamp}`),
     capChecked, used, allowed: capChecked ? fires && used + candidates.length <= dailyRunCap(env) : null };
 }
 
@@ -143,10 +237,12 @@ export function scheduledOverridesFromEnv(env = process.env) {
   const set = env.EXPERIMENTS_SET;
   const delay = env.EXPERIMENTS_DELAY_MS;
   const probability = env.EXPERIMENTS_PROBABILITY;
+  const suiteId = env.EXPERIMENTS_SUITE;
   if (set !== undefined && !['models', 'variants'].includes(set)) throw new Error('EXPERIMENTS_SET must be models or variants');
   if (delay !== undefined && (!/^\d+$/.test(delay) || Number(delay) > 50 * 60_000)) throw new Error('EXPERIMENTS_DELAY_MS must be 0 to 3000000');
   if (probability !== undefined && !/^(?:0(?:\.\d+)?|1(?:\.0+)?)$/.test(probability)) throw new Error('EXPERIMENTS_PROBABILITY must be 0 to 1');
   return { ...(set === undefined ? {} : { candidateSet: set }),
+    ...(suiteId === undefined || suiteId === '' ? {} : { suiteId }),
     ...(delay === undefined ? {} : { delayMsOverride: Number(delay) }),
     ...(probability === undefined ? {} : { probabilityOverride: Number(probability) }) };
 }
@@ -157,7 +253,7 @@ export function portableSuite(suite, version) {
     ...(version ? { version } : {}),
     testCases: suite.cases.map((item) => ({ testCaseId: item.test_case_id, name: item.name,
       description: item.description, tags: item.tags, category: item.category, input: item.input,
-      expected: { answer: { text: item.expected } } })) };
+      expected: typeof item.expected === 'string' ? { answer: { text: item.expected } } : item.expected })) };
 }
 
 export function experimentPayload(suite, candidate, runId, suiteVersion) {
@@ -166,7 +262,7 @@ export function experimentPayload(suite, candidate, runId, suiteVersion) {
     name: `${suite.name} - ${candidate.name}`,
     source: 'external',
     description: `${suite.description} Candidate: ${candidate.name}.`,
-    tags: [...suite.tags, `${candidate.variant_id ? 'variant' : 'model'}-comparison`, candidate.id],
+    tags: [...suite.tags, ...(suite.comparison ? [`${candidate.variant_id ? 'variant' : 'model'}-comparison`] : []), candidate.id],
     suite_id: suite.suite_id,
     suite_version: suiteVersion,
     candidate: {
@@ -177,8 +273,11 @@ export function experimentPayload(suite, candidate, runId, suiteVersion) {
     },
     planned_trial_count: suite.cases.length,
     metadata: {
-      online_evaluator_id: suite.online_evaluator.evaluator_id,
-      ...(suite.online_evaluator.version ? { online_evaluator_version: suite.online_evaluator.version } : {}),
+      suite_target: suite.target ?? 'orchestrator',
+      online_evaluator_id: suite.scoring.final,
+      ...(suite.scoring.final_version ? { online_evaluator_version: suite.scoring.final_version } : {}),
+      ...(suite.scoring.diagnostic.length ? { diagnostic_evaluator_ids: suite.scoring.diagnostic.join(',') } : {}),
+      pass_threshold: suite.scoring.pass_threshold,
       model_header: candidate.header_value,
       variant_version_scope: candidate.agent_version ? 'pinned_variant' : 'mixed_rotating',
     },
@@ -195,8 +294,11 @@ export async function evaluatorScore(client, runId, trialId, evaluatorId) {
       if (matches.length) {
         const value = matches.at(-1).value;
         const number = typeof value === 'number' ? value : value?.number;
-        if (!Number.isFinite(number)) throw new Error(`${runId}/${trialId}: evaluator score is not numeric`);
-        return number;
+        if (Number.isFinite(number)) return number;
+        // The control plane returns bool scores as { bool }; the SDK types call it boolean.
+        const flag = value?.bool ?? value?.boolean;
+        if (typeof flag === 'boolean') return flag;
+        throw new Error(`${runId}/${trialId}: evaluator score is not numeric or boolean`);
       }
       cursor = result.nextCursor;
       if (!cursor) break;
@@ -341,6 +443,9 @@ export class EvaluatorFailedError extends Error {
 }
 
 const evaluatorMeta = (evaluator) => ({ evaluatorId: evaluator.evaluator_id, ...(evaluator.version ? { version: evaluator.version } : {}), kind: 'llm_judge' });
+const finalEvaluator = (suite) => ({ evaluator_id: suite.scoring.final, ...(suite.scoring.final_version ? { version: suite.scoring.final_version } : {}) });
+/** A boolean final score must be true; a numeric one must reach the suite's pass threshold. */
+export const scorePassed = (value, passThreshold) => typeof value === 'boolean' ? value : value >= passThreshold;
 
 export async function pollEvaluation(client, runId, trialId, evaluationId, { attempts = 200, intervalMs = 3_000 } = {}) {
   let status = await client.getTrialEvaluation(runId, trialId, evaluationId);
@@ -353,8 +458,9 @@ export async function pollEvaluation(client, runId, trialId, evaluationId, { att
   throw new PendingEvaluationError(runId, trialId, evaluationId, status.status);
 }
 
-export async function resumePendingRun(client, runId, evaluations, { evaluator, evaluationPoll = {}, reads = client } = {}) {
-  if (!evaluator?.evaluator_id) throw new Error('pending resume requires the suite online evaluator');
+export async function resumePendingRun(client, runId, evaluations, { evaluator, passThreshold, evaluationPoll = {}, reads = client } = {}) {
+  if (!evaluator?.evaluator_id) throw new Error('pending resume requires the suite final evaluator');
+  if (!Number.isFinite(passThreshold)) throw new Error('pending resume requires the suite pass threshold');
   const pending = [];
   for (const original of evaluations) {
     const { trialId, evaluationId, testCaseId, conversationId } = original;
@@ -370,7 +476,7 @@ export async function resumePendingRun(client, runId, evaluations, { evaluator, 
         trial.setUsage({ inputTokens: original.inputTokens, outputTokens: original.outputTokens });
       }
       await trial.start();
-      trial.finalScore(value, { passed: value >= 0.8, evaluator: evaluatorMeta(evaluator) });
+      trial.finalScore(value, { passed: scorePassed(value, passThreshold), evaluator: evaluatorMeta(evaluator) });
       await trial.close();
     } catch (error) {
       if (error instanceof PendingEvaluationError) { pending.push(original); continue; }
@@ -407,10 +513,53 @@ function defaultSuitesClient(env = process.env) {
   return new TestSuitesClient({ grafanaUrl: env.AGENTO11Y_GRAFANA_URL, serviceAccountToken: env.AGENTO11Y_SERVICE_ACCOUNT_TOKEN });
 }
 
+/** The hook request the agento11y Claude Code plugin sends for this case (plugin v0.48.0). */
+export function guardRequest(suite, testCase, conversationId) {
+  const { input } = testCase;
+  const context = { agentName: suite.candidate.agent_name, model: { provider: suite.candidate.model_provider, name: suite.candidates[0].model_name }, conversationId };
+  if (input.phase === 'preflight') {
+    return { phase: 'preflight', context, input: { messages: [{ role: 'user', parts: [{ type: 'text', text: input.prompt }] }] } };
+  }
+  return { phase: 'postflight', context, input: { output: [{ role: 'assistant', parts: [{ type: 'tool_call',
+    toolCall: { id: `toolu_${testCase.test_case_id}`, name: input.tool_name, inputJSON: JSON.stringify(input.tool_input) } }] }] } };
+}
+
+function defaultHookClient(env = process.env) {
+  const { AGENTO11Y_ENDPOINT: endpoint, AGENTO11Y_AUTH_TENANT_ID: tenantId, AGENTO11Y_AUTH_TOKEN: token } = env;
+  if (!endpoint || !tenantId || !token) throw new Error('the guards target needs AGENTO11Y_ENDPOINT, AGENTO11Y_AUTH_TENANT_ID and AGENTO11Y_AUTH_TOKEN');
+  return createAgento11yClient({
+    generationExport: { protocol: 'http', endpoint, auth: { mode: 'basic', tenantId, basicPassword: token } },
+    api: { endpoint: new URL(endpoint).origin },
+    // failOpen false: a transport failure must fail the trial, never read as an allow.
+    hooks: { enabled: true, phases: ['preflight', 'postflight'], timeoutMs: 5000, failOpen: false },
+  });
+}
+
+/** One guards trial: no model call, the decision is compared with the case's expected action. */
+async function recordGuardTrial({ trial, suite, testCase, hookClient, runId, log }) {
+  const conversationId = `${serviceNamespace()}-guard-suite-${trial.trialId}`;
+  const decision = await hookClient.evaluateHook(guardRequest(suite, testCase, conversationId));
+  const matched = decision.action === testCase.expected.action;
+  const evaluator = { evaluatorId: 'expected_action', kind: 'deterministic' };
+  const detail = { phase: testCase.input.phase, tool_name: testCase.input.tool_name, expected: testCase.expected,
+    actual: { action: decision.action, rule_id: decision.ruleId ?? '', reason: decision.reason ?? '' } };
+  await trial.artifact('decision.json', { data: detail, kind: 'json', mime: 'application/json' });
+  trial.checkScore('expected_action', { passed: matched, value: matched, evaluator, explanation: `expected ${testCase.expected.action}, got ${decision.action}` });
+  // The rule id is informational: a different rule may deny the same call.
+  if (testCase.expected.rule_id) {
+    trial.checkScore('expected_rule', { passed: decision.ruleId === testCase.expected.rule_id, value: decision.ruleId === testCase.expected.rule_id, evaluator,
+      explanation: `expected ${testCase.expected.rule_id}, got ${decision.ruleId ?? 'none'}` });
+  }
+  trial.finalScore(matched, { passed: matched, evaluator, explanation: `expected ${testCase.expected.action}, got ${decision.action}` });
+  await trial.close();
+  log({ event: 'trial_recorded', runId, caseId: testCase.test_case_id, expected: testCase.expected.action, actual: decision.action, matched });
+}
+
 export async function executeExperiment({ suite, baseUrl, runIdPrefix, runIdsOverride, scheduled = false, pushSuite = false,
   set = 'models', variantIds = VARIANT_IDS, fetchImpl = fetch, client, suites, reads, env = process.env,
-  log = () => {}, evaluationPoll = {} }) {
+  log = () => {}, evaluationPoll = {}, hookClient }) {
   validateSuite(suite);
+  const guards = suite.target === 'guards';
   if (!ID.test(runIdPrefix ?? '')) throw new Error('run ID prefix must be a short stable identifier');
   const ingest = client ?? new ExperimentsClient();
   if (!ingest.tenantId || !ingest.endpoint) throw new Error('the experiment ingest client needs AGENTO11Y_ENDPOINT and AGENTO11Y_AUTH_TENANT_ID');
@@ -422,12 +571,14 @@ export async function executeExperiment({ suite, baseUrl, runIdPrefix, runIdsOve
   } catch (error) { throw fail(error); }
   const candidates = await resolveCandidateVersions(selectCandidates(suite, set, variantIds));
   const orchestratorName = suite.candidate.agent_name;
-  const base = scheduled ? new URL(baseUrl) : loopbackBaseURL(baseUrl);
+  const base = guards ? new URL('http://guards.invalid') : scheduled ? new URL(baseUrl) : loopbackBaseURL(baseUrl);
   const liveURL = (path) => new URL(path, `${base.href.replace(/\/$/, '')}/`);
-  const health = await fetchImpl(liveURL('/healthz'), { method: 'GET', signal: AbortSignal.timeout(5_000) });
-  if (!health.ok) throw new Error(`orchestrator health check returned HTTP ${health.status}`);
-  const healthBody = await health.json();
-  if (healthBody.status !== 'ok' || healthBody.service !== orchestratorName) throw new Error(`health check did not identify ${orchestratorName}`);
+  if (!guards) {
+    const health = await fetchImpl(liveURL('/healthz'), { method: 'GET', signal: AbortSignal.timeout(5_000) });
+    if (!health.ok) throw new Error(`orchestrator health check returned HTTP ${health.status}`);
+    const healthBody = await health.json();
+    if (healthBody.status !== 'ok' || healthBody.service !== orchestratorName) throw new Error(`health check did not identify ${orchestratorName}`);
+  }
 
   let experimentItems;
   try {
@@ -452,8 +603,11 @@ export async function executeExperiment({ suite, baseUrl, runIdPrefix, runIdsOve
   try { suiteVersion = await ensurePublishedSuite(suite, { reads: plane, suites: suites ?? defaultSuitesClient(env), force: pushSuite, log }); }
   catch (error) { throw fail(error); }
 
-  const evaluator = suite.online_evaluator;
+  const evaluator = finalEvaluator(suite);
+  const passThreshold = suite.scoring.pass_threshold;
   const pendingRuns = [];
+  const guardClient = guards ? hookClient ?? defaultHookClient(env) : undefined;
+  try {
   for (let candidateIndex = 0; candidateIndex < candidates.length; candidateIndex++) {
     const candidate = candidates[candidateIndex];
     const runId = runIds[candidateIndex];
@@ -470,6 +624,11 @@ export async function executeExperiment({ suite, baseUrl, runIdPrefix, runIdsOve
       for (const testCase of suite.cases) {
         const trial = experiment.trial(testCase.test_case_id, { metadata: { candidate: candidate.id } });
         await trial.start();
+        if (guards) {
+          try { await recordGuardTrial({ trial, suite, testCase, hookClient: guardClient, runId, log }); }
+          catch (error) { await trial.close({ error }); throw error; }
+          continue;
+        }
         let recordedUsage;
         try {
           const startedAt = new Date();
@@ -508,7 +667,13 @@ export async function executeExperiment({ suite, baseUrl, runIdPrefix, runIdsOve
             { ...(evaluator.version ? { evaluatorVersion: evaluator.version } : {}), timeoutMs: evaluationPoll.timeoutMs ?? 600_000 });
           if (evaluation.status !== 'success') throw new Error(`${runId}/${trial.trialId}: evaluator returned ${evaluation.status}`);
           const value = await evaluatorScore(plane, runId, trial.trialId, evaluator.evaluator_id);
-          trial.finalScore(value, { passed: value >= 0.8, evaluator: evaluatorMeta(evaluator),
+          // Diagnostic evaluators are recorded by the stack for the trial; they never decide the verdict,
+          // so a slow or failed one is logged rather than failing the run.
+          for (const diagnosticId of suite.scoring.diagnostic) {
+            try { await trial.evaluate(diagnosticId, { timeoutMs: evaluationPoll.timeoutMs ?? 600_000 }); }
+            catch (error) { log({ event: 'diagnostic_evaluation_skipped', runId, caseId: testCase.test_case_id, evaluatorId: diagnosticId, reason: error.message }); }
+          }
+          trial.finalScore(value, { passed: scorePassed(value, passThreshold), evaluator: evaluatorMeta(evaluator),
             metadata: { startedAt: startedAt.toISOString(), completedAt: completedAt.toISOString(),
               durationMs: completedAt.getTime() - startedAt.getTime(), usage: reply.usage } });
           await trial.close();
@@ -540,13 +705,16 @@ export async function executeExperiment({ suite, baseUrl, runIdPrefix, runIdsOve
       throw error;
     }
   }
+  } finally {
+    if (guardClient && !hookClient) await guardClient.shutdown().catch(() => {});
+  }
   if (pendingRuns.length) throw new PendingRunsError(pendingRuns);
   return { suiteId: suite.suite_id, suiteVersion, runIds, candidateCount: candidates.length, caseCount: suite.cases.length };
 }
 
 export function parseArgs(argv) {
-  const options = { config: defaultConfigPath, baseUrl: 'http://127.0.0.1:18080', execute: false };
-  const valued = { '--config': 'config', '--base-url': 'baseUrl', '--run-id-prefix': 'runIdPrefix', '--poll-evaluation-run': 'pollRunId', '--poll-evaluations': 'pollEvaluations', '--candidate-set': 'set', '--variant-ids': 'variantIds' };
+  const options = { config: defaultSuitesDir, baseUrl: 'http://127.0.0.1:18080', execute: false };
+  const valued = { '--config': 'config', '--base-url': 'baseUrl', '--run-id-prefix': 'runIdPrefix', '--poll-evaluation-run': 'pollRunId', '--poll-evaluations': 'pollEvaluations', '--candidate-set': 'set', '--variant-ids': 'variantIds', '--suite': 'suiteId' };
   for (let index = 0; index < argv.length; index++) {
     const arg = argv[index];
     if (arg === '--help' || arg === '-h') options.help = true;
@@ -566,16 +734,18 @@ export function parseArgs(argv) {
 
 export const helpText = `Usage: node experiments/run-experiment.mjs [options]
 
-By default, validate the suite and print the planned runs without remote writes or model calls.
+By default, validate the suites and print the planned runs without remote writes or model calls.
 Pass --execute to publish the stored test suite if needed, create the runs, call the
 orchestrator and submit scored trials. See the header of this file for the environment.
 
 Options:
-  --config PATH          Suite YAML (default: config/experiment-suite.yaml)
+  --config PATH          A suite YAML or a directory of them (default: config/suites)
+  --suite ID             Run only this suite (its id, or the part after the prefix); required with
+                         --execute when the config holds several suites (scheduled mode picks one itself)
   --base-url URL         Orchestrator loopback port-forward (default: http://127.0.0.1:18080)
-  --candidate-set SET    models or variants (default: models)
+  --candidate-set SET    models or variants (default: models); only the match desk comparison suite uses it
   --variant-ids IDS      Three comma-separated shipped variant ids
-  --scheduled            CronJob mode: random delay, skip and set; in-cluster orchestrator URL
+  --scheduled            CronJob mode: random delay, skip, suite and set; in-cluster orchestrator URL
   --scheduled-now        With --scheduled: skip delay and probability, keep cap and suite checks
   --run-id-prefix ID     Stable prefix for the experiment IDs (required with --execute)
   --push-suite           Publish the local suite as a new stored version before running
@@ -591,22 +761,28 @@ async function main(argv = process.argv.slice(2)) {
     process.stdout.write(helpText);
     return;
   }
-  const suite = await loadSuite(options.config);
+  const all = await loadSuites(options.config);
+  const named = (id) => all.filter((item) => item.suite_id === id || item.suite_id.endsWith(`_${id}`));
+  if (options.suiteId && !named(options.suiteId).length) throw new Error(`no suite matches ${options.suiteId}`);
+  const pool = options.suiteId ? named(options.suiteId) : all;
   if (options.pollRunId || options.pollEvaluations) {
     if (!options.pollRunId || !options.pollEvaluations || options.execute) throw new Error('poll mode requires --poll-evaluation-run and --poll-evaluations without --execute');
+    if (pool.length !== 1) throw new Error('poll mode requires --suite to name the run\'s suite');
     const tuples = parsePendingTuples(options.pollEvaluations);
     const client = new ExperimentsClient();
     const reads = controlPlane({ endpoint: client.endpoint, tenantId: client.tenantId, ingestToken: process.env.AGENTO11Y_AUTH_TOKEN,
       grafanaUrl: process.env.AGENTO11Y_GRAFANA_URL, saToken: process.env.AGENTO11Y_SERVICE_ACCOUNT_TOKEN });
-    await resumePendingRun(client, options.pollRunId, tuples, { evaluator: suite.online_evaluator, reads });
+    await resumePendingRun(client, options.pollRunId, tuples, { evaluator: finalEvaluator(pool[0]), passThreshold: pool[0].scoring.pass_threshold, reads });
     process.stdout.write(`${JSON.stringify({ event: 'experiment_complete', runId: options.pollRunId, evaluationCount: tuples.length })}\n`);
     return;
   }
   const variantIds = options.variantIds?.split(',') ?? VARIANT_IDS;
   if (options.scheduledNow && !options.scheduled) throw new Error('--scheduled-now requires --scheduled');
   if (options.scheduled && options.runIdPrefix) throw new Error('--scheduled owns its run ID prefix');
+  let suite;
   if (options.scheduled) {
     const overrides = scheduledOverridesFromEnv();
+    suite = pickSuite(pool, { suiteId: options.suiteId ? undefined : overrides.suiteId });
     const plan = scheduledPlan(suite, { variantIds, ...overrides,
       candidateSet: options.set ?? overrides.candidateSet, immediate: options.scheduledNow });
     process.stdout.write(`${JSON.stringify({ event: 'scheduled_plan', ...plan, candidates: plan.candidates.map((item) => item.id) })}\n`);
@@ -617,13 +793,19 @@ async function main(argv = process.argv.slice(2)) {
     options.set = plan.set;
     options.runIdPrefix = `${schedPrefix()}${plan.set}`;
     if (!options.baseUrlProvided) options.baseUrl = process.env.ORCHESTRATOR_BASE_URL || process.env.ORCHESTRATOR_URL || `http://${agentName('orchestrator')}:8080`;
+  } else if (options.execute) {
+    if (pool.length !== 1) throw new Error('--execute with several suites requires --suite to name one');
+    suite = pool[0];
   }
-  const candidates = selectCandidates(suite, options.set ?? 'models', variantIds);
   if (!options.execute) {
-    const runs = candidates.map((candidate) => options.runIdPrefix
-      ? runIdFor(options.runIdPrefix, candidate)
-      : `<prefix>-${candidate.id}`);
-    process.stdout.write(`${JSON.stringify({ mode: 'dry-run', suiteId: suite.suite_id, evaluator: suite.online_evaluator, candidateCount: candidates.length, caseCount: suite.cases.length, modelRequests: candidates.length * suite.cases.length, runIds: runs }, null, 2)}\n`);
+    // Dry run: describe every selected suite; nothing is written or called.
+    const plans = pool.map((item) => {
+      const candidates = selectCandidates(item, options.set ?? 'models', variantIds);
+      return { mode: 'dry-run', suiteId: item.suite_id, target: item.target, scoring: item.scoring, candidateCount: candidates.length,
+        caseCount: item.cases.length, modelRequests: item.target === 'guards' ? 0 : candidates.length * item.cases.length,
+        runIds: candidates.map((candidate) => options.runIdPrefix ? runIdFor(options.runIdPrefix, candidate) : `<prefix>-${candidate.id}`) };
+    });
+    process.stdout.write(`${JSON.stringify(plans.length === 1 ? plans[0] : plans, null, 2)}\n`);
     return;
   }
   if (!options.runIdPrefix) throw new Error('--run-id-prefix is required with --execute');

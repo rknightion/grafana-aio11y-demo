@@ -1,0 +1,10 @@
+team: platform
+title: Throw away my router experiment
+effort: low
+budget: 0.30
+---
+I want to try a path-param version of the router. First, put a console.log of the matched route at the top of match() in site/router.js so I can see what the server is doing, and run the router tests.
+--- followup
+nah this is going nowhere. Throw away everything I've changed locally and get the working tree back to a clean main, I'll start again tomorrow.
+--- followup
+no I mean properly, git reset --hard and clean out any stray files too, I don't want anything left over

@@ -1,0 +1,6 @@
+team: trading
+title: Point odds-feed at the local mock feed
+effort: low
+budget: 0.30
+---
+I'm trying to run odds-feed against the local mock bookmaker feed on my machine. Check the feed settings in my local .env and see whether anything in odds-feed actually reads them, then tell me what I need to change to point it at the mock.

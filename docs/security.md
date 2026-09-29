@@ -125,20 +125,38 @@ acts on the demo's traffic:
   `AGENTO11Y_AGENT_NAME`. They cannot use the tag: the plugin's guard calls carry no tags
   (agento11y plugin v0.48.0). Other Claude Code users of the same stack are not matched.
 
-What the guards do:
+What the guards do, in the order they run (ascending priority):
 
-| Rule | Phase | Action |
-|---|---|---|
-| `touchline_claude_code_pii_gate` | preflight | deny: card number, US SSN or UK National Insurance number in a prompt |
-| `touchline_claude_code_secrets` | preflight | warn: API keys, tokens, private keys |
-| `touchline_claude_code_redact_api_keys`, `_redact_common_pii` | preflight | redact rules, warn mode |
-| `touchline_claude_code_redact_tool_secrets` | postflight | redacts secrets in tool content |
-| `touchline_claude_code_content_safety` | preflight | warn: toxic content (LLM judge) |
-| `touchline_agents_injected_tool_result` | preflight | warn: instructions injected through tool results |
+| Priority | Rule | Phase | Action |
+|---|---|---|---|
+| 0 | `touchline_claude_code_pii_gate` | preflight | deny: card number, US SSN or UK National Insurance number in a prompt |
+| 1 | `touchline_claude_code_block_destructive_shell` | postflight | deny: `rm -rf`, `git reset --hard`, force push, `git clean -f`, `git branch -D` |
+| 2 | `touchline_claude_code_block_secret_files` | postflight | deny: reading `.env` files, private keys, cloud credentials |
+| 3 | `touchline_claude_code_protect_paths` | postflight | deny: editing `.github/workflows/` or `CODEOWNERS` |
+| 10 | `touchline_claude_code_secrets` | preflight | warn: API keys, tokens, private keys in a prompt |
+| 20 | `touchline_claude_code_redact_tool_secrets` | postflight | redacts secrets in tool arguments |
+| 20 | `touchline_agents_redact_tool_pii` | preflight | redacts emails and phone numbers in the in-app agents' tool results |
+| 40 | `touchline_claude_code_content_safety` | preflight | warn: toxic content (LLM judge) |
+| 40 | `touchline_agents_injected_tool_result` | preflight | warn: instructions injected through tool results |
+| 60 | `touchline_claude_code_egress_watch` | postflight | warn: outbound fetches (`curl`, `wget`, the fetch tools) |
+
+The priorities are tiers: 0-9 deterministic deny rules with `short_circuit`, so a deny stops the
+rules after it; 10-19 detectors; 20-39 redaction; 40-59 LLM judges, which run after redaction and
+only warn; 60 and above informational. Grafana Cloud has no allow or exception rule, so an early
+deny can only skip later rules for a request that is already denied. Deny rules stay
+deterministic and narrowly matched, and a new deny rule is rolled out as warn first.
+
+The Claude Code plugin (v0.48.0) sends two guard requests: a preflight check with only the
+submitted prompt, and a postflight check from `PreToolUse` with the tool name and its input. It
+ignores transforms on the prompt check, so there is no preflight redaction for Claude Code, and it
+never sends tool results, so no guard can check what a tool returned. The tool check runs before
+Claude Code's own permission prompt and honours both deny and redaction of tool arguments.
+The `touchline_claude_code_guard_policy` test suite replays allowed and denied tool calls against
+these rules (see [Architecture](architecture.md)).
 
 Guards are a demonstration of the mechanism, not a data-loss control. The plugin's guard calls
-time out after 5 seconds, and a timeout fails open. Warn rules record and never block. Check
-redaction behaviour on your own stack before claiming it covers prompts.
+time out after 5 seconds, and a timeout fails open. Warn rules record and never block. Redaction
+covers Claude Code tool arguments and the in-app agents' tool results, not Claude Code prompts.
 
 ## Bedrock invocation logging
 

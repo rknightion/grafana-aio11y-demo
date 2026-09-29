@@ -1,0 +1,99 @@
+# Tool-result grounding suite, run against the live orchestrator by experiments/run-experiment.mjs.
+# Each case names a fixture or team in the fixtures under apps/mcp-tools/src/data, so a correct
+# answer must quote what the tools returned.
+suite_id: "{prefix}_tool_grounding"
+name: Touchline Times tool grounding
+description: >-
+  Five match desk questions that can only be answered from the odds, news and head-to-head tools.
+  The final score is the boolean tool-result-grounded judge; answer quality is recorded as a
+  diagnostic.
+tags:
+  - touchline-times
+  - tool-grounding
+changelog: Initial odds, news, history, multi-tool and unknown-team cases.
+
+target: orchestrator
+run_slug: grounding
+weight: 2
+
+candidate:
+  agent_role: orchestrator
+  model_provider: anthropic
+
+candidates:
+  - id: haiku
+    name: Claude Haiku 4.5
+    model_name: claude-haiku-4-5
+variant_candidate: haiku
+
+scoring:
+  final: "{prefix}_tool_result_grounded"
+  diagnostic: ["{prefix}_answer_quality"]
+  pass_threshold: 1
+
+cases:
+  - test_case_id: happy-best-prices
+    name: Quote the best prices
+    description: Best odds for a named fixture, which come only from the odds tool.
+    category: happy
+    tags: [touchline-times, happy, odds]
+    input:
+      question: >-
+        What are the best prices on Harbour City vs Northgate Rovers and which bookmaker has each?
+      userId: experiment-grounding-odds
+    expected: >-
+      The best home, draw and away prices with their bookmakers exactly as the odds tool returned
+      them, labelled fictional and time-sensitive.
+
+  - test_case_id: happy-team-news
+    name: Report the latest team news
+    description: Team news for a named club, which comes only from the news tool.
+    category: happy
+    tags: [touchline-times, happy, news]
+    input:
+      question: >-
+        What is the latest team news on Kingsbridge United ahead of Ashford Athletic?
+      userId: experiment-grounding-news
+    expected: >-
+      The dated headlines the news tool returned for Kingsbridge United, such as the nine-match
+      unbeaten run and the full-back close to a return, with no invented injuries.
+
+  - test_case_id: happy-head-to-head
+    name: Summarise the head-to-head record
+    description: Recent meetings between two clubs, which come only from the history tool.
+    category: happy
+    tags: [touchline-times, happy, history]
+    input:
+      question: >-
+        How have Porthaven Town and Millbrook Lions done in their recent meetings?
+      userId: experiment-grounding-history
+    expected: >-
+      The results and dates from the head-to-head history tool for Porthaven Town and Millbrook
+      Lions, with no invented scores.
+
+  - test_case_id: edge-fixture-details
+    name: Use the fixture record for time and venue
+    description: A question that mixes odds and news with the kickoff and venue.
+    category: edge
+    tags: [touchline-times, edge, multi-tool]
+    input:
+      question: >-
+        For Redvale vs Fellgate Wanderers, give me the competition, kickoff, venue, the latest
+        Redvale news and the best home price.
+      userId: experiment-grounding-multi
+    expected: >-
+      The Northern Cup, the kickoff time and The Old Mill Ground from the fixture record, the
+      Redvale headlines from the news tool and the best home price from the odds tool.
+
+  - test_case_id: edge-unknown-team
+    name: Say so when the tools have nothing
+    description: A team that no tool knows, where any figure would be invented.
+    category: edge
+    tags: [touchline-times, edge, no-data]
+    input:
+      question: >-
+        What are the odds and the latest news for Dunmore Athletic this week?
+      userId: experiment-grounding-unknown
+    expected: >-
+      The assistant reports that the tools returned no fixture or news for Dunmore Athletic and
+      does not invent odds, results or injuries.

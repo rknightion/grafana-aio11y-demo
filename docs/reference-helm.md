@@ -39,7 +39,7 @@ kubectl.
 | `contentCapture` | bool | `true` | Sets `AGENTO11Y_CONTENT_CAPTURE_MODE` (agents/loadgen/experiments) and `CONTENT_CAPTURE` (every app). Frozen. See [Security](security.md). |
 | `traffic.enabled` | bool | `true` | Master switch for the load generator, the experiments schedule and the site-browser schedule. Frozen. |
 | `traffic.siteRequestsPerMinute` | number | `2` | Load generator rate, passed through a ConfigMap. Frozen. |
-| `traffic.experimentsSchedule` | string | `17 */2 * * *` | Cron schedule for the experiments job. |
+| `traffic.experimentsSchedule` | string | `17 * * * *` | Cron schedule for the experiments job: hourly at minute 17. The runner fires on 70% of slots, picks one suite by weight and stops at its daily cap of 12 runs. |
 | `loadgen.dailyBudgetUsd` | number | `5` | Estimated Bedrock spend cap per UTC day, passed through the rate file; the load generator itself caps this at 30 USD/day regardless. |
 | `loadgen.persistence.enabled` | bool | `false` | Give the load generator a PVC for its spend ledger; `false` uses an `emptyDir` (state resets on restart), needed on clusters with no default StorageClass. |
 | `loadgen.persistence.size` | string | `1Gi` | PVC size. |

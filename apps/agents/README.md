@@ -15,8 +15,11 @@ reader load generator and the Agent Observability experiment runner. One image r
   around fixture kick-off times. Separately, occasional bursts of a few conversations from one
   reader carry an injected "Tool note" that the news tool replays as untrusted content, which is
   what the prompt-injection guard should flag.
-- **experiments** (`node experiments/run-experiment.mjs`) compares orchestrator models or prompt
-  variants as Agent Observability experiments, scored by the stack's answer-quality evaluator.
+- **experiments** (`node experiments/run-experiment.mjs`) runs the test suites in `config/suites/`
+  as Agent Observability experiments. The match desk suite compares orchestrator models or prompt
+  variants; the responsible-gambling, tool-grounding and injection-resistance suites score one
+  candidate with their own stored evaluators; the Claude Code guard-policy suite calls the hook
+  evaluation API directly (no model calls) and checks each allow or deny decision.
 
 Every model call is a Bedrock generation recorded with the agento11y SDK (conversation, parent
 generation links, tool executions, token usage), every tool result passes the stack's preflight
@@ -60,10 +63,10 @@ operator action.
 The experiment runner reads `AGENTO11Y_ENABLE_EXPERIMENTAL_FEATURES=true` (required by the SDK),
 optional `AGENTO11Y_GRAFANA_URL` + `AGENTO11Y_SERVICE_ACCOUNT_TOKEN` (to publish the stored test
 suite if it is missing), `ORCHESTRATOR_BASE_URL` or `ORCHESTRATOR_URL`, `EXPERIMENTS_SET`,
-`EXPERIMENTS_DELAY_MS`, `EXPERIMENTS_PROBABILITY`, `EXPERIMENTS_DAILY_RUN_CAP`,
-`EXPERIMENTS_EVALUATOR_ID` and `EXPERIMENTS_EVALUATOR_VERSION`. The suite lives in
-[`config/experiment-suite.yaml`](config/experiment-suite.yaml); `--help` lists the flags. Scheduled
-mode needs RBAC to get, create and update a Lease in its namespace.
+`EXPERIMENTS_SUITE` (force one suite), `EXPERIMENTS_DELAY_MS`, `EXPERIMENTS_PROBABILITY`, `EXPERIMENTS_DAILY_RUN_CAP`,
+`EXPERIMENTS_EVALUATOR_ID` and `EXPERIMENTS_EVALUATOR_VERSION`. The suites live in
+[`config/suites/`](config/suites); `--help` lists the flags. Each scheduled slot fires on 70% of
+draws and picks one suite by weight. Scheduled mode needs RBAC to get, create and update a Lease in its namespace.
 
 ## Develop
 

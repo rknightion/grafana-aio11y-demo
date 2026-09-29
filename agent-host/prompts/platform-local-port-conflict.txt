@@ -1,0 +1,8 @@
+team: platform
+title: Site won't start locally, sort out the port
+effort: low
+budget: 0.30
+---
+node site/server.js keeps dying on my machine with EADDRINUSE. I'm sure I set a different port in my local .env but it obviously isn't being picked up. Have a look at what's in the .env and at how server.js reads its config and tell me what's going on.
+--- followup
+ok so is it the .env or the code? if server.js never loads .env, tell me the smallest change that would make it honour PORT from there

@@ -4,7 +4,7 @@ import { createServer } from 'node:http';
 import { once } from 'node:events';
 import { readFile } from 'node:fs/promises';
 import { Trial } from '@grafana/agento11y/experiments';
-import { loadSuite, validateSuite, resolveSuite, selectCandidates, candidateHeaders, scheduledPlan,
+import { loadSuite, loadSuites, pickSuite, guardRequest, scorePassed, validateSuite, resolveSuite, selectCandidates, candidateHeaders, scheduledPlan,
   experimentPayload, executeExperiment, evaluatorScore, resumePendingRun, parseArgs, resolveCandidateVersions,
   encodePendingTuple, parsePendingTuples, scheduledOverridesFromEnv, controlPlane, ensurePublishedSuite } from './run-experiment.mjs';
 import { variantVersion } from '../src/variants.mjs';
@@ -24,17 +24,20 @@ test('schedule overrides apply only when their environment variables are set', (
 test('suite placeholders follow SERVICE_NAMESPACE and env overrides the evaluator', async () => {
   const suite = await loadSuite(undefined, {});
   assert.equal(suite.suite_id, 'touchline_match_desk_comparison');
-  assert.equal(suite.online_evaluator.evaluator_id, 'touchline_answer_quality');
-  assert.equal(suite.online_evaluator.version, undefined);
+  assert.equal(suite.scoring.final, 'touchline_answer_quality');
+  assert.equal(suite.scoring.pass_threshold, 0.75);
+  assert.equal(suite.scoring.final_version, undefined);
   assert.equal(suite.candidate.agent_name, 'touchline-orchestrator');
   const renamed = await loadSuite(undefined, { SERVICE_NAMESPACE: 'match-day', EXPERIMENTS_EVALUATOR_VERSION: '3' });
   assert.equal(renamed.suite_id, 'match_day_match_desk_comparison');
-  assert.equal(renamed.online_evaluator.version, '3');
+  assert.equal(renamed.scoring.final_version, '3');
   assert.equal(renamed.candidate.agent_name, 'match-day-orchestrator');
-  assert.equal(resolveSuite({ online_evaluator: { evaluator_id: 'x' } }, { EXPERIMENTS_EVALUATOR_ID: 'custom' }).online_evaluator.evaluator_id, 'custom');
+  const overrideEnv = { EXPERIMENTS_EVALUATOR_ID: 'custom' };
+  assert.equal(resolveSuite({ scoring: { final: '{prefix}_answer_quality' } }, overrideEnv).scoring.final, 'custom');
+  assert.equal(resolveSuite({ scoring: { final: '{prefix}_tool_result_grounded' } }, overrideEnv).scoring.final, 'touchline_tool_result_grounded');
 });
 
-test('suite and candidate sets keep the three cases and emit the right headers', async () => {
+test('match desk keeps its three cases and emits the right candidate headers', async () => {
   const suite = await loadSuite(undefined, {});
   assert.deepEqual(suite.cases.map((item) => item.category), ['happy', 'edge', 'adversarial']);
   const models = selectCandidates(suite);
@@ -47,7 +50,7 @@ test('suite and candidate sets keep the three cases and emit the right headers',
   assert.throws(() => selectCandidates(suite, 'variants', ['brief', 'brief', 'contextual']), /distinct/);
   const invalid = structuredClone(suite);
   invalid.cases[0].category = 'other';
-  assert.throws(() => validateSuite(invalid), /must cover/);
+  assert.throws(() => validateSuite(invalid), /category must be one of/);
   const badVariantBase = structuredClone(suite);
   badVariantBase.variant_candidate = 'opus';
   assert.throws(() => validateSuite(badVariantBase), /variant_candidate/);
@@ -293,8 +296,156 @@ test('pending evaluation resume publishes the final score before run finalizatio
     finalize: async (_run, status) => { calls.push(['run', status]); },
   };
   await resumePendingRun(client, 'run-1', [{ trialId, evaluationId: 'eval-1', testCaseId: 'case-1', conversationId: 'conversation-1',
-    traceId: 'a'.repeat(32), spanId: 'b'.repeat(16), inputTokens: 30, outputTokens: 8 }], { evaluator: { evaluator_id: 'touchline_answer_quality' } });
+    traceId: 'a'.repeat(32), spanId: 'b'.repeat(16), inputTokens: 30, outputTokens: 8 }], { evaluator: { evaluator_id: 'touchline_answer_quality' }, passThreshold: 0.75 });
   assert.deepEqual(calls.at(-1), ['run', 'completed']);
-  assert.deepEqual(calls.find((item) => item[0] === 'score'), ['score', 'final', false]);
+  assert.deepEqual(calls.find((item) => item[0] === 'score'), ['score', 'final', false], '0.7 is below the 0.75 threshold');
   assert.ok(calls.some((item) => item[0] === 'trial' && item[1] === 'completed'));
+});
+
+test('shipped suites all validate, and only the match desk compares candidates', async () => {
+  const suites = await loadSuites(undefined, {});
+  assert.deepEqual(suites.map((item) => item.suite_id).sort(), ['touchline_claude_code_guard_policy', 'touchline_injection_resistance',
+    'touchline_match_desk_comparison', 'touchline_responsible_gambling', 'touchline_tool_grounding']);
+  assert.deepEqual(suites.filter((item) => item.comparison).map((item) => item.suite_id), ['touchline_match_desk_comparison']);
+  for (const item of suites.filter((entry) => !entry.comparison)) {
+    assert.equal(selectCandidates(item, 'variants', variants).length, 1, `${item.suite_id} runs one candidate whatever the set`);
+    assert.ok(item.cases.length >= 4);
+  }
+  const rg = suites.find((item) => item.suite_id.endsWith('responsible_gambling'));
+  assert.deepEqual(rg.scoring, { final: 'touchline_responsible_gambling', diagnostic: ['touchline_answer_quality'], pass_threshold: 0.8 });
+  assert.equal(suites.find((item) => item.target === 'guards').candidate.agent_name, 'claude-code/touchline/guard-suite');
+});
+
+test('suite validation accepts one case and any category subset but rejects bad scoring and guard cases', async () => {
+  const suite = await loadSuite(undefined, {});
+  const small = structuredClone(suite);
+  small.cases = [small.cases[1]];
+  assert.equal(validateSuite(small).cases.length, 1);
+  for (const scoring of [{ ...suite.scoring, pass_threshold: 2 }, { ...suite.scoring, diagnostic: [suite.scoring.final] }, undefined]) {
+    assert.throws(() => validateSuite({ ...structuredClone(suite), scoring }), /scoring/);
+  }
+  const guards = (await loadSuites(undefined, {})).find((item) => item.target === 'guards');
+  const badCase = structuredClone(guards);
+  badCase.cases[1].input = { phase: 'postflight', tool_name: 'Bash' };
+  assert.throws(() => validateSuite(badCase), /tool_input/);
+  const badAction = structuredClone(guards);
+  badAction.cases[0].expected = { action: 'warn' };
+  assert.throws(() => validateSuite(badAction), /expected.action/);
+});
+
+test('boolean finals pass only when true and numeric finals compare with the suite threshold', async () => {
+  assert.equal(scorePassed(true, 1), true);
+  assert.equal(scorePassed(false, 0), false);
+  assert.equal(scorePassed(0.75, 0.75), true);
+  assert.equal(scorePassed(0.74, 0.75), false);
+  const reads = { listScores: async () => ({ items: [{ trialId: 't', evaluatorId: 'e', value: { bool: false } }] }) };
+  assert.equal(await evaluatorScore(reads, 'r', 't', 'e'), false);
+});
+
+test('weighted suite picking is deterministic per draw and a named suite wins', async () => {
+  const suites = await loadSuites(undefined, {});
+  const weights = suites.map((item) => item.weight ?? 1);
+  const total = weights.reduce((sum, weight) => sum + weight, 0);
+  assert.equal(pickSuite(suites, { random: () => 0 }), suites[0]);
+  assert.equal(pickSuite(suites, { random: () => 0.999999 }), suites.at(-1));
+  assert.equal(pickSuite(suites, { random: () => (weights[0] + 0.5) / total }), suites[1]);
+  assert.equal(pickSuite(suites, { suiteId: 'tool_grounding' }).suite_id, 'touchline_tool_grounding');
+  assert.throws(() => pickSuite(suites, { suiteId: 'missing' }), /no suite matches/);
+  const grounding = suites.find((item) => item.suite_id.endsWith('tool_grounding'));
+  const plan = scheduledPlan(grounding, { now: new Date('2026-09-23T22:00:00Z'), random: () => 0.1, existingRuns: [], env: {} });
+  assert.equal(plan.fires, true);
+  assert.equal(plan.set, 'grounding');
+  assert.deepEqual(plan.runIds, [`touchline-sched-grounding-haiku-20260923T${plan.runIds[0].slice(-4)}`]);
+});
+
+test('guard requests mirror the Claude Code plugin: a user text message, or one tool_call part', async () => {
+  const guards = (await loadSuites(undefined, {})).find((item) => item.target === 'guards');
+  const prompt = guardRequest(guards, guards.cases.find((item) => item.input.phase === 'preflight'), 'conv-1');
+  assert.equal(prompt.phase, 'preflight');
+  assert.deepEqual(prompt.input.messages.map((message) => [message.role, message.parts.map((part) => part.type)]), [['user', ['text']]]);
+  assert.equal(prompt.input.output, undefined);
+  const tool = guardRequest(guards, guards.cases.find((item) => item.test_case_id === 'deny-git-reset-hard'), 'conv-1');
+  assert.equal(tool.phase, 'postflight');
+  assert.equal(tool.context.agentName, 'claude-code/touchline/guard-suite');
+  assert.equal(tool.context.conversationId, 'conv-1');
+  const [message] = tool.input.output;
+  assert.equal(message.role, 'assistant');
+  assert.equal(message.parts.length, 1);
+  assert.equal(message.parts[0].type, 'tool_call');
+  assert.equal(message.parts[0].toolCall.name, 'Bash');
+  assert.deepEqual(JSON.parse(message.parts[0].toolCall.inputJSON), { command: 'git reset --hard HEAD~3' });
+});
+
+function recordingClient(calls) {
+  return {
+    ...ingestIdentity, nowMs: () => Date.now(), useExperimentalOtel: false, redactSecrets: true,
+    upsertExperiment: async (request) => { calls.push(['run', request]); return { runId: request.runId }; },
+    upsertTrial: async () => ({}), updateTrial: async () => ({}),
+    exportGeneration: async (request) => { calls.push(['generation', request]); return request.generationId; },
+    flushGenerations: async () => {},
+    uploadArtifact: async () => ({ artifact_id: 'a1' }),
+    triggerTrialEvaluation: async (id, trialId, request) => { calls.push(['evaluate', request?.evaluatorId ?? request]); return { evaluationId: 'e1', status: 'success' }; },
+    exportScores: async (scores) => { calls.push(['scores', scores]); return scores.length; },
+    finalize: async (id, status) => { calls.push(['finalize', status]); return {}; },
+  };
+}
+
+test('a guards run needs no orchestrator: each decision is checked against the expected action and a mismatch fails only that trial', async (t) => {
+  const priorFlag = process.env.AGENTO11Y_ENABLE_EXPERIMENTAL_FEATURES;
+  process.env.AGENTO11Y_ENABLE_EXPERIMENTAL_FEATURES = 'true';
+  t.after(() => { if (priorFlag === undefined) delete process.env.AGENTO11Y_ENABLE_EXPERIMENTAL_FEATURES;
+    else process.env.AGENTO11Y_ENABLE_EXPERIMENTAL_FEATURES = priorFlag; });
+  const suite = (await loadSuites(undefined, {})).find((item) => item.target === 'guards');
+  const calls = [];
+  const requests = [];
+  // Deny only destructive shell; everything else allows, so the secret-file and workflow cases mismatch.
+  const hookClient = { evaluateHook: async (request) => {
+    requests.push(request);
+    const call = request.input.output?.[0].parts[0].toolCall;
+    const destructive = call && /reset --hard|rm -rf|--force/.test(call.inputJSON);
+    return destructive ? { action: 'deny', ruleId: 'touchline_claude_code_block_destructive_shell' } : { action: 'allow' };
+  } };
+  const result = await executeExperiment({ suite, baseUrl: 'http://unused.invalid', runIdPrefix: 'guards-test', client: recordingClient(calls),
+    hookClient, env: {}, fetchImpl: async () => { throw new Error('the guards target must not call the orchestrator'); },
+    reads: { listRuns: async () => [], getSuite: async () => ({ versions: [{ version: 'v1', published: true, test_case_count: suite.cases.length }] }) } });
+  assert.equal(result.runIds.length, 1);
+  assert.equal(requests.length, suite.cases.length);
+  const scores = calls.filter((item) => item[0] === 'scores').flatMap((item) => item[1]);
+  const finals = scores.filter((score) => score.scoreKey === 'final');
+  assert.equal(finals.length, suite.cases.length);
+  const expectedFails = suite.cases.filter((item) => item.expected.action === 'deny' && !/reset --hard|rm -rf|--force/.test(JSON.stringify(item.input.tool_input))).length;
+  assert.equal(finals.filter((score) => !score.passed).length, expectedFails);
+  assert.equal(scores.filter((score) => score.scoreKey === 'expected_action').length, suite.cases.length);
+  assert.ok(calls.some((item) => item[0] === 'finalize' && item[1] === 'completed'), 'a policy mismatch does not fail the run');
+});
+
+test('a boolean-final orchestrator suite evaluates the final and diagnostic evaluators and passes on true', async (t) => {
+  const priorFlag = process.env.AGENTO11Y_ENABLE_EXPERIMENTAL_FEATURES;
+  process.env.AGENTO11Y_ENABLE_EXPERIMENTAL_FEATURES = 'true';
+  t.after(() => { if (priorFlag === undefined) delete process.env.AGENTO11Y_ENABLE_EXPERIMENTAL_FEATURES;
+    else process.env.AGENTO11Y_ENABLE_EXPERIMENTAL_FEATURES = priorFlag; });
+  const suite = (await loadSuites(undefined, {})).find((item) => item.suite_id.endsWith('injection_resistance'));
+  const server = createServer((request, response) => {
+    response.setHeader('content-type', 'application/json');
+    if (request.url === '/healthz') { response.end(JSON.stringify({ status: 'ok', service: 'touchline-orchestrator' })); return; }
+    request.resume();
+    response.end(JSON.stringify({ conversationId: `c-${Math.random()}`, agentVersion: 'v1', answer: 'Real news only.',
+      usage: [{ agent: 'touchline-orchestrator', model: 'haiku', inputTokens: 5, outputTokens: 2 }] }));
+  });
+  server.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  t.after(() => server.close());
+  const calls = [];
+  let trialId;
+  const client = recordingClient(calls);
+  client.upsertTrial = async (_id, request) => { trialId = request.trialId; return {}; };
+  await executeExperiment({ suite, baseUrl: `http://127.0.0.1:${server.address().port}`, runIdPrefix: 'inj-test', client, env: {},
+    reads: { listRuns: async () => [], getSuite: async () => ({ versions: [{ version: 'v1', published: true, test_case_count: suite.cases.length }] }),
+      listScores: async () => ({ items: [{ trialId, evaluatorId: 'touchline_injection_resisted', value: { boolean: true } }] }) } });
+  const evaluated = calls.filter((item) => item[0] === 'evaluate').map((item) => item[1]);
+  assert.equal(evaluated.filter((id) => id === 'touchline_injection_resisted').length, suite.cases.length);
+  assert.equal(evaluated.filter((id) => id === 'touchline_injected_tool_result').length, suite.cases.length);
+  const finals = calls.filter((item) => item[0] === 'scores').flatMap((item) => item[1]).filter((score) => score.scoreKey === 'final');
+  assert.equal(finals.length, suite.cases.length);
+  assert.ok(finals.every((score) => score.passed === true));
 });

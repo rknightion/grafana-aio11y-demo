@@ -45,8 +45,14 @@ images carry the former repository name as prefix (see CHANGELOG.md) and must st
   zero-valued series hides the new-series branch.
 - `agento11y_hook_evaluations_total` files pass traffic under `rule_id="none"`. Per-rule guard
   outcomes, including passes, are on `agento11y_hook_rule_outcomes_total`.
-- The experiments CronJob fires on only 40% of its slots (`apps/agents/experiments/run-experiment.mjs`),
-  so a completed job with `"fires": false` is expected.
+- The experiments CronJob fires on 70% of its hourly slots and picks one suite from
+  `apps/agents/config/suites/` by weight (`apps/agents/experiments/run-experiment.mjs`), so a
+  completed job with `"fires": false` is expected.
+- The Claude Code plugin ignores guard transforms on prompts and never sends tool results, so
+  Claude Code redaction only works postflight on tool arguments. Guard `priority` is the tier
+  order documented in `docs/security.md`; keep deny rules below 10.
+- The Experiments overview reads `last_over_time(agento11y_experiment_*)` over the picker range.
+  After downtime a short range shows nothing; widen it before assuming data is missing.
 - The App Observability `team` span-metrics dimension has no API or Terraform resource. Adding it
   is a manual step in the stack's Application Observability settings.
 

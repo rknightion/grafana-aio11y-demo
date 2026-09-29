@@ -105,8 +105,18 @@ commit "2026-08-25T09:05:00" "Priya Anand" "priya.anand@touchlinetimes.example" 
   "chore(scripts): terminal spot-check for offer compliance" \
   scripts/check-offers.js
 
+commit "2026-08-24T10:20:00" "Alex Devon" "alex.devon@touchlinetimes.example" \
+  "ci: run the node test suite and the offer spot-check on every push" \
+  .github/workflows/ci.yml
+
 commit "2026-08-26T16:50:00" "Alex Devon" "alex.devon@touchlinetimes.example" \
   "docs: platform runbook and known gaps" \
   docs/RUNBOOK.md
+
+# Developer-local, git-ignored settings (decoy values only): present in the checkout like a real
+# developer's machine, never part of the history. Stored as dot-env in the source tree so this
+# repository's own ignore rules can't drop it; excluded in the seeded repo via .git/info/exclude.
+cp "$src/dot-env" "$dest/.env"
+printf '.env\n' >>"$dest/.git/info/exclude"
 
 exit 0

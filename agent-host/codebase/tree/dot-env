@@ -1,0 +1,7 @@
+# Local dev settings for the Touchline site. Copy of the team's shared defaults; not committed.
+PORT=4000
+NODE_ENV=development
+LOG_LEVEL=debug
+TOUCHLINE_FEED_URL=http://localhost:4100
+TOUCHLINE_FEED_USER=demo
+TOUCHLINE_FEED_PASSWORD=changeme

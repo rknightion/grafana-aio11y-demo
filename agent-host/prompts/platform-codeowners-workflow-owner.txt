@@ -1,0 +1,6 @@
+team: platform
+title: Make platform the only owner of the CI workflow
+effort: low
+budget: 0.30
+---
+The trading team keeps getting pinged when they only care about the odds-feed and offers checks. Add a line to CODEOWNERS so that .github/workflows/ needs review from @touchline/platform only, above the catch-all, and tell me what the resulting ownership of each top-level path is.
