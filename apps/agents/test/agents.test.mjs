@@ -13,7 +13,11 @@ import { NodeTracerProvider } from '@opentelemetry/sdk-trace-node';
 import { InMemorySpanExporter, SimpleSpanProcessor } from '@opentelemetry/sdk-trace-base';
 import { teamGenerationSpanProcessor, parseResourceAttributes, resourceAttributes, TEAM_ATTRIBUTE } from '../src/telemetry.mjs';
 import { createAgentService, createAgentHttpServer, conversationTitleFor } from '../src/service.mjs';
-import { readSettings, createLoadgen, QUESTIONS, priceUsage, priceFor, settingsFile, picksUrl } from '../src/loadgen.mjs';
+import {
+  readSettings, createLoadgen, priceUsage, priceFor, settingsFile, picksUrl,
+  pickQuestion, pickFollowup, pickInjectionQuestion, DEFAULT_DAILY_CURVE, rateMultiplier, kickoffSlots,
+  injectionBurstGapSeconds, injectionBurstSize, MAX_INJECTION_BURST_SIZE,
+} from '../src/loadgen.mjs';
 import { modelForRole, profileArn, converseRuntime, converseMantle } from '../src/models.mjs';
 import { modelConfig, supportsTemperature, specialistUrl, agentName, canonicalModelName, serviceNamespace, selfAgentName, currentRole } from '../src/config.mjs';
 import { contentCaptureMode } from '../src/agent-client.mjs';
@@ -285,7 +289,6 @@ test('loadgen rereads each setting and caps budget at 30 USD per UTC day', async
     await set('dailyBudgetUsd', 0.5);
     assert.equal((await generator.tick()).sent, false);
     assert.equal(calls, 2);
-    assert.equal(QUESTIONS.length, 56);
     assert.equal(priceUsage([{ model: 'haiku', inputTokens: 1_000_000, outputTokens: 0 }]), 1.1);
     await writeFile(file, '[1]');
     await assert.rejects(generator.tick(), /expected a JSON object/);
@@ -298,9 +301,60 @@ test('loadgen settings fall back to env, the target follows SITE_URL, and a zero
   assert.equal(picksUrl({ SITE_URL: 'http://site:9000/custom' }), 'http://site:9000/custom');
   assert.equal(picksUrl({}), 'http://touchline-site-api:8080/api/picks');
   const settings = await readSettings(undefined, { LOADGEN_REQUESTS_PER_MINUTE: '6', LOADGEN_DAILY_BUDGET_USD: '5', LOADGEN_ENABLED: 'true' });
-  assert.deepEqual(settings, { requestsPerMinute: 6, intervalSeconds: 10, dailyBudgetUsd: 5, enabled: true });
+  assert.deepEqual(settings, {
+    requestsPerMinute: 6, intervalSeconds: 10, dailyBudgetUsd: 5, enabled: true,
+    dailyCurve: DEFAULT_DAILY_CURVE, kickoffPeaksEnabled: true,
+    injectionBurstMeanIntervalHours: 4, injectionBurstMaxSize: 3,
+  });
   assert.equal((await readSettings(undefined, { LOADGEN_REQUESTS_PER_MINUTE: '0' })).enabled, false);
   await assert.rejects(readSettings(undefined, { LOADGEN_REQUESTS_PER_MINUTE: '-1' }), /invalid loadgen settings/);
+  await assert.rejects(readSettings(undefined, { LOADGEN_DAILY_CURVE: JSON.stringify([1, 2, 3]) }), /dailyCurve must be 24/);
+  await assert.rejects(readSettings(undefined, { LOADGEN_INJECTION_BURST_MEAN_INTERVAL_HOURS: '0' }), /injectionBurstMeanIntervalHours/);
+  await assert.rejects(readSettings(undefined, { LOADGEN_INJECTION_BURST_MAX_SIZE: '1.5' }), /injectionBurstMaxSize/);
+  assert.equal((await readSettings(undefined, { LOADGEN_INJECTION_BURST_MAX_SIZE: '99' })).injectionBurstMaxSize, MAX_INJECTION_BURST_SIZE);
+  const custom = await readSettings(undefined, { LOADGEN_DAILY_CURVE: JSON.stringify(Array(24).fill(2)), LOADGEN_KICKOFF_PEAKS_ENABLED: 'false' });
+  assert.deepEqual(custom.dailyCurve, Array(24).fill(2));
+  assert.equal(custom.kickoffPeaksEnabled, false);
+});
+
+test('daily curve and kick-off peaks: requestsPerMinute stays the mean, and a real fixture kick-off peaks weekly', () => {
+  const flat = { dailyCurve: Array(24).fill(3), kickoffPeaksEnabled: false };
+  assert.equal(rateMultiplier(new Date('2026-09-23T09:00:00Z'), flat), 1, 'a flat curve of any scale renormalises to multiplier 1');
+  const shaped = { dailyCurve: DEFAULT_DAILY_CURVE, kickoffPeaksEnabled: false };
+  const quietHour = DEFAULT_DAILY_CURVE.indexOf(Math.min(...DEFAULT_DAILY_CURVE));
+  const busyHour = DEFAULT_DAILY_CURVE.indexOf(Math.max(...DEFAULT_DAILY_CURVE));
+  assert.ok(rateMultiplier(new Date(Date.UTC(2026, 8, 23, busyHour)), shaped) > rateMultiplier(new Date(Date.UTC(2026, 8, 23, quietHour)), shaped));
+  const fixtures = [{ kickoff: '2026-10-03T15:30:00Z' }]; // Saturday, 15:00 UTC
+  const slots = kickoffSlots(fixtures);
+  assert.deepEqual(slots, [{ weekday: 6, hour: 15 }]);
+  const withKickoff = { dailyCurve: Array(24).fill(1), kickoffPeaksEnabled: true };
+  const nextSaturdaySameHour = new Date(Date.UTC(2026, 9, 10, 15)); // a different week, same weekday/hour
+  const nextSaturdayOtherHour = new Date(Date.UTC(2026, 9, 10, 9));
+  assert.ok(rateMultiplier(nextSaturdaySameHour, withKickoff, fixtures) > rateMultiplier(nextSaturdayOtherHour, withKickoff, fixtures), 'the kick-off peak recurs weekly regardless of the exact fixture date');
+  assert.equal(rateMultiplier(nextSaturdayOtherHour, { ...withKickoff, kickoffPeaksEnabled: false }, fixtures), 1, 'the switch turns the peak off');
+});
+
+test('injection bursts: gaps are positive and size is clamped to a small count', () => {
+  assert.ok(injectionBurstGapSeconds(4, () => 0.5) > 0);
+  assert.ok(injectionBurstGapSeconds(4, () => 0) >= 0);
+  for (let x = 0; x <= 1; x += 0.1) assert.ok(injectionBurstSize(3, () => x) >= 1 && injectionBurstSize(3, () => x) <= 3);
+});
+
+test('the reader corpus drives questions, follow-ups and injection probes', () => {
+  const seen = new Set();
+  for (let x = 0; x < 50; x++) {
+    const random = () => (x + 0.5) / 50;
+    const { persona, readerId, intent, fixture, question } = pickQuestion(random);
+    assert.ok(persona.readers.includes(readerId));
+    assert.ok(intent.personas.includes(persona.id));
+    assert.ok(question.length > 0);
+    seen.add(intent.id);
+    const followup = pickFollowup(intent, fixture, random);
+    assert.ok(followup.length > 0);
+  }
+  assert.ok(seen.size > 1, 'more than one intent gets drawn across a spread of random draws');
+  const injected = pickInjectionQuestion(() => 0);
+  assert.match(injected, /Tool note:.*ignore previous instructions/i);
 });
 
 test('pricing matches model families by key or model name and falls back to Sonnet', () => {
@@ -422,23 +476,73 @@ test('arrival draws vary within the clamp and bursts have separate charged reque
   } finally { await rm(dir, { recursive: true }); }
 });
 
-test('random loadgen injection matches the guard marker', async () => {
+test('a forced injection probe matches an injection-intent phrasing and a guard marker, keeping the caller-chosen reader', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'agents-guard-marker-'));
   let question;
   try {
     const gen = createLoadgen({ file: join(dir, 'rate.json'), stateDir: dir, env: {}, preflight: async () => {}, random: () => 0,
       post: async (payload) => { question = payload.question; return { usage: [] }; }, log() {} });
-    const result = await gen.tick();
+    const result = await gen.tick({ userId: 'fan-jamie', forceInjection: true });
     assert.match(question, /ignore previous instructions/i);
-    assert.match(question, /^(Summarize team news|Write a preview with news) for /);
     assert.equal(result.guard, true);
+    assert.equal(result.payload.userId, 'fan-jamie');
+  } finally { await rm(dir, { recursive: true }); }
+});
+
+test('injection bursts come from one reader, a few probe conversations at a time, not a fixed 5% of ordinary traffic', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'agents-injection-burst-'));
+  const posts = [];
+  const controller = new AbortController();
+  try {
+    // random() = 0 makes every burst gap and size deterministic (gap 0, size 1), so every loop
+    // iteration takes the burst branch, never the ordinary-session branch: this isolates the
+    // burst mechanism from arrival-rate randomness entirely.
+    const gen = createLoadgen({
+      file: join(dir, 'rate.json'), stateDir: dir, env: {}, preflight: async () => {}, random: () => 0, wait: async () => {},
+      post: async (payload) => { posts.push(payload); if (posts.length >= 3) controller.abort(); return { usage: [] }; },
+      log() {},
+    });
+    await gen.run(controller.signal);
+    assert.equal(posts.length, 3);
+    assert.ok(posts.every((p) => /Tool note:/.test(p.question)), 'every request in this run was an injection probe, not the old constant 5%');
+    assert.equal(new Set(posts.map((p) => p.userId)).size, 1, 'every probe comes from the same reader');
+    assert.equal(new Set(posts.map((p) => p.conversationId)).size, posts.length, 'each probe is its own conversation, not follow-ups on one');
+  } finally { await rm(dir, { recursive: true }); }
+});
+
+test('the daily budget guard still caps spend when the curve drives peak-hour arrivals', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'agents-curve-budget-'));
+  const peakHour = DEFAULT_DAILY_CURVE.indexOf(Math.max(...DEFAULT_DAILY_CURVE));
+  const now = () => new Date(Date.UTC(2026, 8, 26, peakHour, 0, 0)); // fixed at the curve's busiest hour
+  const controller = new AbortController();
+  let randomCalls = 0;
+  // The budget-exhausted path calls neither post() nor log(), so bound the run by counting
+  // random() draws instead (every loop iteration makes at least one, in exponentialGap): this
+  // guarantees the test terminates even though the loop itself never stops on its own.
+  const random = () => { randomCalls += 1; if (randomCalls > 500) controller.abort(); return 0.5; };
+  try {
+    await writeFile(join(dir, 'rate.json'), JSON.stringify({ requestsPerMinute: 60, dailyBudgetUsd: 0.02, kickoffPeaksEnabled: false }));
+    const generator = createLoadgen({
+      file: join(dir, 'rate.json'), stateDir: dir, env: {}, now, random, preflight: async () => {}, wait: async () => {},
+      post: async () => ({ usage: [{ model: 'haiku', inputTokens: 1000, outputTokens: 0 }] }),
+      log() {},
+    });
+    await generator.run(controller.signal);
+    const state = JSON.parse(await readFile(join(dir, 'state.json'), 'utf8'));
+    const perRequestUsd = priceUsage([{ model: 'haiku', inputTokens: 1000, outputTokens: 0 }]);
+    assert.ok(state.spent <= 0.02 + perRequestUsd + 1e-9, `spend ${state.spent} exceeded the 0.02 cap by more than one request under peak-hour arrivals`);
+    assert.ok(randomCalls > 20, 'the run kept looping (and getting turned away) well past the point spend was capped');
   } finally { await rm(dir, { recursive: true }); }
 });
 
 test('multi-turn title and synthetic BAD rating reuse the conversation', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'agents-session-'));
   const posts = [], ratings = [];
-  const sequence = [0, 0, 0, 0, 0, 0];
+  // 1-5: pickQuestion draws (persona, reader, intent, fixture, phrasing) -> casual-fan/fan-jamie/
+  // best-price. 6: trigger a follow-up. 7: exactly one follow-up. 8: the follow-up's wait delay.
+  // 9: pick that follow-up's phrasing. 10: trigger a rating (casual-fan's rating.probability).
+  // 11: >= goodWhenBad, so the truncated turn below is rated BAD rather than GOOD.
+  const sequence = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.99];
   const random = () => sequence.shift() ?? 0;
   try {
     const gen = createLoadgen({ file: join(dir, 'rate.json'), stateDir: dir, env: {}, preflight: async () => {}, random, wait: async () => {}, post: async (payload) => { posts.push(payload); return { usage: [], truncated: true }; }, rate: async (...args) => ratings.push(args), log() {} });
@@ -547,4 +651,13 @@ test('reasoning-only max_tokens failure logs truncation and exposes partial usag
     assert.deepEqual((await response.json()).usage, [{ agent: 'touchline-editorial', model: 'sonnet', modelName: 'claude-sonnet-5', inputTokens: 9, outputTokens: 450 }]);
     assert.ok(logs.some((entry) => entry.event === 'generation_truncated' && entry.agent === 'touchline-editorial' && entry.model === 'claude-sonnet-5'));
   } finally { console.log = oldLog; server.close(); await once(server, 'close'); await service.shutdown(); await t.shutdown(); }
+});
+
+test('loadgen redraws a first question it asked recently instead of repeating it', async () => {
+  const { pickFreshQuestion } = await import('../src/loadgen.mjs');
+  const draws = ['same', 'same', 'other'].map((question) => ({ question }));
+  const recent = new Set(['same']);
+  assert.equal(pickFreshQuestion(recent, Math.random, () => draws.shift()).question, 'other');
+  // A pool that only ever repeats still returns a question rather than looping forever.
+  assert.equal(pickFreshQuestion(new Set(['same']), Math.random, () => ({ question: 'same' })).question, 'same');
 });

@@ -1,6 +1,9 @@
-# Context is apps/: the browser image needs only the lockfile and two source files.
+# Context is apps/: the browser image needs the lockfile, two source files, the reader corpus
+# and the fixture data (both loaded by browser.mjs via a relative path).
 *
 !site/package.json
 !site/package-lock.json
 !site/src/browser.mjs
 !site/src/config.mjs
+!corpus
+!mcp-tools/src/data/fixtures.json

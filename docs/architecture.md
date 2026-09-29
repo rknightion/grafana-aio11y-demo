@@ -58,7 +58,9 @@ The Helm chart in [charts/touchline](https://github.com/rknightion/grafana-aio11
   in-process, the same implementation Claude Code reaches over MCP. Each agent calls Bedrock
   through its team's application inference profile. Every model call is an Agent Observability
   generation, and every tool result goes through the stack's preflight guard.
-- `touchline-loadgen`, which posts jittered reader questions to the site. A small share carry an
+- `touchline-loadgen`, which posts jittered reader questions to the site, drawn from a committed
+  corpus of reader personas and intents. Arrival rate follows a configurable daily curve with
+  peaks around fixture kick-off times; separately, occasional bursts from one reader carry an
   injected "tool note" that the prompt-injection guard should flag.
 - A synthetic-browser CronJob (optional, on by default) that loads the site in headless
   Chromium every 10 minutes, so Frontend Observability has page loads and browser-to-backend

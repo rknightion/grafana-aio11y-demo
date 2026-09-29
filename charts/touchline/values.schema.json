@@ -147,6 +147,22 @@
       "additionalProperties": true,
       "properties": {
         "dailyBudgetUsd": { "type": "number", "minimum": 0 },
+        "dailyCurve": {
+          "type": ["array", "null"],
+          "items": { "type": "number", "minimum": 0 },
+          "contains": { "type": "number", "exclusiveMinimum": 0 },
+          "minItems": 24,
+          "maxItems": 24
+        },
+        "kickoffPeaksEnabled": { "type": "boolean" },
+        "injection": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "burstMeanIntervalHours": { "type": "number", "exclusiveMinimum": 0 },
+            "burstMaxSize": { "type": "integer", "minimum": 1 }
+          }
+        },
         "persistence": {
           "type": "object",
           "additionalProperties": true,

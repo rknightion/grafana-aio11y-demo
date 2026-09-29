@@ -166,6 +166,10 @@ Keys marked Frozen are the ones the Terraform module sets; `values.schema.json` 
 | `traffic.siteRequestsPerMinute` | number | `2` | Load generator rate, passed through a ConfigMap (`requestsPerMinute` in the rate file). Frozen. |
 | `traffic.experimentsSchedule` | string | `17 */2 * * *` | Cron schedule for the experiments job. |
 | `loadgen.dailyBudgetUsd` | number | `5` | Estimated Bedrock spend cap per UTC day, passed through the rate file (`dailyBudgetUsd`); the load generator itself caps this at 30 USD/day regardless. |
+| `loadgen.dailyCurve` | array or `null` | `null` | 24 UTC hour-of-day multipliers (index 0 = 00:00 UTC) shaping `traffic.siteRequestsPerMinute` across the day, passed through the rate file (`dailyCurve`). `null` keeps the load generator's own built-in default curve. Only the relative shape matters: the load generator renormalises by the curve's own average, so `siteRequestsPerMinute` always stays the true daily mean. |
+| `loadgen.kickoffPeaksEnabled` | bool | `true` | Extra request-rate peaks around each fixture's kick-off hour and weekday (from `apps/mcp-tools/src/data/fixtures.json`), recurring every week regardless of which week's fixture date has passed. Passed through the rate file (`kickoffPeaksEnabled`). |
+| `loadgen.injection.burstMeanIntervalHours` | number | `4` | Mean hours between prompt-injection probe bursts (a few probe conversations from one reader in a short window). Passed through the rate file (`injectionBurstMeanIntervalHours`). |
+| `loadgen.injection.burstMaxSize` | number | `3` | Max probe conversations sent in one burst. Passed through the rate file (`injectionBurstMaxSize`); the load generator itself caps this at 8 regardless. |
 | `loadgen.persistence.enabled` | bool | `false` | Give the load generator a PVC for its spend ledger; `false` uses an `emptyDir` (state resets on restart), needed on clusters with no default StorageClass. |
 | `loadgen.persistence.size` | string | `1Gi` | PVC size. |
 | `loadgen.persistence.storageClassName` | string | `""` | Empty uses the cluster's default StorageClass. |

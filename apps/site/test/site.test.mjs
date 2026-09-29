@@ -61,9 +61,14 @@ test('browser session plans are seeded, jittered and draw distinct fixture quest
   assert.ok(plan.thinkTimesMs.every(milliseconds => milliseconds >= 5 * 1000 && milliseconds <= 40 * 1000));
 
   const fixtures = JSON.parse(await readFile(new URL('../../mcp-tools/src/data/fixtures.json', import.meta.url), 'utf8'));
+  const { loadReaderCorpus } = await import('../../corpus/readers.mjs');
+  const corpus = loadReaderCorpus();
+  const nonInjectionIntents = corpus.intents.filter(intent => !corpus.injection.intents.includes(intent.id));
   assert.ok(FIXTURE_QUESTIONS.length >= 10);
-  assert.ok(FIXTURE_QUESTIONS.every(question => fixtures.some(({ home, away }) => question.includes(home) && question.includes(away))));
-  assert.ok(FIXTURE_QUESTIONS.every(question => /\b(odds?|prices?|news|form|injury)\b/i.test(question)));
+  assert.ok(FIXTURE_QUESTIONS.length >= nonInjectionIntents.length * fixtures.length, 'at least one rendered question per non-injection corpus intent per fixture');
+  // Every question names at least one side of a real fixture (the {team} placeholder resolves to
+  // the home side, so home always appears; away-only phrasings still need the home side present).
+  assert.ok(FIXTURE_QUESTIONS.every(question => fixtures.some(({ home }) => question.includes(home))));
   const page = await readFile(new URL('../public/index.html', import.meta.url), 'utf8');
   assert.match(page, /value="What are the odds and recent news for Harbour City vs Northgate Rovers\?"/);
   assert.match(page, /Touchline Times/);

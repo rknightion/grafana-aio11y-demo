@@ -1,7 +1,9 @@
 import { randomBytes } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
+import { loadReaderCorpus, renderPhrasing } from '../../corpus/readers.mjs';
 import { contentCapture, serviceNamespace } from './config.mjs';
 
 // One synthetic reader session in headless Chromium against the site, run on a schedule
@@ -14,25 +16,18 @@ const MAX_START_DELAY_MS = Number(process.env.BROWSER_MAX_START_DELAY_MS ?? 4 * 
 const THINK_TIME_MIN_MS = 5 * 1000;
 const THINK_TIME_MAX_MS = 40 * 1000;
 
-// Every question names a fixture and asks for facts available from the odds or news tools.
-export const FIXTURE_QUESTIONS = Object.freeze([
-  'What are the best home, draw and away prices for Harbour City vs Northgate Rovers?',
-  'What recent form and injury news matters for Harbour City vs Northgate Rovers?',
-  'Which bookmaker has the best home price for Kingsbridge United vs Ashford Athletic?',
-  'What recent team news could affect Kingsbridge United vs Ashford Athletic?',
-  'Compare the best draw and away prices for Redvale vs Fellgate Wanderers.',
-  'What recent form and injury news could affect Redvale vs Fellgate Wanderers?',
-  'Which bookmaker has the best away price for Porthaven Town vs Millbrook Lions?',
-  'What recent team news is available for Porthaven Town vs Millbrook Lions?',
-  'Compare the best home and away prices for Stonebridge Saints vs Bramley Rangers.',
-  'What recent form news could affect Stonebridge Saints vs Bramley Rangers?',
-  'Which bookmaker lists the best home price for Eastcliff Stars vs Westford City?',
-  'What recent injury and form news matters for Eastcliff Stars vs Westford City?',
-  'What are the best home and away prices for Metro Rockets vs Summit Hawks?',
-  'What recent preseason team news matters for Metro Rockets vs Summit Hawks?',
-  'Which bookmaker has the best home price for Bayview Vipers vs Canyon Thunder?',
-  'What recent preseason news matters for Bayview Vipers vs Canyon Thunder?',
-]);
+const CORPUS = loadReaderCorpus();
+const FIXTURES = JSON.parse(readFileSync(new URL('../../mcp-tools/src/data/fixtures.json', import.meta.url), 'utf8'));
+// Every phrasing that names the home side ({home}, or {team} resolved to home) of every
+// non-injection intent, rendered for every fixture, so every entry names its fixture and a seeded
+// plan rarely repeats a first question the load generator just asked. Drawn from the same corpus the
+// in-app load generator uses (apps/corpus/readers.json), not a hand-maintained list.
+export const FIXTURE_QUESTIONS = Object.freeze([...new Set(
+  CORPUS.intents
+    .filter((intent) => !CORPUS.injection.intents.includes(intent.id))
+    .flatMap((intent) => intent.phrasings.filter((phrasing) => /\{(home|team)\}/.test(phrasing)))
+    .flatMap((phrasing) => FIXTURES.map((fixture) => renderPhrasing(phrasing, fixture, () => 0))),
+)]);
 
 function seededRandom(seed) {
   let state = seed >>> 0;

@@ -9,9 +9,12 @@ reader load generator and the Agent Observability experiment runner. One image r
   and compliance call the shared tools from [`../mcp-tools`](../mcp-tools) (the same
   implementation Claude Code reaches over MCP). Compliance always appends an 18+ and
   responsible-gambling line.
-- **loadgen** posts jittered reader questions to the site API, a small share of them carrying an
-  injected "Tool note" that the news tool replays as untrusted content, which is what the
-  prompt-injection guard should flag.
+- **loadgen** posts jittered reader questions to the site API, drawn from the committed reader
+  corpus ([`../corpus`](../corpus/readers.json): personas, stable reader ids, intents,
+  phrasings and follow-ups). Arrival rate follows a configurable 24-hour curve with extra peaks
+  around fixture kick-off times. Separately, occasional bursts of a few conversations from one
+  reader carry an injected "Tool note" that the news tool replays as untrusted content, which is
+  what the prompt-injection guard should flag.
 - **experiments** (`node experiments/run-experiment.mjs`) compares orchestrator models or prompt
   variants as Agent Observability experiments, scored by the stack's answer-quality evaluator.
 
@@ -46,8 +49,12 @@ operator action.
 | `PORT` | agents | Listen port (default `8080`) |
 | `STUB_MODEL=1` | all | Local runs without Bedrock or Grafana Cloud |
 | `SITE_URL` | loadgen | Site base URL; `/api/picks` is appended when it has no path (`SITE_API_URL` takes a full URL) |
-| `LOADGEN_SETTINGS_FILE` | loadgen | JSON settings, re-read every tick (default `/etc/<namespace>-loadgen/rate.json`): `requestsPerMinute`, `dailyBudgetUsd`, `enabled` |
+| `LOADGEN_SETTINGS_FILE` | loadgen | JSON settings, re-read every tick (default `/etc/<namespace>-loadgen/rate.json`): `requestsPerMinute`, `dailyBudgetUsd`, `enabled`, `dailyCurve`, `kickoffPeaksEnabled`, `injectionBurstMeanIntervalHours`, `injectionBurstMaxSize` |
 | `LOADGEN_REQUESTS_PER_MINUTE`, `LOADGEN_DAILY_BUDGET_USD`, `LOADGEN_ENABLED` | loadgen | Fallbacks for keys the file does not set (defaults 2, 15 capped at 30, true) |
+| `LOADGEN_DAILY_CURVE` | loadgen | Fallback JSON array of 24 UTC hour-of-day multipliers shaping `requestsPerMinute` across the day (default: a quiet-overnight, evening-peak curve). Only the relative shape matters: it is renormalised by its own average, so `requestsPerMinute` always stays the true daily mean. |
+| `LOADGEN_KICKOFF_PEAKS_ENABLED` | loadgen | Fallback switch for extra request-rate peaks around each fixture's kick-off hour and weekday (from `apps/mcp-tools/src/data/fixtures.json`), recurring every week regardless of which week's fixture date has passed (default `true`) |
+| `LOADGEN_INJECTION_BURST_MEAN_INTERVAL_HOURS` | loadgen | Fallback mean hours between prompt-injection probe bursts (default `4`) |
+| `LOADGEN_INJECTION_BURST_MAX_SIZE` | loadgen | Fallback max probe conversations in one burst, from one reader (default `3`, capped at `8` regardless) |
 | `LOADGEN_STATE_DIR` | loadgen | Where the daily spend ledger lives (default `/var/lib/loadgen`, writable) |
 
 The experiment runner reads `AGENTO11Y_ENABLE_EXPERIMENTAL_FEATURES=true` (required by the SDK),

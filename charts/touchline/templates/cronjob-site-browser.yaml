@@ -44,7 +44,7 @@ spec:
               # apps/site package.json "browser" script; the real Chromium page load picks up the
               # Faro bundle the site backend serves, so frontend observability needs no FARO_URL
               # here (that wiring is on the site Deployment, see deployment-site.yaml).
-              command: ["node", "src/browser.mjs"]
+              command: ["node", "site/src/browser.mjs"]
               env:
                 - name: SITE_URL
                   value: "http://{{ include "touchline.prefix" . }}-site-api:8080/"

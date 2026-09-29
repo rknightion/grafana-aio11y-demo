@@ -8,7 +8,7 @@ metadata:
     {{- include "touchline.labels" . | nindent 4 }}
 data:
   rate.json: |
-    {"requestsPerMinute": {{ .Values.traffic.siteRequestsPerMinute }}, "dailyBudgetUsd": {{ .Values.loadgen.dailyBudgetUsd }}, "enabled": {{ .Values.traffic.enabled }}}
+    {"requestsPerMinute": {{ .Values.traffic.siteRequestsPerMinute }}, "dailyBudgetUsd": {{ .Values.loadgen.dailyBudgetUsd }}, "enabled": {{ .Values.traffic.enabled }}, "kickoffPeaksEnabled": {{ .Values.loadgen.kickoffPeaksEnabled }}, "injectionBurstMeanIntervalHours": {{ .Values.loadgen.injection.burstMeanIntervalHours }}, "injectionBurstMaxSize": {{ .Values.loadgen.injection.burstMaxSize }}{{- if .Values.loadgen.dailyCurve }}, "dailyCurve": {{ .Values.loadgen.dailyCurve | toJson }}{{- end }}}
 ---
 {{- if .Values.loadgen.persistence.enabled }}
 apiVersion: v1

@@ -8,5 +8,6 @@
 !agents/config
 !mcp-tools/package.json
 !mcp-tools/src
+!corpus
 **/node_modules
 **/*.test.mjs

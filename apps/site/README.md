@@ -17,7 +17,11 @@ The Touchline Times reader site. It ships as two images from one package:
   trace. HTTP, fetch and ioredis are auto-instrumented with OpenTelemetry.
 - **site-browser** (`Dockerfile.browser`): one headless Chromium reader session per run, for a
   CronJob. The real browser loads the Faro bundle, so Frontend Observability gets page loads, web
-  vitals and browser-to-backend traces with no human visitor.
+  vitals and browser-to-backend traces with no human visitor. Its questions are rendered from the
+  same committed reader corpus the in-app load generator uses
+  ([`../corpus`](../corpus/readers.json)), one per non-injection intent per fixture, so
+  both sources of synthetic traffic read as the same fictional readership; the session plan itself
+  stays a seeded, deterministic pick from that pool.
 
 ## Environment
 

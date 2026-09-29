@@ -26,6 +26,9 @@ COPY agents/package.json ./
 COPY agents/src ./src
 COPY agents/experiments ./experiments
 COPY agents/config ./config
+# The committed reader corpus (apps/corpus/): loadgen.mjs imports it by relative path
+# (../../corpus/readers.mjs from src/), so it must land as a sibling of agents/ and mcp-tools/.
+COPY corpus /app/corpus
 # Default loadgen spend-ledger dir, writable by the runtime user (mount a volume here to keep it
 # across pod restarts; with a read-only root filesystem an emptyDir or PVC is required).
 RUN mkdir -p /var/lib/loadgen && chown node:node /var/lib/loadgen

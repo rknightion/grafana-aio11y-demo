@@ -132,6 +132,22 @@ loadgen:
   # -- Estimated Bedrock spend cap per UTC day (dailyBudgetUsd in the rate file); the load
   # generator itself caps this at 30 USD/day regardless of what is configured here.
   dailyBudgetUsd: 5
+  # -- 24 UTC hour-of-day multipliers (index 0 = 00:00 UTC) shaping traffic.siteRequestsPerMinute
+  # across the day. Only the relative shape matters: the load generator renormalises by the
+  # curve's own average, so siteRequestsPerMinute always stays the true daily mean. null/omitted
+  # keeps the load generator's own built-in default curve (quiet overnight, evening peak).
+  dailyCurve: null
+  # -- Extra request-rate peaks around each fixture's kick-off hour and weekday (derived from
+  # apps/mcp-tools/src/data/fixtures.json), recurring every week regardless of which week's
+  # fixture date has actually passed.
+  kickoffPeaksEnabled: true
+  injection:
+    # -- Mean hours between prompt-injection probe bursts (a few probe conversations from one
+    # reader in a short window), replacing a flat percentage of ordinary traffic.
+    burstMeanIntervalHours: 4
+    # -- Max probe conversations sent in one burst. The load generator itself caps this at 8
+    # regardless of what is configured here.
+    burstMaxSize: 3
   persistence:
     # -- false mounts an emptyDir at LOADGEN_STATE_DIR instead of a PVC (Auto Mode clusters have
     # no default StorageClass); the spend ledger resets on pod restart.
