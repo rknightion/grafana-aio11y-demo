@@ -69,3 +69,6 @@ docs/fonts/
 # corpus-gen review files (see docs/traffic-corpus.md): reviewed by hand, then either accepted
 # into the committed corpora with accept.mjs or discarded. Never committed themselves.
 corpus-review/
+
+# Slide-deck research and screenshots for Claude Design, local only
+deck-brief/
