@@ -1,11 +1,11 @@
 ---
 id: AIO-0002
 title: Rename the project from grafana-aio11y-demo to grafana-cloud-agento11y-demo
-status: In Progress
+status: Done
 assignee:
   - '@claude'
 created_date: '2026-09-29 09:25'
-updated_date: '2026-09-29 11:11'
+updated_date: '2026-09-29 11:21'
 labels:
   - naming
 dependencies: []
@@ -24,7 +24,7 @@ The demo is about Grafana Cloud Agent Observability, and the product name is age
 - [x] #1 The GitHub repository is rknightion/grafana-cloud-agento11y-demo and the local checkout's remote points at it
 - [x] #2 No tracked file outside CHANGELOG.md history entries and backlog/ contains grafana-aio11y or aio11y, checked with git grep
 - [x] #3 The previously published grafana-aio11y-demo-<app> images remain pullable
-- [ ] #4 The docs site builds under the new name and the docs-sync roster lists the new repository
+- [x] #4 The docs site builds under the new name and the docs-sync roster lists the new repository
 - [x] #5 The images workflow publishes ghcr.io/rknightion/gc-agento11y-<app> for a release, and the image defaults in terraform/variables.tf, the chart and the images-push recipe point at them
 - [x] #6 The private lab consumer stack sources the module from the new repository URL at a released tag and plans cleanly
 <!-- AC:END -->
@@ -69,4 +69,12 @@ Done so far (2026-09-29):
 
 Verified: v0.3.0 publish run 36559350905 success; all six gc-agento11y-<app>:0.3.0 and grafana-aio11y-demo-<app>:0.2.0 manifests return 200 anonymously. AC #2: git grep -i aio11y outside backlog/ and CHANGELOG.md returns nothing. just check green after the release. Old OpenBao release-please, renovate-repair and docs-sync entries for the old name deleted; only the new-name entries remain.
 AC #4 stays open: the roster lists the new repository and the site builds strict through the hub's own build-fleet in isolation, but the live hub deploy is red on an unrelated broken anchor in another project, so the new docs path is not served yet. Close it once a hub deploy succeeds, and then point the repository homepage at the new docs path.
+
+AC #4 verified: the hub deploy was blocked by a broken anchor in another project's docs, fixed upstream. The hub run at 2026-09-29T11:18Z succeeded; the new docs path returns 200 and old-name paths 301 to it, deep links included. Repo homepage now points at the new docs path. Left for Rob: rename the local checkout directory once no Claude session is using it (commands handed over in chat).
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Renamed the project to grafana-cloud-agento11y-demo: GitHub repo, every in-repo identifier, and images as ghcr.io/rknightion/gc-agento11y-<app> from v0.3.0. Moved the OpenBao release-please, docs-sync and renovate-repair entries to the new name and deleted the old ones, updated the renovate-repair target list, and moved the docs hub roster, slug and assets, with a 301 from the old path. Pointed the lab consumer at the new module URL at v0.3.0 (planned, not applied). Verified: new-set token minted release PR #25, the docs-sync trigger job succeeded, the v0.3.0 publish run succeeded, and all old and new image manifests return 200 anonymously. git grep shows no old identifier outside CHANGELOG and backlog, just check is green, the hub deploy succeeded, and the new docs path serves 200 with old paths 301. The lab consumer plan is 2 add, 1 change, 2 destroy (host replacement expected). Not done here: renaming the local checkout directory, which waits until no Claude session uses it.
+<!-- SECTION:FINAL_SUMMARY:END -->
