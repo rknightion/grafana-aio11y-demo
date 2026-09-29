@@ -1,3 +1,24 @@
 {
-  "$schema": "https://docs.renovatebot.com/renovate-schema.json"
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "customManagers": [
+    {
+      "description": "agento11y CLI and Claude Code plugin release: the dev-workstation build stage (go install of the plugin module, verified by the Go checksum database) and the plugin marketplace tag render.py pins",
+      "customType": "regex",
+      "managerFilePatterns": ["/^apps/dev-workstation/Dockerfile$/", "/^agent-host/render/render\\.py$/"],
+      "matchStrings": [
+        "ARG AGENTO11Y_VERSION=(?<currentValue>\\d+\\.\\d+\\.\\d+)",
+        "AGENTO11Y_IMAGE_VERSION = \"(?<currentValue>\\d+\\.\\d+\\.\\d+)\""
+      ],
+      "depNameTemplate": "github.com/grafana/agento11y/plugins/agento11y",
+      "datasourceTemplate": "go",
+      "extractVersionTemplate": "^v(?<version>.+)$"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Move the Dockerfile build and the render.py plugin tag together, and the SDK with them",
+      "matchPackageNames": ["github.com/grafana/agento11y/plugins/agento11y", "@grafana/agento11y"],
+      "groupName": "agento11y"
+    }
+  ]
 }

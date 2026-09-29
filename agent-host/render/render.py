@@ -56,8 +56,9 @@ IMAGES = {
     "pdc": "grafana/pdc-agent:0.0.65@sha256:ce14c6c3d7eb1b288e538c0a590730914c2fea97d6fe54a18f32b417e7b56297",
 }
 
-# The agento11y release the dev-workstation image ships (AGENTO11Y_VERSION in its Dockerfile).
-# agento11y_cli_version "latest" means this one; the plugin marketplace is pinned to its tag.
+# The agento11y release the dev-workstation image ships (AGENTO11Y_VERSION in its Dockerfile; the
+# renovate.json custom manager bumps both together). agento11y_cli_version "latest" means this one;
+# the plugin marketplace is pinned to its tag.
 AGENTO11Y_IMAGE_VERSION = "0.48.0"
 
 # Networks. Bridge names are fixed so agent-host-firewall can match them before Docker starts;

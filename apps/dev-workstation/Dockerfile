@@ -23,14 +23,30 @@ RUN set -eu; \
     [ "$fpr" = "$RELEASE_SIGNER_FPR" ] || { echo "release key fingerprint $fpr != $RELEASE_SIGNER_FPR" >&2; exit 1; }; \
     gpg --dearmor < /tmp/key.asc > /claude-code-release.gpg
 
+# Grafana Agent Observability CLI (the Claude Code plugin's hooks run `agento11y claude-code hook`),
+# built from its Go module at the release tag. `go install ...@vX.Y.Z` checks the module against
+# the Go checksum database (sum.golang.org), so the pin is the version alone: Renovate bumps it
+# (go datasource) together with AGENTO11Y_IMAGE_VERSION in agent-host/render/render.py, with no
+# per-architecture archive checksums to keep in step. Cross-compiled on the build platform; the
+# flags match the release's .goreleaser.yaml.
+FROM --platform=$BUILDPLATFORM golang:1.25.14-bookworm@sha256:3b4a11519ad929d1e1d261a12cff056f0c85b735253d7d861346b9c6f8b36437 AS agento11y
+ARG AGENTO11Y_VERSION=0.48.0
+ARG TARGETOS
+ARG TARGETARCH
+ENV CGO_ENABLED=0 GOWORK=off GOTOOLCHAIN=auto GOFLAGS=-trimpath
+# go install puts a cross-compiled binary under bin/<os>_<arch>/ and a native one under bin/.
+RUN GOOS="$TARGETOS" GOARCH="$TARGETARCH" go install \
+      -ldflags "-s -w -X main.version=v${AGENTO11Y_VERSION}" \
+      "github.com/grafana/agento11y/plugins/agento11y/cmd/agento11y@v${AGENTO11Y_VERSION}" \
+    && bin="$(go env GOPATH)/bin" \
+    && mkdir -p /out \
+    && if [ -f "$bin/${TARGETOS}_${TARGETARCH}/agento11y" ]; then cp "$bin/${TARGETOS}_${TARGETARCH}/agento11y" /out/; else cp "$bin/agento11y" /out/; fi
+
 FROM node:24-bookworm-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6
 
-# Keep AGENTO11Y_VERSION in step with AGENTO11Y_IMAGE_VERSION in agent-host/render/render.py (the
-# plugin marketplace is pinned to the same release tag). The checksums are that release's
-# published linux archive SHA-256s; the installer is pinned to the tag's commit and checksum.
-ARG AGENTO11Y_VERSION=0.48.0
-ARG AGENTO11Y_SHA256_AMD64=4f9214b215b908d3d6f3b0c267e5bb2c9396d578d8e882cd82c5c80a834d1163
-ARG AGENTO11Y_SHA256_ARM64=5eff95f194406e5d9ebe365334b51ed1bc8d9117fe1e8a4c420af5b39d52e4b9
+# The installer is used only for a runtime agento11y_cli_version override (dev-entrypoint). It takes
+# the version to install as an argument and verifies that release's archive itself, so its pin is
+# independent of AGENTO11Y_VERSION and never needs moving with it.
 ARG AGENTO11Y_INSTALLER_COMMIT=a9b03af481659cfbb6787946512834cd544df9c6
 ARG AGENTO11Y_INSTALLER_SHA256=88419401c678f229c995cf1459b9c734a11517749e92fd7e9bcc4658e1300862
 ARG PLAYWRIGHT_VERSION=1.63.0
@@ -69,21 +85,9 @@ RUN uv venv /opt/login-venv \
     && rm -rf /var/lib/apt/lists/* \
     && chmod -R a+rX /opt/ms-playwright
 
-# Grafana Agent Observability CLI (the Claude Code plugin's hooks run `agento11y claude-code hook`),
-# from the release archive checked against the pinned SHA-256. The official installer is kept,
-# pinned and checksummed, only for a runtime agento11y_cli_version override (dev-entrypoint).
+# Agent Observability CLI from the agento11y build stage above.
+COPY --from=agento11y /out/agento11y /usr/local/bin/agento11y
 RUN set -eu; \
-    case "$(dpkg --print-architecture)" in \
-      amd64) arch=amd64; sum="$AGENTO11Y_SHA256_AMD64" ;; \
-      arm64) arch=arm64; sum="$AGENTO11Y_SHA256_ARM64" ;; \
-      *) echo "unsupported architecture" >&2; exit 1 ;; \
-    esac; \
-    archive="agento11y_${AGENTO11Y_VERSION}_linux_${arch}.tar.gz"; \
-    curl -fsSL "https://github.com/grafana/agento11y/releases/download/plugins/agento11y/v${AGENTO11Y_VERSION}/${archive}" -o "/tmp/${archive}"; \
-    echo "${sum}  /tmp/${archive}" | sha256sum -c -; \
-    tar -xzf "/tmp/${archive}" -C /usr/local/bin agento11y; \
-    rm -f "/tmp/${archive}"; \
-    chmod 0755 /usr/local/bin/agento11y; \
     ln -sf agento11y /usr/local/bin/sigil; \
     agento11y --version; \
     curl -fsSL "https://raw.githubusercontent.com/grafana/agento11y/${AGENTO11Y_INSTALLER_COMMIT}/plugins/agento11y/scripts/install.sh" \
