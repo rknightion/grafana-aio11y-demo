@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.2.0](https://github.com/rknightion/grafana-aio11y-demo/compare/v0.1.1...v0.2.0) (2026-09-29)
+
+
+### Features
+
+* **corpus-gen:** grow the traffic corpora with Haiku, committed only after review ([0fe6e1b](https://github.com/rknightion/grafana-aio11y-demo/commit/0fe6e1bbf334a496b0383f2365d448a2e3f9ad1c))
+* **dev-sessions:** a seeded Touchline codebase, multi-turn sessions and PII bursts ([912c4cf](https://github.com/rknightion/grafana-aio11y-demo/commit/912c4cf71970745ce416b466645352c8c7ccd60e))
+* **traffic:** reader personas, a shared question corpus and a daily traffic curve ([b7bc52c](https://github.com/rknightion/grafana-aio11y-demo/commit/b7bc52c4fb224508c23122ce6adbdc9ce9c20732))
+
+
+### Documentation
+
+* add the Backlog.md managed block to AGENTS.md ([7489bda](https://github.com/rknightion/grafana-aio11y-demo/commit/7489bda4cbf9ecc64cb9e831d5e3452c9071aa5f))
+* keep the fan-out protocol off the public board ([cc8fc95](https://github.com/rknightion/grafana-aio11y-demo/commit/cc8fc9596230dec89f13df8e59a83b0220c97713))
+
 ## [0.1.1](https://github.com/rknightion/grafana-aio11y-demo/compare/v0.1.0...v0.1.1) (2026-09-28)
 
 
