@@ -65,3 +65,7 @@ docs/fonts/
 
 # loop-pi (pi-subagents writes .pi/subagents/)
 .pi/
+
+# corpus-gen review files (see docs/traffic-corpus.md): reviewed by hand, then either accepted
+# into the committed corpora with accept.mjs or discarded. Never committed themselves.
+corpus-review/

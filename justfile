@@ -46,6 +46,16 @@ test:
 [group('check')]
 check: fmt-check lint test
 
+# Grow a corpus (kind: reader-persona|reader-intent|dev-team|dev-scenario) into a review file (docs/traffic-corpus.md)
+[group('dev')]
+corpus-grow kind name count="10" max_usd="0.50":
+    node apps/agents/corpus-gen/grow.mjs --kind {{ kind }} --name {{ name }} --count {{ count }} --max-usd {{ max_usd }}
+
+# Merge a review file's "accepted" candidates into the committed corpora (docs/traffic-corpus.md)
+[group('dev')]
+corpus-accept file:
+    node apps/agents/corpus-gen/accept.mjs {{ file }}
+
 # check plus image builds (needs a Docker daemon)
 [group('check')]
 ci: check

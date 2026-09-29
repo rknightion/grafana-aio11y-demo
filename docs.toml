@@ -39,6 +39,7 @@ Home = "index.md"
 Guides = [
     { "Demo Runbook" = "demo-runbook.md" },
     { "Coding Agents and the Gateway" = "coding-agents.md" },
+    { "Growing the Traffic Corpus" = "traffic-corpus.md" },
     { "Deploy Alternatives" = "deploy-alternatives.md" },
 ]
 
