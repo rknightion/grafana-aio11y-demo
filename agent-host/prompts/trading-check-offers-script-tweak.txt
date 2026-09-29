@@ -1,0 +1,4 @@
+team: trading
+title: add a summary line to check-offers
+---
+scripts/check-offers.js only prints PASS/FAIL per offer to the terminal, add a final summary line at the end with the total pass count and total fail count

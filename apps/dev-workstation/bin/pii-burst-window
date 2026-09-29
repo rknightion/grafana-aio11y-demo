@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# Prints "1" if this developer (DEVELOPER_NAME) is inside its scheduled PII-probe burst window
+# right now, else "0". Developer containers never talk to each other: every container derives the
+# same slot and the same chosen developer from the same wall clock, PII_ROSTER and
+# PII_BURST_MEAN_MINUTES, so the pick agrees everywhere with no coordination.
+#
+# Time since a "traffic started" anchor is divided into PII_BURST_MEAN_MINUTES-long slots. Each
+# slot's index hashes to exactly one PII_ROSTER developer and a window inside the slot for that
+# developer's burst. dev-loop writes the anchor file the moment traffic actually starts for this
+# container (on the claude-code home volume, so it survives dev-loop restarts); this script writes
+# it itself as a fallback for a standalone/manual run so it still behaves deterministically.
+#
+# Slot 0 is special, per AIO-0001.03: the al-guard-deny alert must fire within two hours of
+# traffic starting. Slot 0's window starts at the anchor itself and runs for
+# PII_BURST_EARLY_CAP_MINUTES (default 60), instead of the usual short, randomly-placed
+# PII_BURST_WINDOW_MINUTES window later slots use for variety. That guarantees the first burst
+# lands within the first hour rather than depending on where a hash happens to place it inside a
+# two-hour slot.
+set -Eeuo pipefail
+
+STATE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/agent-host"
+ANCHOR_FILE="${PII_BURST_ANCHOR_FILE:-$STATE_DIR/traffic-start-epoch}"
+mkdir -p "$STATE_DIR"
+[[ -s "$ANCHOR_FILE" ]] || date -u +%s >"$ANCHOR_FILE"
+anchor="$(cat "$ANCHOR_FILE")"
+
+mean_min="${PII_BURST_MEAN_MINUTES:-120}"
+slot_len=$((mean_min * 60))
+((slot_len <= 0)) && slot_len=1
+
+now="$(date -u +%s)"
+elapsed=$((now - anchor))
+((elapsed < 0)) && elapsed=0
+slot=$((elapsed / slot_len))
+offset=$((elapsed % slot_len))
+
+IFS=',' read -r -a roster <<<"${PII_ROSTER:-${DEVELOPER_NAME:-dev}}"
+n=${#roster[@]}
+if ((n == 0)); then
+  echo 0
+  exit 0
+fi
+
+hash_of() { printf '%s' "$1" | cksum | awk '{print $1}'; }
+
+dev_idx=$(($(hash_of "slot:$slot") % n))
+chosen="${roster[dev_idx]}"
+
+if [[ "$chosen" != "${DEVELOPER_NAME:-}" ]]; then
+  echo 0
+  exit 0
+fi
+
+win_len=$((${PII_BURST_WINDOW_MINUTES:-20} * 60))
+if ((slot == 0)); then
+  win_start=0
+  win_end=$((${PII_BURST_EARLY_CAP_MINUTES:-60} * 60))
+else
+  max_start=$((slot_len - win_len))
+  ((max_start < 0)) && max_start=0
+  win_start=$(($(hash_of "win:$slot") % (max_start + 1)))
+  win_end=$((win_start + win_len))
+fi
+
+if ((offset >= win_start && offset < win_end)); then
+  echo 1
+else
+  echo 0
+fi

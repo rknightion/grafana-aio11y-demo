@@ -1,0 +1,6 @@
+team: trading
+title: Cross-check local offer fixtures against the live feed
+effort: medium
+budget: 0.40
+---
+Pull all current offers from the {{MCP}} offers tool and compare bookmakers against what's in offers/terms.js locally. Write GAP-CHECK.md listing any bookmaker that has a live offer but no local fixture, so we know our test data isn't drifting from reality. Don't modify offers/terms.js, this is read-only.

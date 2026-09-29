@@ -1,0 +1,6 @@
+team: platform
+title: Summarise the repo's own commit history
+---
+Use the git MCP server (not a Bash git command) to read this repo's own commit log and the diff of the last two commits. Write a short CHANGELOG-DRAFT.md with the last five commit subjects and one sentence on what actually changed in the most recent one. This is our repo, not a clone - work in the current directory.
+--- followup
+Actually just the last three commits, not five - keep the note tight.

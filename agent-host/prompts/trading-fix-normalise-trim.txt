@@ -1,0 +1,6 @@
+team: trading
+title: fix the failing normalise test
+---
+fix the failing normalise test, it's the trailing space thing in odds-feed/normalise.js, bookmaker names from the feed aren't getting trimmed before they're used as keys
+--- followup
+yep that's it, all green now?

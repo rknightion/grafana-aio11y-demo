@@ -93,13 +93,23 @@ port forward below; the hostname must resolve to 127.0.0.1 and the forward must 
 ## Traffic
 
 With `traffic_enabled`, each developer runs `dev-session` every `session_interval_minutes`
-(jittered): a random prompt from `prompts/` (about 20% PII probes that the preflight deny guard should
-block; of the rest, 70% are written for the developer's team and the others are any non-PII
-prompt), a model weighted mostly towards Haiku within
-the team's allowed models, `--max-budget-usd 0.30`, and one JSON result line in the container log
-(`event=dev_session`, with `guard_blocked` for blocked probes). Sessions auto-approve only the
-tools the prompts need (read-only git plus clone/reset/checkout, file tools, python3, node, jq
-and the MCP servers); no curl, rm, npm or npx.
+(jittered): the container first re-seeds a fresh copy of the fictional Touchline codebase
+(`agent-host/codebase`) into the session directory, then picks a prompt from `prompts/` and runs
+its first turn plus, for a share of sessions, one to three of its `--- followup` turns on the
+same Claude Code session (`claude -p ... --resume <session_id>`), sharing one budget across every
+turn; some of those sessions stop before using all their follow-ups (abandoned). A low baseline of
+sessions are PII probes that the preflight deny guard should block (`pii-*.txt`), plus occasional
+bursts of several probes in a row from one developer at a time (`pii-burst-window`; see
+AIO-0001.03) -- deterministic per time slot from the wall clock and the developer roster, no
+coordination between containers. Of the rest, 70% are written for the developer's team and the
+others are any non-PII prompt. Each session uses a model weighted mostly towards Haiku within the
+team's allowed models, and a hard whole-session budget from the prompt file (clamped to
+`SESSION_MAX_BUDGET_USD`, default $1.00, comfortably under every gateway spend cap). Every session
+writes one JSON result line to the container log (`event=dev_session`, with `guard_blocked` for
+blocked probes, `user_turns` for the turn count and `abandoned` for early stops). Sessions
+auto-approve only the tools the prompts need (read-only git plus local
+checkout/restore/reset, file tools, python3, node, jq and the MCP servers); no curl, rm, npm, npx
+or `git clone` (prompts work inside the already-seeded checkout, not by cloning anything).
 
 ## Troubleshooting (SSM)
 

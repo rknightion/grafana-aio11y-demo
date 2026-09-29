@@ -2,8 +2,8 @@
 # Agent Observability CLI and Claude Code plugin, the stdio MCP servers the demo prompts use, the
 # sign-in bot (tmux + headless Chromium) and the unattended traffic loop.
 #
-# Build context is the REPOSITORY ROOT (it needs apps/mcp-tools, apps/gateway/claude-install.sh
-# and agent-host/prompts): docker build -f apps/dev-workstation/Dockerfile .
+# Build context is the REPOSITORY ROOT (it needs apps/mcp-tools, apps/gateway/claude-install.sh,
+# agent-host/prompts and agent-host/codebase): docker build -f apps/dev-workstation/Dockerfile .
 # Base images are pinned by tag and multi-arch index digest; bump both together.
 # Dockerfile.dockerignore next to this file limits what the context sends.
 
@@ -96,24 +96,27 @@ RUN npm ci --prefix /opt/mcp-tools --omit=dev --no-fund --no-audit --ignore-scri
 COPY apps/mcp-tools/src /opt/mcp-tools/src
 RUN test -f /opt/mcp-tools/src/server.mjs
 
-# npm/npx/corepack are unused from here on: the demo prompts deliberately run sample repos with
-# plain `node`, never `npm install` or `npm test` (see agent-host/prompts). Drop the base image's
-# bundled npm CLI so its own vulnerable transitive deps (pacote, sigstore, picomatch, ...) never
-# ship in the image.
+# npm/npx/corepack are unused from here on: the demo prompts work inside the seeded Touchline
+# checkout (see agent-host/codebase) with plain `node`, never `npm install` or `npm test`. Drop
+# the base image's bundled npm CLI so its own vulnerable transitive deps (pacote, sigstore,
+# picomatch, ...) never ship in the image.
 RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
     /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack
 
 COPY apps/gateway/claude-install.sh /usr/local/bin/claude-install
 COPY agent-host/prompts /opt/agent-host/prompts
+COPY agent-host/codebase /opt/agent-host/codebase
 COPY apps/dev-workstation/bin/ /opt/agent-host/bin/
 COPY apps/dev-workstation/entrypoint.sh /usr/local/bin/dev-entrypoint
 
 RUN chmod 0755 /usr/local/bin/claude-install /usr/local/bin/dev-entrypoint /opt/agent-host/bin/* \
+    /opt/agent-host/codebase/seed-repo \
     && ln -s /opt/agent-host/bin/dev-login /usr/local/bin/dev-login \
     && ln -s /opt/agent-host/bin/dev-session /usr/local/bin/dev-session \
     && ln -s /opt/agent-host/bin/dev-loop /usr/local/bin/dev-loop \
     && ln -s /opt/agent-host/bin/dev-reseed /usr/local/bin/dev-reseed \
     && ln -s /opt/agent-host/bin/dev-login-link /usr/local/bin/dev-login-link \
+    && ln -s /opt/agent-host/bin/pii-burst-window /usr/local/bin/pii-burst-window \
     && install -d -o node -g node /home/node/.claude /home/node/work /home/node/.local/bin
 
 ENV HOME=/home/node \

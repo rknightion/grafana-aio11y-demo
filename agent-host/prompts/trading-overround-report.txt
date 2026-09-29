@@ -1,0 +1,8 @@
+team: trading
+title: Overround ranking across all fixtures
+effort: medium
+budget: 0.45
+---
+Use the {{MCP}} odds tool to get prices for every fixture, run odds-feed/overround.js's overround() on each book's set of prices per fixture, and write OVERROUND.md ranking fixtures from tightest to widest market (lowest to highest overround). Show the working, not just the final numbers, so an editor can sanity-check it.
+--- followup
+This is useful. Sort it descending by overround instead - I want the worst-priced books at the top, not the tightest.

@@ -1,0 +1,6 @@
+team: newsroom
+title: Cross-check the betting glossary against a memory graph
+---
+Use the memory MCP server to create entities for the five terms in editorial/glossary.md (each-way, accumulator, draw no bet, handicap, over/under), one observation per term defining it, and relations linking related terms (e.g. handicap and over/under as both "line" bets). Read the graph back and write REVIEW.md noting whether editorial/glossary.md is missing any term the graph's relations suggest readers might expect nearby.
+--- followup
+Nice - can you also add a relation between "over/under" and "handicap" in the graph? Readers mix those two up constantly and I want to know if the graph agrees they're related.

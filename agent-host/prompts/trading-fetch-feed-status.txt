@@ -1,0 +1,6 @@
+team: trading
+title: Check the bookmaker feed status page
+---
+Before we blame odds-feed for stale prices again, use the fetch MCP server to read https://www.githubstatus.com/ (stand-in for the bookmaker status page in this environment) and write FEED-STATUS.md noting the overall status and any listed incidents in one line each. If it's unreachable, say so instead of guessing.
+--- followup
+Ok, it's up. Are there any incidents listed at all, even resolved ones from today? Add that to the file too if so.

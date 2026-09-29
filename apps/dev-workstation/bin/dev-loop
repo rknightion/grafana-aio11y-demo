@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 # Developer container main loop: keep the gateway session signed in and, when traffic is enabled,
-# run one session every SESSION_INTERVAL_MINUTES on average (uniformly jittered 50-150%).
+# run one session every SESSION_INTERVAL_MINUTES on average (uniformly jittered 50-150%), except
+# while this developer is inside its own PII-probe burst window (pii-burst-window, AIO-0001.03),
+# when sessions instead run every PII_BURST_INTERVAL_MINUTES so a burst plays out as a handful of
+# probes rather than one every SESSION_INTERVAL_MINUTES.
 set -Eeuo pipefail
 
 log() { printf '%s dev-loop[%s]: %s\n' "$(date -u +%FT%TZ)" "${DEVELOPER_NAME:-?}" "$*" >&2; }
 
 interval_s=$(( ${SESSION_INTERVAL_MINUTES:-20} * 60 ))
+burst_interval_s=$(( ${PII_BURST_INTERVAL_MINUTES:-6} * 60 ))
 state="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/agent-host"
 mkdir -p "$state"
 plugin_done=0
@@ -53,16 +57,29 @@ while true; do
   ensure_plugin
 
   if [[ "${TRAFFIC_ENABLED:-false}" != "true" ]]; then
+    rm -f -- "$state/traffic-start-epoch"
     log "traffic disabled; staying signed in (checking hourly)"
     sleep 3600
     continue
   fi
 
+  # The moment traffic started: pii-burst-window anchors its slot 0 here, so the first PII-probe
+  # burst lands within PII_BURST_EARLY_CAP_MINUTES. It lives on the volume so one container's
+  # restart keeps the slots every developer shares; the disabled branch above clears it, so a
+  # traffic_enabled flip (which recreates every developer container together) starts afresh.
+  [[ -s "$state/traffic-start-epoch" ]] || date -u +%s >"$state/traffic-start-epoch"
+
   # Drop anything the previous session persisted in the user-scope config before the next one.
   dev-reseed || log "config reset failed with $?"
   ensure_plugin
   dev-session || log "session exited with $?"
-  wait_s=$(( interval_s / 2 + RANDOM * interval_s / 32768 ))
-  log "next session in $((wait_s / 60))m"
+
+  if [[ "$(pii-burst-window 2>/dev/null || echo 0)" == "1" ]]; then
+    wait_s=$(( burst_interval_s / 2 + RANDOM * burst_interval_s / 32768 ))
+    log "in PII burst window; next session in $((wait_s / 60))m"
+  else
+    wait_s=$(( interval_s / 2 + RANDOM * interval_s / 32768 ))
+    log "next session in $((wait_s / 60))m"
+  fi
   sleep "$wait_s"
 done

@@ -1,0 +1,6 @@
+team: newsroom
+title: glossary wording
+effort: low
+budget: 0.15
+---
+the each-way definition in editorial/glossary.md reads a bit clunky, tighten the wording

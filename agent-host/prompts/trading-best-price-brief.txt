@@ -1,0 +1,6 @@
+team: trading
+title: Best price brief for Harbour City v Northgate Rovers
+---
+Pull the odds for Harbour City v Northgate Rovers with the {{MCP}} odds tool and write a best-price table into BRIEF.md: each outcome, each bookmaker's price to two decimal places, and the best price per outcome in bold. Add a one-line note with the fixture kickoff time. Current directory only.
+--- followup
+Good, but I said home/draw/away and the table's only got home and away highlighted - make sure the draw price and its best book are in there too.

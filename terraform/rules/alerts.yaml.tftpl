@@ -16,8 +16,10 @@
   dashboard: claude-code
   summary: "Guard {{ $labels.rule_id }} denied {{ humanize $values.A.Value }} request(s) in the last 30m"
   description: >-
-    An Agent Observability preflight guard blocked a request. In this demo the scheduled PII probe
-    in the developers' traffic mix trips ${pii_guard} on purpose, so this alert fires unattended.
+    An Agent Observability preflight guard blocked a request. In this demo the developers' traffic
+    mix includes a low baseline of PII probes plus occasional bursts of several probes in a row
+    from one developer at a time, which trip ${pii_guard} on purpose, so this alert fires
+    unattended.
 
 - uid: al-gw-spend
   title: Developer gateway spend today above ${spend_fraction_pct}% of the organization daily cap

@@ -1,0 +1,4 @@
+team: newsroom
+title: International kickoff times for the syndication feed
+---
+Use the time MCP server to convert Saturday's kickoffs (12:30, 15:00, 17:30) from Europe/London to America/New_York and Asia/Kolkata. Add them as a short comment block at the top of site/data/fixtures.js noting the international kickoff times, for the syndication feed team. Don't change the fixture data itself.

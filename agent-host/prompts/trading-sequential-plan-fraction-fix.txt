@@ -1,0 +1,6 @@
+team: trading
+title: Plan the fractional-odds fix
+effort: medium
+budget: 0.40
+---
+odds-feed/convert.js's toFractionString gives garbage output (e.g. "130/100" for 2.30 instead of "13/10"). Use the sequential-thinking MCP server to think through, step by step, how to fix it properly: how to reduce the fraction (gcd), which edge cases matter (evens, heavy favourites, exact whole numbers), and what tests to add. Write PLAN.md with the final plan. Don't touch convert.js yet, that's a separate task.

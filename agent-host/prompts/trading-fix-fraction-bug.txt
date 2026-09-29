@@ -1,0 +1,8 @@
+team: trading
+title: Fix toFractionString's unreduced fractions
+effort: medium
+budget: 0.50
+---
+Fix toFractionString in odds-feed/convert.js so it returns a properly reduced fraction (2.30 should come out as 13/10, not 130/100) and add test cases to odds-feed/test/convert.test.js covering an evens price, a heavy favourite and a longshot.
+--- followup
+The reduced form is right for 2.30, but double check 3.00 doesn't come out as something silly like 200/100 too - make sure the reduction actually runs on every case, not just the one you hand-checked.

@@ -161,22 +161,28 @@ and the Claude Code dashboard's *Gateway spend* tab, and the gateway spend alert
 the organization daily cap.
 
 Gateway spend is the gateway's own estimate from token counts, a circuit breaker rather than a
-Bedrock invoice. Each unattended session also has a hard `--max-budget-usd 0.30`.
+Bedrock invoice. Each unattended session also has a hard whole-session budget from the prompt file
+(`SESSION_MAX_BUDGET_USD`, default $1.00), shared across every turn including any follow-ups.
 
 ## Traffic
 
 With `traffic_enabled = true`, each developer runs a scripted session every
-`developer_session_interval_minutes` (20 by default, jittered): usually a prompt written for their
-team, sometimes a general coding task, and about one in five a PII probe that the preflight deny
-guard should block. Prompts are in [agent-host/prompts](https://github.com/rknightion/grafana-aio11y-demo/tree/main/agent-host/prompts). Models are
+`developer_session_interval_minutes` (20 by default, jittered) against a fresh copy of the
+fictional Touchline codebase seeded into the session directory (`agent-host/codebase`): usually a
+prompt written for their team, sometimes any other non-PII prompt, and a low baseline plus
+occasional multi-probe bursts from one developer at a time otherwise a PII probe (`pii-*.txt`)
+that the preflight deny guard should block -- see [the runbook's PII guard
+section](demo-runbook.md#the-pii-guard). A share of sessions continue for one to three
+`--- followup` turns on the same Claude Code session (`--resume`), and some stop early
+(abandoned). Prompts are in [agent-host/prompts](https://github.com/rknightion/grafana-aio11y-demo/tree/main/agent-host/prompts). Models are
 weighted towards Haiku within the team's allowed models. Each session writes one JSON result line
-to the container log (`event=dev_session`).
+to the container log (`event=dev_session`, including `user_turns` and `abandoned`).
 
 Run one session by hand:
 
 ```bash
 sudo docker compose exec dev-priya-shah dev-session                       # random prompt
-sudo docker compose exec dev-priya-shah dev-session /opt/agent-host/prompts/21-best-price-table.txt
+sudo docker compose exec dev-priya-shah dev-session /opt/agent-host/prompts/<scenario>.txt
 ```
 
 ## What the gateway pushes

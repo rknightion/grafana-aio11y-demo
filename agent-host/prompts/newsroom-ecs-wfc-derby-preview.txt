@@ -1,0 +1,8 @@
+team: newsroom
+title: Eastcliff Stars v Westford City derby preview
+effort: medium
+budget: 0.40
+---
+The coastal derby is coming up, Eastcliff Stars v Westford City. Pull news for both sides plus the head-to-head history with the {{MCP}} tools and write the preview per editorial/styleGuide.md - the derby always gets good traffic so make it a bit livelier than a standard midtable preview, but don't overdo it or claim anything the news items don't support. Save as draft-ecs-wfc-preview.md.
+--- followup
+Great, that's exactly the energy we want for a derby. Ship it as is.

@@ -1,0 +1,6 @@
+team: trading
+title: evens edge case
+effort: low
+budget: 0.15
+---
+what should toAmerican in odds-feed/convert.js return for exactly evens, 2.00 - add a test for it if there isn't one already

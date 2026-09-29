@@ -1,0 +1,6 @@
+team: platform
+title: Pre-build sanity pass across the whole test suite
+effort: medium
+budget: 0.60
+---
+Before the next site build kicks off, do a sanity pass: run node --test across the whole repo, list every currently failing test, and for each one write one sentence in TEST-STATUS.md on whether it looks like a real bug worth a ticket or a badly written test, without fixing anything yet. Keep it factual, this is triage not a fix.

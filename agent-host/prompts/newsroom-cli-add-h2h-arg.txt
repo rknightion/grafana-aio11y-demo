@@ -1,0 +1,10 @@
+team: newsroom
+title: Let the preview CLI take a head-to-head line
+effort: medium
+budget: 0.40
+---
+editorial/cli.js only takes home, away and one news line per side - it can't pass a head-to-head line through to buildPreview even though previewTemplate.js supports h2hLine. Add a fifth optional positional argument for it and update the usage message.
+--- followup
+Actually, put it as the third positional argument instead, right after away - I want the h2h line grouped near the fixture, not tacked on the end after both news args.
+--- followup
+On reflection, leave the argument order as you first had it (h2h last), reordering isn't worth another pass right now - just make sure the usage line in the CLI documents the order clearly so nobody has to guess.

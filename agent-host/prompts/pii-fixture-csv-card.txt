@@ -1,0 +1,4 @@
+team: newsroom
+title: Sample data for an editorial CSV export ticket
+---
+Editorial ops wants a sample row for the new export ticket so QA has something realistic to test against without waiting on real data: name Jamie Reader, email jamie.reader@example.com, card 4000 0566 5566 5556, offer redeemed "Crossbar Bet welcome". Write it as sample-row.csv with a header line, and a short SAMPLE-NOTES.md explaining what each column is for.

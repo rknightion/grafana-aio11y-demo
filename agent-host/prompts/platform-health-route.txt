@@ -1,0 +1,8 @@
+team: platform
+title: add a health route
+effort: low
+budget: 0.20
+---
+add a quick GET /health route to site/router.js that just returns the plain text "ok", no template needed for this one
+--- followup
+actually make it return JSON {"status":"ok"} instead of plain text, with the right content-type

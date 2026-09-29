@@ -1,0 +1,6 @@
+team: trading
+title: node:test subtests and .only cheat sheet
+---
+Use the context7 MCP server to pull the current node:test documentation on subtests and test.only. Write NOTES.md (under 20 lines) for the odds-feed team on how to run just one test file and how to focus on a single test while fixing the fractional-odds bug, with one small example. Add a link or reference to odds-feed/README.md's TODO section.
+--- followup
+Nice, add one more line on how to run a single test by name (not just test.only) - some of us prefer that over editing the file.

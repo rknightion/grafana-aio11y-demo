@@ -1,0 +1,6 @@
+team: platform
+title: Double-check CODEOWNERS covers scripts/ and docs/
+---
+Legal asked whether every directory in the repo has a code owner. Check CODEOWNERS against the actual top-level directories (site, odds-feed, offers, editorial, scripts, docs) and confirm each one is covered, either directly or by the catch-all at the bottom. Note the result in one or two lines, no need for a report file, just tell me directly.
+--- followup
+Thanks - go ahead and add scripts/ explicitly to CODEOWNERS then, don't leave it relying on the catch-all.

@@ -1,0 +1,6 @@
+team: platform
+title: How Express matches param routes
+---
+site/router.js only matches literal paths right now (see the FIXME at the top of the file). Ask the deepwiki MCP server about the expressjs/express repository: how its router matches a param segment like /:id and turns it into req.params. Write NOTES.md in site/ summarising the approach in plain English, and name the one or two source files deepwiki points to. Don't change router.js yet, this is just research before we touch it.
+--- followup
+Good, one more thing while you're looking - does Express handle query strings the same way, through params, or is that a totally separate mechanism? Just add a line to NOTES.md, don't go deep on it.

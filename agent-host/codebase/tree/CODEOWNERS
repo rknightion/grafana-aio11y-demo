@@ -1,0 +1,10 @@
+# Team ownership. Groups match the gateway's team names (newsroom, trading, platform).
+
+/editorial/           @touchline/newsroom
+/site/templates/      @touchline/newsroom
+/site/                @touchline/platform
+/odds-feed/           @touchline/trading
+/offers/              @touchline/trading
+/scripts/             @touchline/platform
+/docs/                @touchline/platform
+*                      @touchline/platform

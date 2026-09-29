@@ -1,0 +1,6 @@
+team: newsroom
+title: Add cup-tie preview length guidance to the style guide
+---
+editorial/styleGuide.md doesn't say how long a cup-tie preview should run versus a normal league one. Add a short line covering that, in keeping with the rest of the guide's tone.
+--- followup
+Actually, mention preseason blurbs in that same section too while you're editing it, not just cup ties - might as well cover both in one go.

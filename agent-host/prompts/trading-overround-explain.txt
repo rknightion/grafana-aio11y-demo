@@ -1,0 +1,6 @@
+team: trading
+title: overround question
+effort: low
+budget: 0.15
+---
+what does odds-feed/overround.js actually compute, in plain english, no maths jargon please

@@ -1,0 +1,11 @@
+[
+  { "fixture": "fx-2026-10-03-hbc-ngr", "book": "Crossbar Bet ", "outcome": "home", "price": "2.30" },
+  { "fixture": "fx-2026-10-03-hbc-ngr", "book": "Halftime Odds", "outcome": "home", "price": "2.25" },
+  { "fixture": "fx-2026-10-03-hbc-ngr", "book": "Longshot & Co", "outcome": "home", "price": "2.35" },
+  { "fixture": "fx-2026-10-03-hbc-ngr", "book": "Crossbar Bet ", "outcome": "draw", "price": "3.40" },
+  { "fixture": "fx-2026-10-03-hbc-ngr", "book": "Halftime Odds", "outcome": "draw", "price": "3.50" },
+  { "fixture": "fx-2026-10-03-hbc-ngr", "book": "Longshot & Co", "outcome": "draw", "price": "3.45" },
+  { "fixture": "fx-2026-10-03-hbc-ngr", "book": "Crossbar Bet ", "outcome": "away", "price": "3.10" },
+  { "fixture": "fx-2026-10-03-hbc-ngr", "book": "Halftime Odds", "outcome": "away", "price": "3.00" },
+  { "fixture": "fx-2026-10-03-hbc-ngr", "book": "Longshot & Co", "outcome": "away", "price": "3.05" }
+]

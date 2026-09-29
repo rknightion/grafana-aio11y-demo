@@ -1,0 +1,8 @@
+team: newsroom
+title: Redvale v Fellgate Wanderers preview
+effort: medium
+budget: 0.40
+---
+Working on the Northern Cup preview for Redvale v Fellgate Wanderers. Pull news for both clubs and the head-to-head history with the {{MCP}} tools, then write it up as a normal preview per editorial/styleGuide.md - intro line, one paragraph per team, closing head-to-head stat. Save as draft-rdv-fgw-preview.md.
+--- followup
+Nice, drop the last sentence though, it reads a bit flat compared to the rest.

@@ -1,0 +1,8 @@
+team: platform
+title: Switch the request logger to structured JSON
+effort: medium
+budget: 0.45
+---
+site/middleware/logger.js writes a plain text line per request. Once alloy starts picking up container logs we want structured lines instead: switch logRequest to build and log a single JSON object with method, url and an ISO timestamp field, and return that same object (not the string) so the test can assert on fields instead of a regex. Update site/test/logger.test.js accordingly.
+--- followup
+Looks good. Now also log the response status code once the handler returns, not just the request line - you'll need to pass that in from server.js.

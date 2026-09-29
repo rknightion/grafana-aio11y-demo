@@ -1,0 +1,8 @@
+team: newsroom
+title: Kingsbridge United v Ashford Athletic preview
+effort: medium
+budget: 0.55
+---
+Draft the preview for Kingsbridge United v Ashford Athletic. Use editorial/cli.js as a starting point (it'll give you the plain template), then pull real news for both teams and the head-to-head history with the {{MCP}} tools and polish the intro and closing line past what the CLI's bare template gives you - follow editorial/styleGuide.md for tone. Save the final version as draft-kbu-asa-preview.md. Don't invent injury news or scorelines the tools didn't return.
+--- followup
+Good draft. Can you shorten the closing line though - it runs long for our usual style, one crisp sentence is plenty.

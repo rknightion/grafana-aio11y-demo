@@ -1,0 +1,6 @@
+team: platform
+title: Document the PORT env var
+---
+Someone asked in standup whether the site server's port is configurable. Check site/server.js, confirm whether it already reads a PORT env var, and if docs/RUNBOOK.md doesn't mention it, add a one-line note there with the default.
+--- followup
+Good, add the actual default value (3000) to that runbook line too, not just "configurable via PORT".

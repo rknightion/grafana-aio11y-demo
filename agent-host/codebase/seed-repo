@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+# Seeds <dest> (an existing empty directory) as a git repository containing the fictional
+# Touchline Times codebase, with a realistic multi-author, backdated commit history ending on a
+# clean main. Deterministic and offline: two runs against two empty destinations produce the same
+# tree hash. Source files live under agent-host/codebase/tree/ next to this script.
+set -Eeuo pipefail
+
+if [[ $# -ne 1 ]]; then
+  echo "usage: seed-repo <dest>" >&2
+  exit 2
+fi
+
+dest=$1
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+src="$script_dir/tree"
+
+if [[ ! -d "$src" ]]; then
+  echo "seed-repo: source tree not found at $src" >&2
+  exit 1
+fi
+if [[ ! -d "$dest" ]]; then
+  echo "seed-repo: dest '$dest' does not exist" >&2
+  exit 1
+fi
+if [[ -n "$(ls -A "$dest" 2>/dev/null)" ]]; then
+  echo "seed-repo: dest '$dest' is not empty" >&2
+  exit 1
+fi
+
+# Never let the host's or a developer's own git config leak into the fictional history.
+export GIT_CONFIG_GLOBAL=/dev/null
+export GIT_CONFIG_NOSYSTEM=1
+export GIT_ATTR_NOSYSTEM=1
+
+git -C "$dest" init --quiet --initial-branch=main
+
+commit() {
+  local date=$1 name=$2 email=$3 message=$4
+  shift 4
+  local rel to
+  for rel in "$@"; do
+    to="$dest/$rel"
+    mkdir -p "$(dirname "$to")"
+    cp "$src/$rel" "$to"
+  done
+  git -C "$dest" -c user.name="$name" -c user.email="$email" add -- "$@"
+  GIT_AUTHOR_DATE="$date" GIT_COMMITTER_DATE="$date" \
+    git -C "$dest" -c user.name="$name" -c user.email="$email" \
+      commit --quiet --no-gpg-sign -m "$message"
+}
+
+commit "2026-08-03T09:12:00" "Priya Anand" "priya.anand@touchlinetimes.example" \
+  "chore: scaffold the touchline-times monorepo" \
+  README.md CODEOWNERS .gitignore
+
+commit "2026-08-03T14:40:00" "Alex Devon" "alex.devon@touchlinetimes.example" \
+  "feat(site): minimal http server and literal-path router" \
+  site/server.js site/router.js site/render.js
+
+commit "2026-08-04T11:05:00" "Jordan Blake" "jordan.blake@touchlinetimes.example" \
+  "feat(site): home page template and fixture list" \
+  site/templates/layout.js site/templates/match.js site/data/fixtures.js
+
+commit "2026-08-05T16:20:00" "Alex Devon" "alex.devon@touchlinetimes.example" \
+  "feat(site): request logging middleware" \
+  site/middleware/logger.js
+
+commit "2026-08-06T10:00:00" "Priya Anand" "priya.anand@touchlinetimes.example" \
+  "test(site): cover the router, home page and logger" \
+  site/test/router.test.js site/test/render.test.js site/test/logger.test.js
+
+commit "2026-08-10T09:30:00" "Sam Whitfield" "sam.whitfield@touchlinetimes.example" \
+  "feat(odds-feed): ingest and normalise the bookmaker export" \
+  odds-feed/fixtures-snapshot.json odds-feed/ingest.js odds-feed/normalise.js
+
+commit "2026-08-11T13:15:00" "Nita Okafor" "nita.okafor@touchlinetimes.example" \
+  "feat(odds-feed): price format conversion and overround" \
+  odds-feed/convert.js odds-feed/overround.js
+
+commit "2026-08-12T15:45:00" "Sam Whitfield" "sam.whitfield@touchlinetimes.example" \
+  "test(odds-feed): normalise, convert and overround coverage" \
+  odds-feed/test/normalise.test.js odds-feed/test/convert.test.js odds-feed/test/overround.test.js odds-feed/README.md
+
+commit "2026-08-17T09:50:00" "Nita Okafor" "nita.okafor@touchlinetimes.example" \
+  "feat(offers): offer terms fixtures and RG wording variants" \
+  offers/terms.js offers/wording.js
+
+commit "2026-08-18T11:30:00" "Sam Whitfield" "sam.whitfield@touchlinetimes.example" \
+  "feat(offers): 18+ and responsible-gambling line checks" \
+  offers/rgCheck.js offers/test/rgCheck.test.js
+
+commit "2026-08-20T10:10:00" "Chris Meadows" "chris.meadows@touchlinetimes.example" \
+  "docs(editorial): style guide and betting glossary" \
+  editorial/styleGuide.md editorial/glossary.md
+
+commit "2026-08-21T14:00:00" "Jordan Blake" "jordan.blake@touchlinetimes.example" \
+  "feat(editorial): preview template and drafting CLI" \
+  editorial/previewTemplate.js editorial/cli.js
+
+commit "2026-08-21T17:40:00" "Chris Meadows" "chris.meadows@touchlinetimes.example" \
+  "test(editorial): preview template and blurb word cap" \
+  editorial/test/previewTemplate.test.js
+
+commit "2026-08-25T09:05:00" "Priya Anand" "priya.anand@touchlinetimes.example" \
+  "chore(scripts): terminal spot-check for offer compliance" \
+  scripts/check-offers.js
+
+commit "2026-08-26T16:50:00" "Alex Devon" "alex.devon@touchlinetimes.example" \
+  "docs: platform runbook and known gaps" \
+  docs/RUNBOOK.md
+
+exit 0

@@ -1,0 +1,6 @@
+team: newsroom
+title: word cap question
+effort: low
+budget: 0.15
+---
+what's MAX_BLURB_WORDS in editorial/previewTemplate.js set to right now and why 120 specifically

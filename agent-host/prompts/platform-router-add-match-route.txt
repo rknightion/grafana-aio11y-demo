@@ -1,0 +1,10 @@
+team: platform
+title: Add a /match/:id route to the site router
+effort: medium
+budget: 0.50
+---
+The site team wants a real per-fixture page. Add /match/:id support to site/router.js so a GET to /match/anything-here matches with params.id set, without breaking the existing literal / route. Wire up a handler in site/render.js that just echoes the id back for now (real fixture lookup is a separate ticket). Add a test in site/test/router.test.js covering both the new param route and that literal routes still work.
+--- followup
+Actually, keep it to a single :id segment only, no nested params like /match/:id/:tab - we don't need that yet and I don't want to review a general path-matching engine today.
+--- followup
+That's fine as it is now. Add one more test: an unmatched method (like POST to /match/123) should still return null from match(), same as before.

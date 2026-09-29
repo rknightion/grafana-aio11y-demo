@@ -1,0 +1,8 @@
+team: newsroom
+title: Stonebridge Saints v Bramley Rangers cup preview
+effort: medium
+budget: 0.50
+---
+Cup tie preview, Stonebridge Saints v Bramley Rangers. Pull news for both clubs, the head-to-head history, and the current odds for the fixture with the {{MCP}} tools - we like to drop one odds line near the end as a soft nudge towards the offers section. Write it up per editorial/styleGuide.md, closing with something like "Crossbar Bet has the hosts at X" using whatever the actual current price is, don't make a number up. Save as draft-sbs-bmr-preview.md.
+--- followup
+Good, but the closing price line needs the bookmaker name capitalised properly - "Crossbar Bet", not "crossbar bet".

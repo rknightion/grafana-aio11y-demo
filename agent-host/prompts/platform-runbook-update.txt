@@ -1,0 +1,6 @@
+team: platform
+title: Add the normalise trimming bug to the runbook
+---
+Run node --test in odds-feed/ to confirm the bookmaker-name trimming test is still failing, then add one line about it to the "Known gaps" section of docs/RUNBOOK.md if it isn't already listed there. Don't fix the bug itself, this is just keeping the runbook honest.
+--- followup
+Good, also add a line about the toFractionString gap while you're already editing that section - no test coverage for it at all right now.

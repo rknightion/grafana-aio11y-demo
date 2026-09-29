@@ -1,0 +1,6 @@
+team: trading
+title: Handle a missing snapshot file in ingest.js
+---
+Check whether odds-feed/ingest.js gives a sensible error if the snapshot file it's pointed at doesn't exist, or whether it just throws a raw ENOENT. If it's the raw error, wrap it with a clearer message naming the path that was missing.
+--- followup
+Good, add a one-line note about that error handling to odds-feed/README.md too so the next person doesn't have to go read the source.

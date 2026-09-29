@@ -1,0 +1,8 @@
+team: trading
+title: fix the failing offers test
+---
+fix the failing offers test, the "Gambling can be addictive" one - hasResponsibleGamblingLine in offers/rgCheck.js is checking lower-case "gambling" so it misses the capitalised sentence-start version
+--- followup
+good, now what about the Longshot & Co cashback offer, its terms don't have any RG line at all - should checkOffer start failing that one too?
+--- followup
+actually leave checkOffer alone for that one, don't change the logic further - just note it as a known compliance gap somewhere, offers/terms.js's comment is enough, don't go build a report for it right now

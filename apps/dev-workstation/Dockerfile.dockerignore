@@ -7,4 +7,5 @@
 !apps/mcp-tools/package-lock.json
 !apps/mcp-tools/src/
 !agent-host/prompts/
+!agent-host/codebase/
 **/__pycache__

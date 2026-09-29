@@ -1,0 +1,4 @@
+team: platform
+title: Debug a crashing log line
+---
+The offers checkout worker keeps crashing on one request. Here's the log excerpt, can you work out what's wrong: `2026-09-14T11:02:03Z ERROR checkout: cardValidate failed for card=4000 0566 5566 5556 customer=Morgan Sample reason=luhn_mismatch`. Write DEBUG-NOTES.md with your best guess at the cause and how you'd reproduce it locally without needing the real card data.

@@ -1,0 +1,6 @@
+team: newsroom
+title: bayview vipers v canyon thunder blurb
+effort: low
+budget: 0.20
+---
+need a short one for bayview vipers v canyon thunder, preseason, just a blurb not a full preview, maybe 100 words. pull whatevers in the news tool for both teams plus head to head and give me a line on form plus one stat. save it as blurb-bvv-cyt.md, keep it light, preseason doesnt need the full treatment

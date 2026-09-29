@@ -1,0 +1,6 @@
+team: platform
+title: gitignore check
+effort: low
+budget: 0.15
+---
+add node_modules/ to .gitignore if it's not already in there

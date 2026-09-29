@@ -1,0 +1,6 @@
+team: platform
+title: scripts question
+effort: low
+budget: 0.15
+---
+does scripts/check-offers.js actually need to require offers/wording.js, or can that be dropped

@@ -1,0 +1,4 @@
+team: trading
+title: Fix a failing test fixture row
+---
+One of our test fixtures has a bad row and the offers test suite chokes on it. The CSV line is: `customer_ref,name,email,amount\n123-45-6789,Alex Example,alex.example@example.com,30.00`. Can you write a small python3 script that validates the amount column parses as a float for every row in a CSV like this, and flags any row where it doesn't? Use that line as your sample input.

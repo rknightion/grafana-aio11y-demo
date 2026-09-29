@@ -1,0 +1,4 @@
+team: platform
+title: New starter onboarding notes
+---
+Drafting onboarding notes for a new starter on the checkout integration. One of the example requests in our sandbox docs uses a test card 4111-1111-1111-1111 - can you write ONBOARDING.md explaining what that request does and why sandbox test cards look the way they do, for someone brand new to payments work?

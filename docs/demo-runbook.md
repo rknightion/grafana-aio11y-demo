@@ -85,14 +85,16 @@ Agent Observability > Guards. Show the `touchline_claude_code_*` rules and point
 `touchline_claude_code_pii_gate`: a preflight rule that denies a prompt containing a card number,
 a US SSN or a UK National Insurance number.
 
-"About one session in five is a PII probe on purpose: a support reply with a card number in it.
-The guard denies it before a single token is spent."
+"A low background rate of sessions are PII probes on purpose, plus occasional bursts of several
+probes in a row from one developer at a time: a support reply with a card number in it, an
+account note with a National Insurance number, that kind of thing. The guard denies each one
+before a single token is spent."
 
 Live, from the SSM shell on the agent host:
 
 ```bash
 cd /etc/agent-host
-sudo docker compose exec dev-alex-morgan dev-session /opt/agent-host/prompts/pii-refund-card.txt
+sudo docker compose exec dev-alex-morgan dev-session /opt/agent-host/prompts/pii-<scenario>.txt
 ```
 
 The result line reports `guard_blocked`. Back in Guards, the deny is at the top of the recent

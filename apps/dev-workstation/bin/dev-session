@@ -1,27 +1,41 @@
 #!/usr/bin/env bash
-# One unattended Claude Code session through the Claude apps gateway. Everything about telemetry,
-# models, MCP (context7, deepwiki) and the Agent Observability plugin is pushed by the gateway;
-# the container only carries the gateway sign-in settings and the local stdio MCP servers.
+# One unattended Claude Code session (one to several turns) through the Claude apps gateway.
+# Everything about telemetry, models, MCP (context7, deepwiki) and the Agent Observability plugin
+# is pushed by the gateway; the container only carries the gateway sign-in settings and the local
+# stdio MCP servers.
 #
-# Picks a prompt (usually one written for this developer's team, sometimes a PII probe that the
-# preflight deny guard should block), a model from SESSION_MODELS, runs `claude -p` with a hard
-# budget and prints one JSON result line on stdout.
+# Seeds a fresh copy of the fictional Touchline codebase (agent-host/codebase), picks a prompt
+# (usually one written for this developer's team, occasionally a PII probe that the preflight deny
+# guard should block -- see pii-burst-window), a model from SESSION_MODELS, and runs the prompt's
+# first turn plus a share of its follow-ups as `claude -p ... --resume <session_id>` on the same
+# session, sharing one budget across every turn. Some multi-turn sessions stop before using all
+# their follow-ups (abandoned). Prints one JSON result line on stdout.
 #
 # Usage: dev-session [prompt-file]
 set -Eeuo pipefail
 
 PROMPTS_DIR="${PROMPTS_DIR:-/opt/agent-host/prompts}"
-EFFORT="${SESSION_EFFORT:-low}"
-BUDGET_USD="${SESSION_BUDGET_USD:-0.30}"
+EFFORT_DEFAULT="${SESSION_EFFORT:-low}"
+BUDGET_DEFAULT_USD="${SESSION_BUDGET_USD:-0.30}"
+MAX_BUDGET_USD="${SESSION_MAX_BUDGET_USD:-1.00}"
+MIN_REMAINING_BUDGET_USD="${SESSION_MIN_REMAINING_BUDGET_USD:-0.02}"
 TIMEOUT_S="${SESSION_TIMEOUT_S:-900}"
-PII_PROBE_PERCENT="${PII_PROBE_PERCENT:-20}"
-TEAM="${DEVELOPER_TEAM:-platform}"
+SHORT_TIMEOUT_S="${SESSION_SHORT_TIMEOUT_S:-45}"
+SHORT_TIMEOUT_PERCENT="${SESSION_SHORT_TIMEOUT_PERCENT:-8}"
+FOLLOWUP_PERCENT="${SESSION_FOLLOWUP_PERCENT:-45}"
+ABANDON_PERCENT="${SESSION_ABANDON_PERCENT:-20}"
+MAX_FOLLOWUPS="${SESSION_MAX_FOLLOWUPS:-3}"
+PII_BASELINE_PERCENT="${PII_BASELINE_PERCENT:-2}"
+TEAM_DEFAULT="${DEVELOPER_TEAM:-platform}"
 MCP="${MCP_SERVER_NAME:-touchline}"
+CODEBASE_SEED="${CODEBASE_SEED:-/opt/agent-host/codebase/seed-repo}"
 STATE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/agent-host"
 mkdir -p "$STATE_DIR"
 
 exec 9>"${CLAUDE_LOCK:-/tmp/claude.lock}"
 flock -w 120 9 || { echo "dev-session: claude is busy (sign-in or another session); skipping" >&2; exit 0; }
+
+bool() { if (("$1")); then echo true; else echo false; fi; }
 
 # Weighted model choice from "id=weight,id=weight".
 pick_model() {
@@ -40,12 +54,17 @@ pick_model() {
   echo "${ids[0]}"
 }
 
+# PII probes: a low baseline everywhere, plus this developer's own scheduled burst window
+# (pii-burst-window; see AIO-0001.03). Otherwise mostly this developer's own team, sometimes any
+# non-PII prompt.
 pick_prompt() {
   local -a pool=()
-  if ((RANDOM % 100 < PII_PROBE_PERCENT)); then
+  local in_burst
+  in_burst="$(pii-burst-window 2>/dev/null || echo 0)"
+  if [[ "$in_burst" == "1" ]] || ((RANDOM % 100 < PII_BASELINE_PERCENT)); then
     mapfile -t pool < <(find "$PROMPTS_DIR" -name 'pii-*.txt')
   elif ((RANDOM % 100 < 70)); then
-    mapfile -t pool < <(grep -l -x "team: $TEAM" "$PROMPTS_DIR"/*.txt | grep -v '/pii-')
+    mapfile -t pool < <(grep -l -x "team: $TEAM_DEFAULT" "$PROMPTS_DIR"/*.txt | grep -v '/pii-')
   fi
   if ((${#pool[@]} == 0)); then
     mapfile -t pool < <(find "$PROMPTS_DIR" -name '*.txt' ! -name 'pii-*.txt')
@@ -53,62 +72,220 @@ pick_prompt() {
   printf '%s\n' "${pool[@]}" | shuf -n 1
 }
 
+# Parses a Seam 2 prompt file into globals: title, file_effort, file_budget, and turns[] (turns[0]
+# is the first user turn, turns[1..] are the "--- followup" turns, in order). {{MCP}} is
+# substituted in every turn and in the title. The header's own "team" key is only used by
+# pick_prompt's file-name grep (below); this developer's team for reporting is $TEAM_DEFAULT.
+parse_prompt() {
+  local file="$1" header body line new_turn
+  header="$(sed '/^---$/q' "$file" | sed '$d')"
+  title="$(printf '%s\n' "$header" | sed -n 's/^title: *//p' | head -1 | sed "s/{{MCP}}/$MCP/g")"
+  file_effort="$(printf '%s\n' "$header" | sed -n 's/^effort: *//p' | head -1)"
+  file_budget="$(printf '%s\n' "$header" | sed -n 's/^budget: *//p' | head -1)"
+
+  body="$(sed '1,/^---$/d' "$file")"
+  turns=()
+  current=""
+  new_turn=1
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    if [[ "$line" == "--- followup" ]]; then
+      turns+=("$current")
+      current=""
+      new_turn=1
+    elif ((new_turn)); then
+      current="$line"
+      new_turn=0
+    else
+      current+=$'\n'"$line"
+    fi
+  done <<<"$body"
+  turns+=("$current")
+  for i in "${!turns[@]}"; do
+    turns[i]="${turns[i]//\{\{MCP\}\}/$MCP}"
+  done
+}
+
 model="${SESSION_MODEL:-$(pick_model)}"
 prompt_file="${1:-$(pick_prompt)}"
 [[ -r "$prompt_file" ]] || { echo "dev-session: no prompt file" >&2; exit 2; }
-# {{MCP}} in a prompt names the demo's own MCP server, registered under MCP_SERVER_NAME.
-title="$(sed -n 's/^title: *//p' "$prompt_file" | head -1 | sed "s/{{MCP}}/$MCP/g")"
-prompt="$(sed '1,/^---$/d' "$prompt_file" | sed "s/{{MCP}}/$MCP/g")"
-[[ -n "$prompt" ]] || { echo "dev-session: empty prompt in $prompt_file" >&2; exit 2; }
+
+declare -a turns=()
+title="" file_effort="" file_budget="" current=""
+parse_prompt "$prompt_file"
+[[ -n "${turns[0]:-}" ]] || { echo "dev-session: empty prompt in $prompt_file" >&2; exit 2; }
 scenario="$(basename "$prompt_file" .txt)"
+
+effort="${file_effort:-$EFFORT_DEFAULT}"
+case "$effort" in
+  low | medium | high) ;;
+  *) effort="$EFFORT_DEFAULT" ;;
+esac
+
+# File budget (optional) clamped to SESSION_MAX_BUDGET_USD; an absent or non-positive value falls
+# back to SESSION_BUDGET_USD first. This is the whole session's budget, shared across every turn
+# (see the --max-budget-usd use below): each --resume call gets whatever is left, and the loop
+# stops once it runs low. SESSION_MAX_BUDGET_USD's default of $1.00 sits well inside every gateway
+# spend cap configured for this demo (terraform/variables.tf spend_caps: organization $20/day,
+# trading team $5/day, and the tightest single-developer cap $2/day) -- comfortably under even the
+# tightest per-developer cap while still allowing several sessions a day per developer.
+budget_usd="$(awk -v b="$file_budget" -v d="$BUDGET_DEFAULT_USD" -v m="$MAX_BUDGET_USD" \
+  'BEGIN{ bn=b+0; if (bn<=0) bn=d+0; if (bn>m+0) bn=m+0; printf "%.4f", bn }')"
 
 work="$(mktemp -d "$HOME/work/session.XXXXXX")"
 trap 'rm -rf -- "$work"' EXIT
+
+started="$(date -u +%FT%TZ)"
+
+# Seed a fresh checkout of the fictional Touchline codebase (agent-host/codebase) for this
+# session; CODEBASE_SEED is overridable for testing. On failure, report it the same way as every
+# other dev_session result and stop cleanly rather than falling through to an empty directory.
+if ! "$CODEBASE_SEED" "$work"; then
+  jq -cn --arg started "$started" --arg developer "${DEVELOPER_NAME:-}" --arg team "$TEAM_DEFAULT" \
+    --arg scenario "$scenario" --arg title "$title" --arg model "$model" --arg effort "$effort" \
+    --argjson budget_usd "$budget_usd" '
+    {event: "dev_session", started: $started, developer: $developer, team: $team,
+     scenario: $scenario, title: $title, model: $model, effort: $effort, budget_usd: $budget_usd,
+     rc: 1, pii_probe: ($scenario | startswith("pii-")), guard_blocked: false,
+     subtype: null, is_error: true, cost_usd: 0, turns: 0, user_turns: 0, abandoned: true,
+     denials: [], session_id: null, error: "codebase seed failed"}'
+  exit 3
+fi
 cd "$work"
 
+# How many follow-ups (if any) this session will attempt, and whether it stops early
+# (abandoned): a share of sessions with follow-ups in the file (SESSION_FOLLOWUP_PERCENT) plan to
+# use 1..min(available, SESSION_MAX_FOLLOWUPS) of them; of those, SESSION_ABANDON_PERCENT instead
+# use fewer than planned. A session that was never a follow-up candidate is not "abandoned" just
+# for having one turn.
+available_followups=$((${#turns[@]} - 1))
+planned_followups=0
+if ((available_followups > 0)) && ((RANDOM % 100 < FOLLOWUP_PERCENT)); then
+  cap=$((available_followups < MAX_FOLLOWUPS ? available_followups : MAX_FOLLOWUPS))
+  planned_followups=$(((RANDOM % cap) + 1))
+fi
+target_followups=$planned_followups
+if ((planned_followups > 0)) && ((RANDOM % 100 < ABANDON_PERCENT)); then
+  target_followups=$((RANDOM % planned_followups))
+fi
+
+# Occasionally a distracted developer only gives the first turn a very short amount of time
+# before walking away; if that turn actually times out, treat the whole session as abandoned
+# (there is no session to resume).
+first_timeout="$TIMEOUT_S"
+short_timeout_roll=0
+if ((RANDOM % 100 < SHORT_TIMEOUT_PERCENT)); then
+  first_timeout="$SHORT_TIMEOUT_S"
+  short_timeout_roll=1
+fi
+
 # Auto-approved tools: what the prompts in PROMPTS_DIR need and no more. No curl, rm, npm or npx
-# (fetching goes through the fetch MCP server, clones stay in the session directory, which is
-# deleted afterwards). python3 and node remain for the prompts that write and run small scripts;
-# the container's network isolation (agent-host-firewall) is what bounds them. File edits and
-# writes are approved only under the session directory (an Edit path rule also governs Write);
-# the user-scope config is denied outright, and dev-reseed resets it before every session anyway.
+# (fetching goes through the fetch MCP server; the seeded repo is deleted with the session
+# directory afterwards). Prompts no longer clone external repositories (they work inside the
+# seeded Touchline checkout), so git is read-only plus local checkout/restore/reset; no git
+# clone/ls-remote. python3 and node remain for the prompts that write and run small scripts; the
+# container's network isolation (agent-host-firewall) is what bounds them. File edits and writes
+# are approved only under the session directory (an Edit path rule also governs Write); the
+# user-scope config is denied outright, and dev-reseed resets it before every session anyway.
 allowed=(
   Read "Edit(./**)" Glob Grep "mcp__$MCP" mcp__time mcp__context7 mcp__deepwiki mcp__fetch mcp__git
   mcp__sequential-thinking mcp__memory
-  "Bash(git clone:*)" "Bash(git ls-remote:*)" "Bash(git log:*)" "Bash(git diff:*)"
-  "Bash(git status:*)" "Bash(git show:*)" "Bash(git reset:*)" "Bash(git checkout:*)"
-  "Bash(git restore:*)" "Bash(ls:*)" "Bash(cat:*)" "Bash(head:*)" "Bash(tail:*)" "Bash(wc:*)"
-  "Bash(grep:*)" "Bash(find:*)" "Bash(sort:*)" "Bash(uniq:*)" "Bash(diff:*)" "Bash(mkdir:*)"
-  "Bash(awk:*)" "Bash(cd:*)" "Bash(jq:*)" "Bash(python3:*)" "Bash(node:*)"
+  "Bash(git log:*)" "Bash(git diff:*)" "Bash(git status:*)" "Bash(git show:*)"
+  "Bash(git reset:*)" "Bash(git checkout:*)" "Bash(git restore:*)" "Bash(ls:*)" "Bash(cat:*)"
+  "Bash(head:*)" "Bash(tail:*)" "Bash(wc:*)" "Bash(grep:*)" "Bash(find:*)" "Bash(sort:*)"
+  "Bash(uniq:*)" "Bash(diff:*)" "Bash(mkdir:*)" "Bash(awk:*)" "Bash(cd:*)" "Bash(jq:*)"
+  "Bash(python3:*)" "Bash(node:*)"
 )
 denied=("Edit(~/.claude/**)" "Read(~/.claude/**)")
 
-started="$(date -u +%FT%TZ)"
-set +e
-result="$(timeout "$TIMEOUT_S" claude -p "$prompt" --model "$model" --effort "$EFFORT" \
-  --max-budget-usd "$BUDGET_USD" \
-  --append-system-prompt "Work only inside the current working directory: clone repositories into it and create files in it. Never commit or push." \
-  --allowedTools "${allowed[@]}" --disallowedTools "${denied[@]}" --output-format json 2>"$STATE_DIR/last-stderr.log" | tail -n 1)"
-rc=$?
-set -e
+system_prompt="Work only inside the current repository (already checked out here). Never commit, push, or clone another repository."
 
-# A lapsed or revoked gateway session: ask the loop to sign in again before the next run. Only
-# stderr and the text of an error result are checked; a normal answer that happens to mention
-# "401" or "unauthorized" must not trigger a sign-in.
-error_text="$(jq -r 'select(.is_error == true) | .result // empty' <<<"$result" 2>/dev/null || true)"
-if printf '%s\n' "$error_text" | cat "$STATE_DIR/last-stderr.log" - \
-    | grep -qiE 'gateway sign-in|not logged in|run /login|\b401\b|unauthori[sz]ed|session (has )?expired'; then
-  touch "$STATE_DIR/relogin-needed"
-fi
+run_turn() {
+  local text="$1" resume_id="$2" to="$3"
+  local -a resume_flag=()
+  [[ -n "$resume_id" ]] && resume_flag=(--resume "$resume_id")
+  set +e
+  last_result="$(timeout "$to" claude -p "$text" --model "$model" --effort "$effort" \
+    --max-budget-usd "$budget_remaining" "${resume_flag[@]}" \
+    --append-system-prompt "$system_prompt" \
+    --allowedTools "${allowed[@]}" --disallowedTools "${denied[@]}" \
+    --output-format json 2>"$STATE_DIR/last-stderr.log" | tail -n 1)"
+  last_rc=$?
+  set -e
+}
 
-jq -cn --arg started "$started" --arg developer "${DEVELOPER_NAME:-}" --arg team "$TEAM" \
-  --arg scenario "$scenario" --arg title "$title" --arg model "$model" --argjson rc "$rc" \
-  --arg result "$result" --arg stderr "$(tail -c 400 "$STATE_DIR/last-stderr.log" 2>/dev/null)" '
+cumulative_cost="0"
+user_turns=0
+session_id=""
+all_denials='[]'
+last_result=""
+last_rc=0
+any_guard_blocked=0
+
+for ((i = 0; i <= target_followups; i++)); do
+  if ((i == 0)); then
+    turn_timeout="$first_timeout"
+    turn_text="${turns[0]}"
+    resume=""
+  else
+    turn_timeout="$TIMEOUT_S"
+    turn_text="${turns[i]}"
+    resume="$session_id"
+  fi
+
+  budget_remaining="$(awk -v b="$budget_usd" -v c="$cumulative_cost" \
+    'BEGIN{ r=b-c; if (r<0) r=0; printf "%.6f", r }')"
+  run_turn "$turn_text" "$resume" "$turn_timeout"
+  user_turns=$((user_turns + 1))
+
+  # A lapsed or revoked gateway session: ask the loop to sign in again before the next run. Only
+  # stderr and the text of an error result are checked; a normal answer that happens to mention
+  # "401" or "unauthorized" must not trigger a sign-in.
+  error_text="$(jq -r 'select(.is_error == true) | .result // empty' <<<"$last_result" 2>/dev/null || true)"
+  if printf '%s\n' "$error_text" | cat "$STATE_DIR/last-stderr.log" - \
+      | grep -qiE 'gateway sign-in|not logged in|run /login|\b401\b|unauthori[sz]ed|session (has )?expired'; then
+    touch "$STATE_DIR/relogin-needed"
+  fi
+
+  if printf '%s' "${last_result}$(tail -c 400 "$STATE_DIR/last-stderr.log" 2>/dev/null)" \
+      | grep -qiE 'blocked by hook|policy blocked'; then
+    any_guard_blocked=1
+  fi
+
+  turn_cost="$(jq -r '.total_cost_usd // 0' <<<"$last_result" 2>/dev/null || echo 0)"
+  turn_session_id="$(jq -r '.session_id // empty' <<<"$last_result" 2>/dev/null || true)"
+  [[ -n "$turn_session_id" ]] && session_id="$turn_session_id"
+  turn_denials="$(jq -c '.permission_denials // [] | map(.tool_name)' <<<"$last_result" 2>/dev/null || echo '[]')"
+  all_denials="$(jq -cn --argjson a "$all_denials" --argjson b "$turn_denials" '$a + $b' 2>/dev/null || echo "$all_denials")"
+  # total_cost_usd after --resume is the whole session so far (the resumed session restores its
+  # cost), not this turn's, so it replaces the running total; max() guards a result without it.
+  cumulative_cost="$(awk -v c="$cumulative_cost" -v t="$turn_cost" 'BEGIN{ printf "%.6f", (t+0 > c+0 ? t : c) }')"
+
+  # Stop the conversation on a hard error, a session with no resumable id, or (once the budget
+  # tracked above is spent) nothing meaningful left to spend on another turn.
+  if ((last_rc != 0)) || [[ -z "$session_id" ]]; then break; fi
+  remaining_after="$(awk -v b="$budget_usd" -v c="$cumulative_cost" \
+    'BEGIN{ r=b-c; if (r<0) r=0; printf "%.6f", r }')"
+  if awk -v r="$remaining_after" -v m="$MIN_REMAINING_BUDGET_USD" 'BEGIN{ exit !(r+0<=m+0) }'; then break; fi
+done
+
+followups_sent=$((user_turns - 1))
+abandoned_flag=0
+if ((followups_sent < planned_followups)); then abandoned_flag=1; fi
+if ((short_timeout_roll == 1)) && ((last_rc != 0)); then abandoned_flag=1; fi
+
+final_stderr="$(tail -c 400 "$STATE_DIR/last-stderr.log" 2>/dev/null)"
+
+jq -cn --arg started "$started" --arg developer "${DEVELOPER_NAME:-}" --arg team "$TEAM_DEFAULT" \
+  --arg scenario "$scenario" --arg title "$title" --arg model "$model" --arg effort "$effort" \
+  --argjson rc "$last_rc" --argjson budget_usd "$budget_usd" --argjson cost_usd "$cumulative_cost" \
+  --argjson user_turns "$user_turns" --argjson abandoned "$(bool "$abandoned_flag")" \
+  --argjson guard_blocked "$(bool "$any_guard_blocked")" --argjson denials "$all_denials" \
+  --arg session_id "$session_id" --arg result "$last_result" --arg stderr "$final_stderr" '
   ($result | try fromjson catch {}) as $r
   | {event: "dev_session", started: $started, developer: $developer, team: $team,
-     scenario: $scenario, title: $title, model: $model, rc: $rc,
-     pii_probe: ($scenario | startswith("pii-")),
-     guard_blocked: (($result + $stderr) | test("blocked by hook|policy blocked"; "i")),
-     subtype: $r.subtype, is_error: $r.is_error, cost_usd: $r.total_cost_usd, turns: $r.num_turns,
-     denials: ($r.permission_denials // [] | map(.tool_name)), session_id: $r.session_id,
+     scenario: $scenario, title: $title, model: $model, effort: $effort, budget_usd: $budget_usd,
+     rc: $rc, pii_probe: ($scenario | startswith("pii-")), guard_blocked: $guard_blocked,
+     subtype: $r.subtype, is_error: $r.is_error, cost_usd: $cost_usd, turns: $r.num_turns,
+     user_turns: $user_turns, abandoned: $abandoned,
+     denials: $denials, session_id: (if $session_id == "" then null else $session_id end),
      error: (if $rc != 0 or ($r.is_error // false) then ($r.result // $stderr | tostring | .[0:300]) else null end)}'
