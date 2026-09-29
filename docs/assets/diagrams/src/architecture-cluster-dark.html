@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Touchline in the EKS cluster</title>
+  <!-- Source for docs/assets/diagrams/architecture-cluster-dark.png, drawn with the diagram-design skill (default style guide). -->
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-paper: #2d3142;
+      --color-ink: #f5f5f5;
+      --color-muted: #bfc0c0;
+      --color-accent: #f08a59;
+      --font-sans: 'Geist', system-ui, sans-serif;
+      --font-serif: 'Instrument Serif', serif;
+      --font-mono: 'Geist Mono', ui-monospace, monospace;
+    }
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-paper);
+      color: var(--color-ink);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 2rem;
+    }
+    .frame { max-width: 1256px; width: 100%; }
+    .diagram-container { width: 100%; overflow-x: auto; }
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      margin-bottom: 0.5rem;
+    }
+    h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      color: var(--color-ink);
+      margin-bottom: 1.5rem;
+    }
+    svg { width: 100%; min-width: 1216px; display: block; }
+    @media print {
+      .diagram-container { overflow-x: visible; }
+      svg { min-width: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Architecture · In the cluster</p>
+    <h1>Touchline in the EKS cluster</h1>
+    <div class="diagram-container">
+<svg viewBox="0 0 1216 656" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="architecture-cluster-dark-title architecture-cluster-dark-desc">
+<title id="architecture-cluster-dark-title">Touchline in the EKS cluster</title>
+<desc id="architecture-cluster-dark-desc">The Touchline site, its Redis cache, the orchestrator and four specialist agents, the load generator, the experiments CronJob and the Alloy collector in the touchline namespace, with the agents calling Bedrock and sending generations to Agent Observability.</desc>
+<defs>
+<marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bfc0c0"/></marker>
+<marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#f08a59"/></marker>
+<marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6a95d8"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#2d3142"/>
+<rect x="40" y="64" width="848" height="436" rx="8" fill="rgba(245,245,245,0.025)" stroke="rgba(245,245,245,0.12)" stroke-width="0.8"/>
+<rect x="52" y="70" width="264" height="12" rx="2" fill="#2d3142"/>
+<g transform="translate(57,69) scale(0.583333)" fill="#bfc0c0" stroke="none" aria-hidden="true"><path d="M10.204 14.35l.007.01-.999 2.413a5.171 5.171 0 0 1-2.075-2.597l2.578-.437.004.005a.44.44 0 0 1 .484.606zm-.833-2.129a.44.44 0 0 0 .173-.756l.002-.011L7.585 9.7a5.143 5.143 0 0 0-.73 3.255l2.514-.725.002-.009zm1.145-1.98a.44.44 0 0 0 .699-.337l.01-.005.15-2.62a5.144 5.144 0 0 0-3.01 1.442l2.147 1.523.004-.002zm.76 2.75l.723.349.722-.347.18-.78-.5-.623h-.804l-.5.623.179.779zm1.5-3.095a.44.44 0 0 0 .7.336l.008.003 2.134-1.513a5.188 5.188 0 0 0-2.992-1.442l.148 2.615.002.001zm10.876 5.97l-5.773 7.181a1.6 1.6 0 0 1-1.248.594l-9.261.003a1.6 1.6 0 0 1-1.247-.596l-5.776-7.18a1.583 1.583 0 0 1-.307-1.34L2.1 5.573c.108-.47.425-.864.863-1.073L11.305.513a1.606 1.606 0 0 1 1.385 0l8.345 3.985c.438.209.755.604.863 1.073l2.062 8.955c.108.47-.005.963-.308 1.34zm-3.289-2.057c-.042-.01-.103-.026-.145-.034-.174-.033-.315-.025-.479-.038-.35-.037-.638-.067-.895-.148-.105-.04-.18-.165-.216-.216l-.201-.059a6.45 6.45 0 0 0-.105-2.332 6.465 6.465 0 0 0-.936-2.163c.052-.047.15-.133.177-.159.008-.09.001-.183.094-.282.197-.185.444-.338.743-.522.142-.084.273-.137.415-.242.032-.024.076-.062.11-.089.24-.191.295-.52.123-.736-.172-.216-.506-.236-.745-.045-.034.027-.08.062-.111.088-.134.116-.217.23-.33.35-.246.25-.45.458-.673.609-.097.056-.239.037-.303.033l-.19.135a6.545 6.545 0 0 0-4.146-2.003l-.012-.223c-.065-.062-.143-.115-.163-.25-.022-.268.015-.557.057-.905.023-.163.061-.298.068-.475.001-.04-.001-.099-.001-.142 0-.306-.224-.555-.5-.555-.275 0-.499.249-.499.555l.001.014c0 .041-.002.092 0 .128.006.177.044.312.067.475.042.348.078.637.056.906a.545.545 0 0 1-.162.258l-.012.211a6.424 6.424 0 0 0-4.166 2.003 8.373 8.373 0 0 1-.18-.128c-.09.012-.18.04-.297-.029-.223-.15-.427-.358-.673-.608-.113-.12-.195-.234-.329-.349-.03-.026-.077-.062-.111-.088a.594.594 0 0 0-.348-.132.481.481 0 0 0-.398.176c-.172.216-.117.546.123.737l.007.005.104.083c.142.105.272.159.414.242.299.185.546.338.743.522.076.082.09.226.1.288l.16.143a6.462 6.462 0 0 0-1.02 4.506l-.208.06c-.055.072-.133.184-.215.217-.257.081-.546.11-.895.147-.164.014-.305.006-.48.039-.037.007-.09.02-.133.03l-.004.002-.007.002c-.295.071-.484.342-.423.608.061.267.349.429.645.365l.007-.001.01-.003.129-.029c.17-.046.294-.113.448-.172.33-.118.604-.217.87-.256.112-.009.23.069.288.101l.217-.037a6.5 6.5 0 0 0 2.88 3.596l-.09.218c.033.084.069.199.044.282-.097.252-.263.517-.452.813-.091.136-.185.242-.268.399-.02.037-.045.095-.064.134-.128.275-.034.591.213.71.248.12.556-.007.69-.282v-.002c.02-.039.046-.09.062-.127.07-.162.094-.301.144-.458.132-.332.205-.68.387-.897.05-.06.13-.082.215-.105l.113-.205a6.453 6.453 0 0 0 4.609.012l.106.192c.086.028.18.042.256.155.136.232.229.507.342.84.05.156.074.295.145.457.016.037.043.09.062.129.133.276.442.402.69.282.247-.118.341-.435.213-.71-.02-.039-.045-.096-.065-.134-.083-.156-.177-.261-.268-.398-.19-.296-.346-.541-.443-.793-.04-.13.007-.21.038-.294-.018-.022-.059-.144-.083-.202a6.499 6.499 0 0 0 2.88-3.622c.064.01.176.03.213.038.075-.05.144-.114.28-.104.266.039.54.138.87.256.154.06.277.128.448.173.036.01.088.019.13.028l.009.003.007.001c.297.064.584-.098.645-.365.06-.266-.128-.537-.423-.608zM16.4 9.701l-1.95 1.746v.005a.44.44 0 0 0 .173.757l.003.01 2.526.728a5.199 5.199 0 0 0-.108-1.674A5.208 5.208 0 0 0 16.4 9.7zm-4.013 5.325a.437.437 0 0 0-.404-.232.44.44 0 0 0-.372.233h-.002l-1.268 2.292a5.164 5.164 0 0 0 3.326.003l-1.27-2.296h-.01zm1.888-1.293a.44.44 0 0 0-.27.036.44.44 0 0 0-.214.572l-.003.004 1.01 2.438a5.15 5.15 0 0 0 2.081-2.615l-2.6-.44-.004.005z"/></g>
+<text x="75" y="79" fill="rgba(245,245,245,0.55)" font-size="8" font-weight="500" font-family="'Geist Mono', monospace" letter-spacing="0.14em">EKS · NAMESPACE TOUCHLINE · HELM CHART</text>
+<rect x="476" y="96" width="396" height="284" rx="8" fill="rgba(245,245,245,0.025)" stroke="rgba(245,245,245,0.12)" stroke-width="0.8"/>
+<rect x="488" y="102" width="184" height="12" rx="2" fill="#2d3142"/>
+<g transform="translate(493,101) scale(0.583333)" fill="none" stroke="#bfc0c0" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2l0 -4" /> <path d="M12 2v2" /> <path d="M9 12v9" /> <path d="M15 12v9" /> <path d="M5 16l4 -2" /> <path d="M15 14l4 2" /> <path d="M9 18h6" /> <path d="M10 8v.01" /> <path d="M14 8v.01" /></g>
+<text x="511" y="111" fill="rgba(245,245,245,0.55)" font-size="8" font-weight="500" font-family="'Geist Mono', monospace" letter-spacing="0.14em">FIVE AI AGENTS, ONE IMAGE</text>
+<rect x="952" y="104" width="232" height="120" rx="8" fill="rgba(245,245,245,0.025)" stroke="rgba(245,245,245,0.12)" stroke-width="0.8"/>
+<rect x="964" y="110" width="52" height="12" rx="2" fill="#2d3142"/>
+<g transform="translate(969,109) scale(0.583333)" fill="none" stroke="#bfc0c0" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 18.5a15.198 15.198 0 0 1 -7.37 1.44a14.62 14.62 0 0 1 -6.63 -2.94" /> <path d="M19.5 21c.907 -1.411 1.451 -3.323 1.5 -5c-1.197 -.773 -2.577 -.935 -4 -1" /> <path d="M3 11v-4.5a1.5 1.5 0 0 1 3 0v4.5" /> <path d="M3 9h3" /> <path d="M9 5l1.2 6l1.8 -4l1.8 4l1.2 -6" /> <path d="M18 10.25c0 .414 .336 .75 .75 .75h1.25a1 1 0 0 0 1 -1v-1a1 1 0 0 0 -1 -1h-1a1 1 0 0 1 -1 -1v-1a1 1 0 0 1 1 -1h1.25a.75 .75 0 0 1 .75 .75" /></g>
+<text x="987" y="119" fill="rgba(245,245,245,0.55)" font-size="8" font-weight="500" font-family="'Geist Mono', monospace" letter-spacing="0.14em">AWS</text>
+<rect x="952" y="236" width="232" height="344" rx="8" fill="rgba(245,245,245,0.025)" stroke="rgba(245,245,245,0.12)" stroke-width="0.8"/>
+<rect x="964" y="242" width="112" height="12" rx="2" fill="#2d3142"/>
+<g transform="translate(969,241) scale(0.583333)" fill="none" stroke="#bfc0c0" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.657 18c-2.572 0 -4.657 -2.007 -4.657 -4.483c0 -2.475 2.085 -4.482 4.657 -4.482c.393 -1.762 1.794 -3.2 3.675 -3.773c1.88 -.572 3.956 -.193 5.444 1c1.488 1.19 2.162 3.007 1.77 4.769h.99c1.913 0 3.464 1.56 3.464 3.486c0 1.927 -1.551 3.487 -3.465 3.487h-11.878" /></g>
+<text x="987" y="251" fill="rgba(245,245,245,0.55)" font-size="8" font-weight="500" font-family="'Geist Mono', monospace" letter-spacing="0.14em">GRAFANA CLOUD</text>
+<path d="M 232,240 H 264" fill="none" stroke="#bfc0c0" stroke-width="1.2" marker-end="url(#arrow)"/>
+<path d="M 232,348 H 240 Q 248,348 248,340 V 272 Q 248,264 256,264 H 264" fill="none" stroke="#bfc0c0" stroke-width="1.2" marker-end="url(#arrow)"/>
+<path d="M 320,280 V 320" fill="none" stroke="#bfc0c0" stroke-width="1.2" marker-end="url(#arrow)"/>
+<path d="M 448,252 H 496" fill="none" stroke="#bfc0c0" stroke-width="1.2" marker-end="url(#arrow)"/>
+<path d="M 448,140 H 552 Q 560,140 560,148 V 200" fill="none" stroke="#bfc0c0" stroke-width="1.2" marker-end="url(#arrow)"/>
+<path d="M 656,216 H 662 Q 668,216 668,210 V 152 Q 668,144 676,144 H 696" fill="none" stroke="#bfc0c0" stroke-width="1.2" marker-end="url(#arrow)"/>
+<path d="M 656,232 H 672 Q 680,232 680,224 V 216 Q 680,208 688,208 H 696" fill="none" stroke="#bfc0c0" stroke-width="1.2" marker-end="url(#arrow)"/>
+<path d="M 656,248 H 672 Q 680,248 680,256 V 264 Q 680,272 688,272 H 696" fill="none" stroke="#bfc0c0" stroke-width="1.2" marker-end="url(#arrow)"/>
+<path d="M 656,264 H 662 Q 668,264 668,270 V 328 Q 668,336 676,336 H 696" fill="none" stroke="#bfc0c0" stroke-width="1.2" marker-end="url(#arrow)"/>
+<path d="M 872,180 H 968" fill="none" stroke="#6a95d8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+<path d="M 872,304 H 968" fill="none" stroke="#f08a59" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+<path d="M 576,380 V 424" fill="none" stroke="#bfc0c0" stroke-width="1.0" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+<path d="M 412,280 V 444 Q 412,452 420,452 H 496" fill="none" stroke="#bfc0c0" stroke-width="1.0" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+<path d="M 656,452 H 968" fill="none" stroke="#bfc0c0" stroke-width="1.0" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+<path d="M 144,376 V 524 Q 144,532 152,532 H 968" fill="none" stroke="#bfc0c0" stroke-width="1.0" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+<rect x="882" y="158" width="76" height="12" rx="2" fill="#2d3142"/>
+<text x="920" y="167" fill="#6a95d8" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">POD IDENTITY</text>
+<rect x="884" y="282" width="72" height="12" rx="2" fill="#2d3142"/>
+<text x="920" y="291" fill="#f08a59" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">GENERATIONS</text>
+<rect x="592" y="396" width="32" height="12" rx="2" fill="#2d3142"/>
+<text x="608" y="405" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">OTLP</text>
+<rect x="420" y="394" width="32" height="12" rx="2" fill="#2d3142"/>
+<text x="436" y="403" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">OTLP</text>
+<rect x="704" y="432" width="32" height="12" rx="2" fill="#2d3142"/>
+<text x="720" y="441" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">OTLP</text>
+<rect x="744" y="512" width="32" height="12" rx="2" fill="#2d3142"/>
+<text x="760" y="521" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">FARO</text>
+<g data-node="exp">
+<rect x="264" y="112" width="184" height="56" rx="6" fill="#2d3142"/>
+<rect x="264" y="112" width="184" height="56" rx="6" fill="rgba(191,192,192,0.10)" stroke="#8e98ac" stroke-width="1"/>
+<rect x="274" y="126" width="28" height="28" rx="4" fill="rgba(191,192,192,0.12)"/>
+<g transform="translate(279,131) scale(0.75)" fill="none" stroke="#bfc0c0" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 8.04l-12.122 12.124a2.857 2.857 0 1 1 -4.041 -4.04l12.122 -12.124" /> <path d="M7 13h8" /> <path d="M19 15l1.5 1.6a2 2 0 1 1 -3 0l1.5 -1.6" /> <path d="M15 3l6 6" /></g>
+<text data-fit="1" x="310" y="138" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Experiments CronJob</text>
+<text data-fit="1" x="310" y="152" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace">prompt, model variants</text>
+</g>
+<g data-node="loadgen">
+<rect x="56" y="224" width="176" height="56" rx="6" fill="#2d3142"/>
+<rect x="56" y="224" width="176" height="56" rx="6" fill="rgba(191,192,192,0.10)" stroke="#8e98ac" stroke-width="1"/>
+<rect x="66" y="238" width="28" height="28" rx="4" fill="rgba(191,192,192,0.12)"/>
+<g transform="translate(71,243) scale(0.75)" fill="none" stroke="#bfc0c0" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l14 0" /> <path d="M13 18l6 -6" /> <path d="M13 6l6 6" /></g>
+<text data-fit="1" x="102" y="250" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Load generator</text>
+<text data-fit="1" x="102" y="264" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace">reader personas</text>
+</g>
+<g data-node="browser">
+<rect x="56" y="320" width="176" height="56" rx="6" fill="#2d3142"/>
+<rect x="56" y="320" width="176" height="56" rx="6" fill="rgba(191,192,192,0.10)" stroke="#8e98ac" stroke-width="1"/>
+<rect x="66" y="334" width="28" height="28" rx="4" fill="rgba(191,192,192,0.12)"/>
+<g transform="translate(71,339) scale(0.75)" fill="none" stroke="#bfc0c0" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" /> <path d="M3.6 9h16.8" /> <path d="M3.6 15h16.8" /> <path d="M11.5 3a17 17 0 0 0 0 18" /> <path d="M12.5 3a17 17 0 0 1 0 18" /></g>
+<text data-fit="1" x="102" y="346" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Reader browser</text>
+<text data-fit="1" x="102" y="360" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace">Faro, site-browser job</text>
+</g>
+<g data-node="site">
+<rect x="264" y="224" width="184" height="56" rx="6" fill="#2d3142"/>
+<rect x="264" y="224" width="184" height="56" rx="6" fill="#393e53" stroke="#f5f5f5" stroke-width="1"/>
+<rect x="274" y="238" width="28" height="28" rx="4" fill="rgba(245,245,245,0.06)"/>
+<g transform="translate(279,243) scale(0.75)" fill="none" stroke="#f5f5f5" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4a2 2 0 0 0 -2 2v3a2 3 0 0 1 -2 3a2 3 0 0 1 2 3v3a2 2 0 0 0 2 2" /> <path d="M17 4a2 2 0 0 1 2 2v3a2 3 0 0 0 2 3a2 3 0 0 0 -2 3v3a2 2 0 0 1 -2 2" /></g>
+<text data-fit="1" x="310" y="250" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Site API</text>
+<text data-fit="1" x="310" y="264" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace">touchline-site-api</text>
+</g>
+<g data-node="redis">
+<rect x="264" y="320" width="112" height="56" rx="6" fill="#2d3142"/>
+<rect x="264" y="320" width="112" height="56" rx="6" fill="rgba(245,245,245,0.05)" stroke="#bfc0c0" stroke-width="1"/>
+<rect x="274" y="334" width="28" height="28" rx="4" fill="rgba(191,192,192,0.12)"/>
+<g transform="translate(279,339) scale(0.75)" fill="none" stroke="#bfc0c0" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6a8 3 0 1 0 16 0a8 3 0 1 0 -16 0" /> <path d="M4 6v6a8 3 0 0 0 16 0v-6" /> <path d="M4 12v6a8 3 0 0 0 16 0v-6" /></g>
+<text data-fit="1" x="310" y="346" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Redis</text>
+<text data-fit="1" x="310" y="360" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace">odds cache</text>
+</g>
+<g data-node="orch">
+<rect x="496" y="200" width="160" height="80" rx="6" fill="#2d3142"/>
+<rect x="496" y="200" width="160" height="80" rx="6" fill="#393e53" stroke="#f5f5f5" stroke-width="1"/>
+<rect x="506" y="226" width="28" height="28" rx="4" fill="rgba(245,245,245,0.06)"/>
+<g transform="translate(511,231) scale(0.75)" fill="none" stroke="#f5f5f5" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2l0 -4" /> <path d="M12 2v2" /> <path d="M9 12v9" /> <path d="M15 12v9" /> <path d="M5 16l4 -2" /> <path d="M15 14l4 2" /> <path d="M9 18h6" /> <path d="M10 8v.01" /> <path d="M14 8v.01" /></g>
+<text data-fit="1" x="542" y="232.5" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Orchestrator</text>
+<text data-fit="1" x="542" y="246.5" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace">POST /v1/ask,</text>
+<text data-fit="1" x="542" y="257.5" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace">shared tools</text>
+</g>
+<g data-node="news">
+<rect x="696" y="120" width="160" height="48" rx="6" fill="#2d3142"/>
+<rect x="696" y="120" width="160" height="48" rx="6" fill="#393e53" stroke="#f5f5f5" stroke-width="1"/>
+<rect x="706" y="130" width="28" height="28" rx="4" fill="rgba(245,245,245,0.06)"/>
+<g transform="translate(711,135) scale(0.75)" fill="none" stroke="#f5f5f5" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2l0 -4" /> <path d="M12 2v2" /> <path d="M9 12v9" /> <path d="M15 12v9" /> <path d="M5 16l4 -2" /> <path d="M15 14l4 2" /> <path d="M9 18h6" /> <path d="M10 8v.01" /> <path d="M14 8v.01" /></g>
+<text data-fit="1" x="742" y="147.5" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif">News agent</text>
+</g>
+<g data-node="odds">
+<rect x="696" y="184" width="160" height="48" rx="6" fill="#2d3142"/>
+<rect x="696" y="184" width="160" height="48" rx="6" fill="#393e53" stroke="#f5f5f5" stroke-width="1"/>
+<rect x="706" y="194" width="28" height="28" rx="4" fill="rgba(245,245,245,0.06)"/>
+<g transform="translate(711,199) scale(0.75)" fill="none" stroke="#f5f5f5" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2l0 -4" /> <path d="M12 2v2" /> <path d="M9 12v9" /> <path d="M15 12v9" /> <path d="M5 16l4 -2" /> <path d="M15 14l4 2" /> <path d="M9 18h6" /> <path d="M10 8v.01" /> <path d="M14 8v.01" /></g>
+<text data-fit="1" x="742" y="211.5" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Odds agent</text>
+</g>
+<g data-node="ed">
+<rect x="696" y="248" width="160" height="48" rx="6" fill="#2d3142"/>
+<rect x="696" y="248" width="160" height="48" rx="6" fill="#393e53" stroke="#f5f5f5" stroke-width="1"/>
+<rect x="706" y="258" width="28" height="28" rx="4" fill="rgba(245,245,245,0.06)"/>
+<g transform="translate(711,263) scale(0.75)" fill="none" stroke="#f5f5f5" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2l0 -4" /> <path d="M12 2v2" /> <path d="M9 12v9" /> <path d="M15 12v9" /> <path d="M5 16l4 -2" /> <path d="M15 14l4 2" /> <path d="M9 18h6" /> <path d="M10 8v.01" /> <path d="M14 8v.01" /></g>
+<text data-fit="1" x="742" y="275.5" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Editorial agent</text>
+</g>
+<g data-node="comp">
+<rect x="696" y="312" width="160" height="48" rx="6" fill="#2d3142"/>
+<rect x="696" y="312" width="160" height="48" rx="6" fill="#393e53" stroke="#f5f5f5" stroke-width="1"/>
+<rect x="706" y="322" width="28" height="28" rx="4" fill="rgba(245,245,245,0.06)"/>
+<g transform="translate(711,327) scale(0.75)" fill="none" stroke="#f5f5f5" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2l0 -4" /> <path d="M12 2v2" /> <path d="M9 12v9" /> <path d="M15 12v9" /> <path d="M5 16l4 -2" /> <path d="M15 14l4 2" /> <path d="M9 18h6" /> <path d="M10 8v.01" /> <path d="M14 8v.01" /></g>
+<text data-fit="1" x="742" y="339.5" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Compliance agent</text>
+</g>
+<g data-node="alloy">
+<rect x="496" y="424" width="160" height="56" rx="6" fill="#2d3142"/>
+<rect x="496" y="424" width="160" height="56" rx="6" fill="#393e53" stroke="#f5f5f5" stroke-width="1"/>
+<rect x="506" y="438" width="28" height="28" rx="4" fill="rgba(245,245,245,0.06)"/>
+<g transform="translate(511,443) scale(0.75)" fill="none" stroke="#f5f5f5" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 18a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /> <path d="M5 6a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /> <path d="M15 12a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /> <path d="M7 8l0 8" /> <path d="M7 8a4 4 0 0 0 4 4h4" /></g>
+<text data-fit="1" x="542" y="450" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Alloy</text>
+<text data-fit="1" x="542" y="464" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace">OTLP in, pod logs</text>
+</g>
+<g data-node="bedrock">
+<rect x="968" y="148" width="208" height="64" rx="6" fill="#2d3142"/>
+<rect x="968" y="148" width="208" height="64" rx="6" fill="rgba(245,245,245,0.03)" stroke="rgba(245,245,245,0.30)" stroke-width="1"/>
+<rect x="978" y="166" width="28" height="28" rx="4" fill="rgba(245,245,245,0.06)"/>
+<g transform="translate(983,171) scale(0.75)" fill="none" stroke="#bfc0c0" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.657 18c-2.572 0 -4.657 -2.007 -4.657 -4.483c0 -2.475 2.085 -4.482 4.657 -4.482c.393 -1.762 1.794 -3.2 3.675 -3.773c1.88 -.572 3.956 -.193 5.444 1c1.488 1.19 2.162 3.007 1.77 4.769h.99c1.913 0 3.464 1.56 3.464 3.486c0 1.927 -1.551 3.487 -3.465 3.487h-11.878" /></g>
+<text data-fit="1" x="1014" y="172.5" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Amazon Bedrock</text>
+<text data-fit="1" x="1014" y="186.5" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace">inference profile</text>
+<text data-fit="1" x="1014" y="197.5" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace">per team and model</text>
+</g>
+<g data-node="ao">
+<rect x="968" y="272" width="208" height="64" rx="6" fill="#2d3142"/>
+<rect x="968" y="272" width="208" height="64" rx="6" fill="rgba(240,138,89,0.08)" stroke="#f08a59" stroke-width="1"/>
+<rect x="978" y="290" width="28" height="28" rx="4" fill="rgba(240,138,89,0.12)"/>
+<g transform="translate(983,295) scale(0.75)" fill="none" stroke="#f08a59" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" /> <path d="M21 21l-6 -6" /></g>
+<text data-fit="1" x="1014" y="296.5" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Agent Observability</text>
+<text data-fit="1" x="1014" y="310.5" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace">generations, guards,</text>
+<text data-fit="1" x="1014" y="321.5" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace">online evaluations</text>
+</g>
+<g data-node="otlp">
+<rect x="968" y="424" width="208" height="56" rx="6" fill="#2d3142"/>
+<rect x="968" y="424" width="208" height="56" rx="6" fill="rgba(245,245,245,0.03)" stroke="rgba(245,245,245,0.30)" stroke-width="1"/>
+<rect x="978" y="438" width="28" height="28" rx="4" fill="rgba(245,245,245,0.06)"/>
+<g transform="translate(983,443) scale(0.75)" fill="none" stroke="#bfc0c0" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 12h13" /> <path d="M18 9l3 3l-3 3" /> <path d="M5.5 9.5l-2.5 2.5l2.5 2.5l2.5 -2.5l-2.5 -2.5" /></g>
+<text data-fit="1" x="1014" y="450" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif">OTLP gateway</text>
+<text data-fit="1" x="1014" y="464" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace">Mimir, Loki, Tempo</text>
+</g>
+<g data-node="fo">
+<rect x="968" y="504" width="208" height="56" rx="6" fill="#2d3142"/>
+<rect x="968" y="504" width="208" height="56" rx="6" fill="rgba(245,245,245,0.03)" stroke="rgba(245,245,245,0.30)" stroke-width="1"/>
+<rect x="978" y="518" width="28" height="28" rx="4" fill="rgba(245,245,245,0.06)"/>
+<g transform="translate(983,523) scale(0.75)" fill="none" stroke="#bfc0c0" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" /> <path d="M3.6 9h16.8" /> <path d="M3.6 15h16.8" /> <path d="M11.5 3a17 17 0 0 0 0 18" /> <path d="M12.5 3a17 17 0 0 1 0 18" /></g>
+<text data-fit="1" x="1014" y="530" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Frontend Observability</text>
+<text data-fit="1" x="1014" y="544" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace">page loads, web traces</text>
+</g>
+<line x1="40" y1="596" x2="1176" y2="596" stroke="rgba(245,245,245,0.10)" stroke-width="0.8"/>
+<text x="40" y="612" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.18em">KEY</text>
+<rect x="40" y="624" width="14" height="10" rx="2" fill="rgba(240,138,89,0.08)" stroke="#f08a59" stroke-width="1"/>
+<text x="60" y="632" fill="#bfc0c0" font-size="8.5" font-family="'Geist', sans-serif">Focal</text>
+<rect x="112.5" y="624" width="14" height="10" rx="2" fill="#393e53" stroke="#f5f5f5" stroke-width="1"/>
+<text x="132.5" y="632" fill="#bfc0c0" font-size="8.5" font-family="'Geist', sans-serif">Component</text>
+<rect x="204.6" y="624" width="14" height="10" rx="2" fill="rgba(245,245,245,0.05)" stroke="#bfc0c0" stroke-width="1"/>
+<text x="224.6" y="632" fill="#bfc0c0" font-size="8.5" font-family="'Geist', sans-serif">Store</text>
+<rect x="277.1" y="624" width="14" height="10" rx="2" fill="rgba(245,245,245,0.03)" stroke="rgba(245,245,245,0.30)" stroke-width="1"/>
+<text x="297.1" y="632" fill="#bfc0c0" font-size="8.5" font-family="'Geist', sans-serif">Managed service</text>
+<rect x="398.6" y="624" width="14" height="10" rx="2" fill="rgba(191,192,192,0.10)" stroke="#8e98ac" stroke-width="1"/>
+<text x="418.6" y="632" fill="#bfc0c0" font-size="8.5" font-family="'Geist', sans-serif">Driver or client</text>
+<line x1="525.0" y1="629" x2="553.0" y2="629" stroke="#bfc0c0" stroke-width="1.2" marker-end="url(#arrow)"/>
+<text x="561.0" y="632" fill="#bfc0c0" font-size="8.5" font-family="'Geist', sans-serif">Request</text>
+<line x1="623.3" y1="629" x2="651.3" y2="629" stroke="#6a95d8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+<text x="659.3" y="632" fill="#bfc0c0" font-size="8.5" font-family="'Geist', sans-serif">Model call</text>
+<line x1="736.3" y1="629" x2="764.3" y2="629" stroke="#f08a59" stroke-width="1.2" marker-end="url(#arrow-accent)"/>
+<text x="772.3" y="632" fill="#bfc0c0" font-size="8.5" font-family="'Geist', sans-serif">Generations</text>
+<line x1="854.1999999999999" y1="629" x2="882.1999999999999" y2="629" stroke="#bfc0c0" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+<text x="890.1999999999999" y="632" fill="#bfc0c0" font-size="8.5" font-family="'Geist', sans-serif">Telemetry</text>
+</svg>
+    </div>
+  </div>
+</body>
+</html>

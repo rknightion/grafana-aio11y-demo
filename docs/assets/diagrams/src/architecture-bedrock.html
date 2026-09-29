@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bedrock and its own telemetry</title>
+  <!-- Source for docs/assets/diagrams/architecture-bedrock.png, drawn with the diagram-design skill (default style guide). -->
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-paper: #f5f5f5;
+      --color-ink: #2d3142;
+      --color-muted: #4f5d75;
+      --color-accent: #eb6c36;
+      --font-sans: 'Geist', system-ui, sans-serif;
+      --font-serif: 'Instrument Serif', serif;
+      --font-mono: 'Geist Mono', ui-monospace, monospace;
+    }
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-paper);
+      color: var(--color-ink);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 2rem;
+    }
+    .frame { max-width: 1232px; width: 100%; }
+    .diagram-container { width: 100%; overflow-x: auto; }
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      margin-bottom: 0.5rem;
+    }
+    h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      color: var(--color-ink);
+      margin-bottom: 1.5rem;
+    }
+    svg { width: 100%; min-width: 1192px; display: block; }
+    @media print {
+      .diagram-container { overflow-x: visible; }
+      svg { min-width: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Architecture · On the AWS side</p>
+    <h1>Bedrock and its own telemetry</h1>
+    <div class="diagram-container">
+<svg viewBox="0 0 1192 396" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="architecture-bedrock-title architecture-bedrock-desc">
+<title id="architecture-bedrock-title">Bedrock and its own telemetry</title>
+<desc id="architecture-bedrock-desc">The in-app agents and the Claude apps gateway call per-team Bedrock application inference profiles; a CloudWatch metric stream and optional model invocation logging reach Grafana Cloud Metrics and Logs through Firehose.</desc>
+<defs>
+<marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
+<marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#eb6c36"/></marker>
+<marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<rect x="40" y="64" width="888" height="256" rx="10" fill="none" stroke="rgba(45,49,66,0.28)" stroke-width="1" stroke-dasharray="5,4"/>
+<rect x="52" y="58" width="128" height="12" rx="2" fill="#f5f5f5"/>
+<g transform="translate(57,57) scale(0.583333)" fill="none" stroke="#4f5d75" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 18.5a15.198 15.198 0 0 1 -7.37 1.44a14.62 14.62 0 0 1 -6.63 -2.94" /> <path d="M19.5 21c.907 -1.411 1.451 -3.323 1.5 -5c-1.197 -.773 -2.577 -.935 -4 -1" /> <path d="M3 11v-4.5a1.5 1.5 0 0 1 3 0v4.5" /> <path d="M3 9h3" /> <path d="M9 5l1.2 6l1.8 -4l1.8 4l1.2 -6" /> <path d="M18 10.25c0 .414 .336 .75 .75 .75h1.25a1 1 0 0 0 1 -1v-1a1 1 0 0 0 -1 -1h-1a1 1 0 0 1 -1 -1v-1a1 1 0 0 1 1 -1h1.25a.75 .75 0 0 1 .75 .75" /></g>
+<text x="75" y="67" fill="#4f5d75" font-size="8" font-weight="500" font-family="'Geist Mono', monospace" letter-spacing="0.14em">YOUR AWS ACCOUNT</text>
+<rect x="944" y="80" width="208" height="240" rx="8" fill="rgba(45,49,66,0.025)" stroke="rgba(45,49,66,0.12)" stroke-width="0.8"/>
+<rect x="956" y="86" width="112" height="12" rx="2" fill="#f5f5f5"/>
+<g transform="translate(961,85) scale(0.583333)" fill="none" stroke="#4f5d75" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.657 18c-2.572 0 -4.657 -2.007 -4.657 -4.483c0 -2.475 2.085 -4.482 4.657 -4.482c.393 -1.762 1.794 -3.2 3.675 -3.773c1.88 -.572 3.956 -.193 5.444 1c1.488 1.19 2.162 3.007 1.77 4.769h.99c1.913 0 3.464 1.56 3.464 3.486c0 1.927 -1.551 3.487 -3.465 3.487h-11.878" /></g>
+<text x="979" y="95" fill="rgba(45,49,66,0.55)" font-size="8" font-weight="500" font-family="'Geist Mono', monospace" letter-spacing="0.14em">GRAFANA CLOUD</text>
+<path d="M 240,140 H 280" fill="none" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+<path d="M 240,268 H 280" fill="none" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+<path d="M 464,140 H 504" fill="none" stroke="#4f5d75" stroke-width="1.0" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+<path d="M 688,140 H 728" fill="none" stroke="#4f5d75" stroke-width="1.0" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+<path d="M 912,140 H 960" fill="none" stroke="#4f5d75" stroke-width="1.0" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+<path d="M 464,268 H 504" fill="none" stroke="#4f5d75" stroke-width="1.0" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+<path d="M 688,268 H 728" fill="none" stroke="#4f5d75" stroke-width="1.0" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+<path d="M 912,268 H 960" fill="none" stroke="#4f5d75" stroke-width="1.0" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+<g data-node="agents">
+<rect x="56" y="112" width="184" height="56" rx="6" fill="#f5f5f5"/>
+<rect x="56" y="112" width="184" height="56" rx="6" fill="rgba(79,93,117,0.10)" stroke="#7a8399" stroke-width="1"/>
+<rect x="66" y="126" width="28" height="28" rx="4" fill="rgba(79,93,117,0.12)"/>
+<g transform="translate(71,131) scale(0.75)" fill="none" stroke="#4f5d75" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2l0 -4" /> <path d="M12 2v2" /> <path d="M9 12v9" /> <path d="M15 12v9" /> <path d="M5 16l4 -2" /> <path d="M15 14l4 2" /> <path d="M9 18h6" /> <path d="M10 8v.01" /> <path d="M14 8v.01" /></g>
+<text data-fit="1" x="102" y="138" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Touchline agents</text>
+<text data-fit="1" x="102" y="152" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">EKS Pod Identity</text>
+</g>
+<g data-node="gw">
+<rect x="56" y="240" width="184" height="56" rx="6" fill="#f5f5f5"/>
+<rect x="56" y="240" width="184" height="56" rx="6" fill="rgba(79,93,117,0.10)" stroke="#7a8399" stroke-width="1"/>
+<rect x="66" y="254" width="28" height="28" rx="4" fill="rgba(79,93,117,0.12)"/>
+<g transform="translate(71,259) scale(0.75)" fill="none" stroke="#4f5d75" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 12v.01" /> <path d="M3 21h18" /> <path d="M5 21v-16a2 2 0 0 1 2 -2h6m4 10.5v7.5" /> <path d="M21 7h-7m3 -3l-3 3l3 3" /></g>
+<text data-fit="1" x="102" y="266" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Claude apps gateway</text>
+<text data-fit="1" x="102" y="280" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">EC2 instance role</text>
+</g>
+<g data-node="bedrock">
+<rect x="280" y="104" width="184" height="200" rx="6" fill="#f5f5f5"/>
+<rect x="280" y="104" width="184" height="200" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+<rect x="290" y="116" width="28" height="28" rx="4" fill="rgba(235,108,54,0.12)"/>
+<g transform="translate(295,121) scale(0.75)" fill="none" stroke="#eb6c36" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.657 18c-2.572 0 -4.657 -2.007 -4.657 -4.483c0 -2.475 2.085 -4.482 4.657 -4.482c.393 -1.762 1.794 -3.2 3.675 -3.773c1.88 -.572 3.956 -.193 5.444 1c1.488 1.19 2.162 3.007 1.77 4.769h.99c1.913 0 3.464 1.56 3.464 3.486c0 1.927 -1.551 3.487 -3.465 3.487h-11.878" /></g>
+<text data-fit="1" x="326" y="128" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Amazon Bedrock</text>
+<text data-fit="1" x="326" y="141" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">inference profiles,</text>
+<text data-fit="1" x="326" y="152" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">one per team, model</text>
+<line x1="290" y1="167" x2="454" y2="167" stroke="rgba(45,49,66,0.12)" stroke-width="0.8"/>
+<g transform="translate(294,177) scale(0.583333)" fill="none" stroke="#eb6c36" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 7a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" /> <path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" /> <path d="M16 3.13a4 4 0 0 1 0 7.75" /> <path d="M21 21v-2a4 4 0 0 0 -3 -3.85" /></g>
+<text data-fit="1" x="316" y="187.5" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">newsroom team</text>
+<g transform="translate(294,195) scale(0.583333)" fill="none" stroke="#eb6c36" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 7a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" /> <path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" /> <path d="M16 3.13a4 4 0 0 1 0 7.75" /> <path d="M21 21v-2a4 4 0 0 0 -3 -3.85" /></g>
+<text data-fit="1" x="316" y="205.5" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">trading team</text>
+<g transform="translate(294,213) scale(0.583333)" fill="none" stroke="#eb6c36" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 7a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" /> <path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" /> <path d="M16 3.13a4 4 0 0 1 0 7.75" /> <path d="M21 21v-2a4 4 0 0 0 -3 -3.85" /></g>
+<text data-fit="1" x="316" y="223.5" fill="#2d3142" font-size="11" font-family="'Geist', sans-serif">platform team</text>
+</g>
+<g data-node="ms">
+<rect x="504" y="112" width="184" height="56" rx="6" fill="#f5f5f5"/>
+<rect x="504" y="112" width="184" height="56" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+<rect x="514" y="126" width="28" height="28" rx="4" fill="rgba(45,49,66,0.06)"/>
+<g transform="translate(519,131) scale(0.75)" fill="none" stroke="#4f5d75" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19l16 0" /> <path d="M4 15l4 -6l4 2l4 -5l4 4" /></g>
+<text data-fit="1" x="550" y="138" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Metric stream</text>
+<text data-fit="1" x="550" y="152" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">CloudWatch, AWS/Bedrock</text>
+</g>
+<g data-node="fh1">
+<rect x="728" y="112" width="184" height="56" rx="6" fill="#f5f5f5"/>
+<rect x="728" y="112" width="184" height="56" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+<rect x="738" y="126" width="28" height="28" rx="4" fill="rgba(45,49,66,0.06)"/>
+<g transform="translate(743,131) scale(0.75)" fill="none" stroke="#4f5d75" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4l-8 4l8 4l8 -4l-8 -4" /> <path d="M4 12l8 4l8 -4" /> <path d="M4 16l8 4l8 -4" /></g>
+<text data-fit="1" x="774" y="138" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Firehose</text>
+<text data-fit="1" x="774" y="152" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">metrics delivery</text>
+</g>
+<g data-node="il">
+<rect x="504" y="240" width="184" height="56" rx="6" fill="#f5f5f5"/>
+<rect x="504" y="240" width="184" height="56" rx="6" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.30)" stroke-width="1" stroke-dasharray="4,3"/>
+<rect x="514" y="254" width="28" height="28" rx="4" fill="rgba(45,49,66,0.05)"/>
+<g transform="translate(519,259) scale(0.75)" fill="none" stroke="#7a8399" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3v4a1 1 0 0 0 1 1h4" /> <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2" /> <path d="M9 9l1 0" /> <path d="M9 13l6 0" /> <path d="M9 17l6 0" /></g>
+<text data-fit="1" x="550" y="266" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Invocation logging</text>
+<text data-fit="1" x="550" y="280" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">KMS log group</text>
+</g>
+<g data-node="fh2">
+<rect x="728" y="240" width="184" height="56" rx="6" fill="#f5f5f5"/>
+<rect x="728" y="240" width="184" height="56" rx="6" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.30)" stroke-width="1" stroke-dasharray="4,3"/>
+<rect x="738" y="254" width="28" height="28" rx="4" fill="rgba(45,49,66,0.05)"/>
+<g transform="translate(743,259) scale(0.75)" fill="none" stroke="#7a8399" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4l-8 4l8 4l8 -4l-8 -4" /> <path d="M4 12l8 4l8 -4" /> <path d="M4 16l8 4l8 -4" /></g>
+<text data-fit="1" x="774" y="266" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Firehose</text>
+<text data-fit="1" x="774" y="280" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">subscription filter</text>
+</g>
+<g data-node="mimir">
+<rect x="960" y="112" width="184" height="56" rx="6" fill="#f5f5f5"/>
+<rect x="960" y="112" width="184" height="56" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+<rect x="970" y="126" width="28" height="28" rx="4" fill="rgba(45,49,66,0.06)"/>
+<g transform="translate(975,131) scale(0.75)" fill="none" stroke="#4f5d75" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19l16 0" /> <path d="M4 15l4 -6l4 2l4 -5l4 4" /></g>
+<text data-fit="1" x="1006" y="138" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Mimir</text>
+<text data-fit="1" x="1006" y="152" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">Grafana Cloud Metrics</text>
+</g>
+<g data-node="loki">
+<rect x="960" y="240" width="184" height="56" rx="6" fill="#f5f5f5"/>
+<rect x="960" y="240" width="184" height="56" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+<rect x="970" y="254" width="28" height="28" rx="4" fill="rgba(45,49,66,0.06)"/>
+<g transform="translate(975,259) scale(0.75)" fill="none" stroke="#4f5d75" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3v4a1 1 0 0 0 1 1h4" /> <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2" /> <path d="M9 9l1 0" /> <path d="M9 13l6 0" /> <path d="M9 17l6 0" /></g>
+<text data-fit="1" x="1006" y="266" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Loki</text>
+<text data-fit="1" x="1006" y="280" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace">Grafana Cloud Logs</text>
+</g>
+<line x1="40" y1="336" x2="1152" y2="336" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+<text x="40" y="352" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.18em">KEY</text>
+<rect x="40" y="364" width="14" height="10" rx="2" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+<text x="60" y="372" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Focal</text>
+<rect x="112.5" y="364" width="14" height="10" rx="2" fill="rgba(79,93,117,0.10)" stroke="#7a8399" stroke-width="1"/>
+<text x="132.5" y="372" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Caller</text>
+<rect x="189.9" y="364" width="14" height="10" rx="2" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+<text x="209.9" y="372" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Managed service</text>
+<rect x="311.4" y="364" width="14" height="10" rx="2" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.30)" stroke-width="1" stroke-dasharray="3,2"/>
+<text x="331.4" y="372" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Opt-in, off by default</text>
+<line x1="467.2" y1="369" x2="495.2" y2="369" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+<text x="503.2" y="372" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Model call</text>
+<line x1="580.2" y1="369" x2="608.2" y2="369" stroke="#4f5d75" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+<text x="616.2" y="372" fill="#4f5d75" font-size="8.5" font-family="'Geist', sans-serif">Telemetry</text>
+</svg>
+    </div>
+  </div>
+</body>
+</html>

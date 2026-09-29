@@ -5,6 +5,9 @@ the Claude apps gateway, its Postgres, a PDC agent, a host Alloy and one Claude 
 developer, all under docker compose. [agent-host/README.md](https://github.com/rknightion/grafana-cloud-agento11y-demo/blob/main/agent-host/README.md) covers the
 boot sequence and the files in detail; this page is the operator's view.
 
+![The agent host: five Claude Code containers reach the Claude apps gateway over HTTPS; the gateway keeps spend in Postgres, signs developers in with Cognito, calls Bedrock with its instance role and forwards telemetry, the plugin sends generations to Agent Observability and the PDC agent tunnels Postgres to Grafana](assets/diagrams/architecture-agent-host.png#only-light)
+![The agent host: five Claude Code containers reach the Claude apps gateway over HTTPS; the gateway keeps spend in Postgres, signs developers in with Cognito, calls Bedrock with its instance role and forwards telemetry, the plugin sends generations to Agent Observability and the PDC agent tunnels Postgres to Grafana](assets/diagrams/architecture-agent-host-dark.png#only-dark)
+
 ## What runs where
 
 | Container | Role |

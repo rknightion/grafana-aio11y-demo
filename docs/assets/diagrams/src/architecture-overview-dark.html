@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Touchline demo architecture</title>
+  <!-- Source for docs/assets/diagrams/architecture-overview-dark.png, drawn with the diagram-design skill (default style guide). -->
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-paper: #2d3142;
+      --color-ink: #f5f5f5;
+      --color-muted: #bfc0c0;
+      --color-accent: #f08a59;
+      --font-sans: 'Geist', system-ui, sans-serif;
+      --font-serif: 'Instrument Serif', serif;
+      --font-mono: 'Geist Mono', ui-monospace, monospace;
+    }
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-paper);
+      color: var(--color-ink);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 2rem;
+    }
+    .frame { max-width: 1288px; width: 100%; }
+    .diagram-container { width: 100%; overflow-x: auto; }
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      margin-bottom: 0.5rem;
+    }
+    h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      color: var(--color-ink);
+      margin-bottom: 1.5rem;
+    }
+    svg { width: 100%; min-width: 1248px; display: block; }
+    @media print {
+      .diagram-container { overflow-x: visible; }
+      svg { min-width: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Architecture · Overview</p>
+    <h1>Touchline demo architecture</h1>
+    <div class="diagram-container">
+<svg viewBox="0 0 1248 1032" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="architecture-overview-dark-title architecture-overview-dark-desc">
+<title id="architecture-overview-dark-title">Touchline demo architecture</title>
+<desc id="architecture-overview-dark-desc">Architecture of the Touchline demo: the site and five AI agents on EKS, five Claude Code developers behind the Claude apps gateway on an EC2 host, Amazon Bedrock with its CloudWatch and Firehose telemetry, and the Grafana Cloud stack that receives generations and OTLP telemetry.</desc>
+<defs>
+<marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bfc0c0"/></marker>
+<marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#f08a59"/></marker>
+<marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6a95d8"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#2d3142"/>
+<rect x="40" y="40" width="884" height="792" rx="10" fill="none" stroke="rgba(245,245,245,0.28)" stroke-width="1" stroke-dasharray="5,4"/>
+<rect x="52" y="34" width="128" height="12" rx="2" fill="#2d3142"/>
+<g transform="translate(57,33) scale(0.583333)" fill="none" stroke="#bfc0c0" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 18.5a15.198 15.198 0 0 1 -7.37 1.44a14.62 14.62 0 0 1 -6.63 -2.94" /> <path d="M19.5 21c.907 -1.411 1.451 -3.323 1.5 -5c-1.197 -.773 -2.577 -.935 -4 -1" /> <path d="M3 11v-4.5a1.5 1.5 0 0 1 3 0v4.5" /> <path d="M3 9h3" /> <path d="M9 5l1.2 6l1.8 -4l1.8 4l1.2 -6" /> <path d="M18 10.25c0 .414 .336 .75 .75 .75h1.25a1 1 0 0 0 1 -1v-1a1 1 0 0 0 -1 -1h-1a1 1 0 0 1 -1 -1v-1a1 1 0 0 1 1 -1h1.25a.75 .75 0 0 1 .75 .75" /></g>
+<text x="75" y="43" fill="#bfc0c0" font-size="8" font-weight="500" font-family="'Geist Mono', monospace" letter-spacing="0.14em">YOUR AWS ACCOUNT</text>
+<rect x="56" y="64" width="852" height="324" rx="8" fill="rgba(245,245,245,0.025)" stroke="rgba(245,245,245,0.12)" stroke-width="0.8"/>
+<rect x="68" y="70" width="184" height="12" rx="2" fill="#2d3142"/>
+<g transform="translate(73,69) scale(0.583333)" fill="#bfc0c0" stroke="none" aria-hidden="true"><path d="M10.204 14.35l.007.01-.999 2.413a5.171 5.171 0 0 1-2.075-2.597l2.578-.437.004.005a.44.44 0 0 1 .484.606zm-.833-2.129a.44.44 0 0 0 .173-.756l.002-.011L7.585 9.7a5.143 5.143 0 0 0-.73 3.255l2.514-.725.002-.009zm1.145-1.98a.44.44 0 0 0 .699-.337l.01-.005.15-2.62a5.144 5.144 0 0 0-3.01 1.442l2.147 1.523.004-.002zm.76 2.75l.723.349.722-.347.18-.78-.5-.623h-.804l-.5.623.179.779zm1.5-3.095a.44.44 0 0 0 .7.336l.008.003 2.134-1.513a5.188 5.188 0 0 0-2.992-1.442l.148 2.615.002.001zm10.876 5.97l-5.773 7.181a1.6 1.6 0 0 1-1.248.594l-9.261.003a1.6 1.6 0 0 1-1.247-.596l-5.776-7.18a1.583 1.583 0 0 1-.307-1.34L2.1 5.573c.108-.47.425-.864.863-1.073L11.305.513a1.606 1.606 0 0 1 1.385 0l8.345 3.985c.438.209.755.604.863 1.073l2.062 8.955c.108.47-.005.963-.308 1.34zm-3.289-2.057c-.042-.01-.103-.026-.145-.034-.174-.033-.315-.025-.479-.038-.35-.037-.638-.067-.895-.148-.105-.04-.18-.165-.216-.216l-.201-.059a6.45 6.45 0 0 0-.105-2.332 6.465 6.465 0 0 0-.936-2.163c.052-.047.15-.133.177-.159.008-.09.001-.183.094-.282.197-.185.444-.338.743-.522.142-.084.273-.137.415-.242.032-.024.076-.062.11-.089.24-.191.295-.52.123-.736-.172-.216-.506-.236-.745-.045-.034.027-.08.062-.111.088-.134.116-.217.23-.33.35-.246.25-.45.458-.673.609-.097.056-.239.037-.303.033l-.19.135a6.545 6.545 0 0 0-4.146-2.003l-.012-.223c-.065-.062-.143-.115-.163-.25-.022-.268.015-.557.057-.905.023-.163.061-.298.068-.475.001-.04-.001-.099-.001-.142 0-.306-.224-.555-.5-.555-.275 0-.499.249-.499.555l.001.014c0 .041-.002.092 0 .128.006.177.044.312.067.475.042.348.078.637.056.906a.545.545 0 0 1-.162.258l-.012.211a6.424 6.424 0 0 0-4.166 2.003 8.373 8.373 0 0 1-.18-.128c-.09.012-.18.04-.297-.029-.223-.15-.427-.358-.673-.608-.113-.12-.195-.234-.329-.349-.03-.026-.077-.062-.111-.088a.594.594 0 0 0-.348-.132.481.481 0 0 0-.398.176c-.172.216-.117.546.123.737l.007.005.104.083c.142.105.272.159.414.242.299.185.546.338.743.522.076.082.09.226.1.288l.16.143a6.462 6.462 0 0 0-1.02 4.506l-.208.06c-.055.072-.133.184-.215.217-.257.081-.546.11-.895.147-.164.014-.305.006-.48.039-.037.007-.09.02-.133.03l-.004.002-.007.002c-.295.071-.484.342-.423.608.061.267.349.429.645.365l.007-.001.01-.003.129-.029c.17-.046.294-.113.448-.172.33-.118.604-.217.87-.256.112-.009.23.069.288.101l.217-.037a6.5 6.5 0 0 0 2.88 3.596l-.09.218c.033.084.069.199.044.282-.097.252-.263.517-.452.813-.091.136-.185.242-.268.399-.02.037-.045.095-.064.134-.128.275-.034.591.213.71.248.12.556-.007.69-.282v-.002c.02-.039.046-.09.062-.127.07-.162.094-.301.144-.458.132-.332.205-.68.387-.897.05-.06.13-.082.215-.105l.113-.205a6.453 6.453 0 0 0 4.609.012l.106.192c.086.028.18.042.256.155.136.232.229.507.342.84.05.156.074.295.145.457.016.037.043.09.062.129.133.276.442.402.69.282.247-.118.341-.435.213-.71-.02-.039-.045-.096-.065-.134-.083-.156-.177-.261-.268-.398-.19-.296-.346-.541-.443-.793-.04-.13.007-.21.038-.294-.018-.022-.059-.144-.083-.202a6.499 6.499 0 0 0 2.88-3.622c.064.01.176.03.213.038.075-.05.144-.114.28-.104.266.039.54.138.87.256.154.06.277.128.448.173.036.01.088.019.13.028l.009.003.007.001c.297.064.584-.098.645-.365.06-.266-.128-.537-.423-.608zM16.4 9.701l-1.95 1.746v.005a.44.44 0 0 0 .173.757l.003.01 2.526.728a5.199 5.199 0 0 0-.108-1.674A5.208 5.208 0 0 0 16.4 9.7zm-4.013 5.325a.437.437 0 0 0-.404-.232.44.44 0 0 0-.372.233h-.002l-1.268 2.292a5.164 5.164 0 0 0 3.326.003l-1.27-2.296h-.01zm1.888-1.293a.44.44 0 0 0-.27.036.44.44 0 0 0-.214.572l-.003.004 1.01 2.438a5.15 5.15 0 0 0 2.081-2.615l-2.6-.44-.004.005z"/></g>
+<text x="91" y="79" fill="rgba(245,245,245,0.55)" font-size="8" font-weight="500" font-family="'Geist Mono', monospace" letter-spacing="0.14em">EKS · NAMESPACE TOUCHLINE</text>
+<rect x="476" y="172" width="416" height="116" rx="8" fill="rgba(245,245,245,0.025)" stroke="rgba(245,245,245,0.12)" stroke-width="0.8"/>
+<rect x="488" y="178" width="88" height="12" rx="2" fill="#2d3142"/>
+<g transform="translate(493,177) scale(0.583333)" fill="none" stroke="#bfc0c0" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2l0 -4" /> <path d="M12 2v2" /> <path d="M9 12v9" /> <path d="M15 12v9" /> <path d="M5 16l4 -2" /> <path d="M15 14l4 2" /> <path d="M9 18h6" /> <path d="M10 8v.01" /> <path d="M14 8v.01" /></g>
+<text x="511" y="187" fill="rgba(245,245,245,0.55)" font-size="8" font-weight="500" font-family="'Geist Mono', monospace" letter-spacing="0.14em">AI AGENTS</text>
+<rect x="56" y="528" width="852" height="288" rx="8" fill="rgba(245,245,245,0.025)" stroke="rgba(245,245,245,0.12)" stroke-width="0.8"/>
+<rect x="68" y="534" width="196" height="12" rx="2" fill="#2d3142"/>
+<g transform="translate(73,533) scale(0.583333)" fill="none" stroke="#bfc0c0" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3" /> <path d="M3 15a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3l0 -2" /> <path d="M7 8l0 .01" /> <path d="M7 16l0 .01" /></g>
+<text x="91" y="543" fill="rgba(245,245,245,0.55)" font-size="8" font-weight="500" font-family="'Geist Mono', monospace" letter-spacing="0.14em">EC2 AGENT HOST · NO INBOUND</text>
+<rect x="964" y="64" width="244" height="904" rx="8" fill="rgba(245,245,245,0.025)" stroke="rgba(245,245,245,0.12)" stroke-width="0.8"/>
+<rect x="976" y="70" width="148" height="12" rx="2" fill="#2d3142"/>
+<g transform="translate(981,69) scale(0.583333)" fill="none" stroke="#bfc0c0" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.657 18c-2.572 0 -4.657 -2.007 -4.657 -4.483c0 -2.475 2.085 -4.482 4.657 -4.482c.393 -1.762 1.794 -3.2 3.675 -3.773c1.88 -.572 3.956 -.193 5.444 1c1.488 1.19 2.162 3.007 1.77 4.769h.99c1.913 0 3.464 1.56 3.464 3.486c0 1.927 -1.551 3.487 -3.465 3.487h-11.878" /></g>
+<text x="999" y="79" fill="rgba(245,245,245,0.55)" font-size="8" font-weight="500" font-family="'Geist Mono', monospace" letter-spacing="0.14em">GRAFANA CLOUD STACK</text>
+<path d="M 256,240 H 280" fill="none" stroke="#bfc0c0" stroke-width="1.2" marker-end="url(#arrow)"/>
+<path d="M 464,240 H 488" fill="none" stroke="#bfc0c0" stroke-width="1.2" marker-end="url(#arrow)"/>
+<path d="M 672,240 H 696" fill="none" stroke="#bfc0c0" stroke-width="1.2" marker-end="url(#arrow)"/>
+<path d="M 580,156 V 208" fill="none" stroke="#bfc0c0" stroke-width="1.2" marker-end="url(#arrow)"/>
+<path d="M 892,240 H 980" fill="none" stroke="#f08a59" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+<path d="M 788,288 V 312" fill="none" stroke="#bfc0c0" stroke-width="1.0" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+<path d="M 372,272 V 332 Q 372,340 380,340 H 532 a 8,8 0 0,1 16,0 H 696" fill="none" stroke="#bfc0c0" stroke-width="1.0" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+<path d="M 540,288 V 400 Q 540,408 532,408 H 428 Q 420,408 420,416 V 428" fill="none" stroke="#6a95d8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+<path d="M 880,340 H 980" fill="none" stroke="#bfc0c0" stroke-width="1.0" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+<path d="M 464,460 H 488" fill="none" stroke="#bfc0c0" stroke-width="1.0" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+<path d="M 672,460 H 696" fill="none" stroke="#bfc0c0" stroke-width="1.0" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+<path d="M 880,460 H 980" fill="none" stroke="#bfc0c0" stroke-width="1.0" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+<path d="M 280,592 H 256" fill="none" stroke="#bfc0c0" stroke-width="1.2" marker-end="url(#arrow)"/>
+<path d="M 372,564 V 492" fill="none" stroke="#6a95d8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+<path d="M 316,564 V 520 Q 316,512 308,512 H 172 Q 164,512 164,504 V 492" fill="none" stroke="#6a95d8" stroke-width="1.0" stroke-dasharray="4,3" marker-end="url(#arrow-link)"/>
+<path d="M 464,592 H 980" fill="none" stroke="#bfc0c0" stroke-width="1.0" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+<path d="M 164,652 V 620" fill="none" stroke="#bfc0c0" stroke-width="1.2" marker-end="url(#arrow)"/>
+<path d="M 672,680 H 980" fill="none" stroke="#bfc0c0" stroke-width="1.0" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+<path d="M 372,740 V 620" fill="none" stroke="#bfc0c0" stroke-width="1.2" marker-end="url(#arrow)"/>
+<path d="M 464,768 H 1176 Q 1184,768 1184,760 V 280" fill="none" stroke="#f08a59" stroke-width="1.4" marker-end="url(#arrow-accent)"/>
+<path d="M 140,708 V 840 Q 140,848 148,848 H 980" fill="none" stroke="#bfc0c0" stroke-width="1.0" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+<rect x="900" y="220" width="72" height="12" rx="2" fill="#2d3142"/>
+<text x="936" y="229" fill="#f08a59" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">GENERATIONS</text>
+<rect x="804" y="294" width="32" height="12" rx="2" fill="#2d3142"/>
+<text x="820" y="303" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">OTLP</text>
+<rect x="384" y="294" width="32" height="12" rx="2" fill="#2d3142"/>
+<text x="400" y="303" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">OTLP</text>
+<rect x="548" y="306" width="76" height="12" rx="2" fill="#2d3142"/>
+<text x="586" y="315" fill="#6a95d8" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">POD IDENTITY</text>
+<rect x="914" y="320" width="32" height="12" rx="2" fill="#2d3142"/>
+<text x="930" y="329" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">OTLP</text>
+<rect x="380" y="518" width="84" height="12" rx="2" fill="#2d3142"/>
+<text x="422" y="527" fill="#6a95d8" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">INSTANCE ROLE</text>
+<rect x="224" y="518" width="32" height="12" rx="2" fill="#2d3142"/>
+<text x="240" y="527" fill="#6a95d8" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">OIDC</text>
+<rect x="526" y="572" width="68" height="12" rx="2" fill="#2d3142"/>
+<text x="560" y="581" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">FORWARD_TO</text>
+<rect x="380" y="694" width="40" height="12" rx="2" fill="#2d3142"/>
+<text x="400" y="703" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">HTTPS</text>
+<rect x="538" y="748" width="44" height="12" rx="2" fill="#2d3142"/>
+<text x="560" y="757" fill="#f08a59" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">PLUGIN</text>
+<rect x="526" y="856" width="68" height="12" rx="2" fill="#2d3142"/>
+<text x="560" y="865" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">PDC TUNNEL</text>
+<g data-node="exp">
+<rect x="488" y="100" width="184" height="56" rx="6" fill="#2d3142"/>
+<rect x="488" y="100" width="184" height="56" rx="6" fill="rgba(191,192,192,0.10)" stroke="#8e98ac" stroke-width="1"/>
+<rect x="498" y="114" width="28" height="28" rx="4" fill="rgba(191,192,192,0.12)"/>
+<g transform="translate(503,119) scale(0.75)" fill="none" stroke="#bfc0c0" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 8.04l-12.122 12.124a2.857 2.857 0 1 1 -4.041 -4.04l12.122 -12.124" /> <path d="M7 13h8" /> <path d="M19 15l1.5 1.6a2 2 0 1 1 -3 0l1.5 -1.6" /> <path d="M15 3l6 6" /></g>
+<text data-fit="1" x="534" y="126" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Experiments CronJob</text>
+<text data-fit="1" x="534" y="140" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace">prompt, model variants</text>
+</g>
+<g data-node="loadgen">
+<rect x="72" y="208" width="184" height="64" rx="6" fill="#2d3142"/>
+<rect x="72" y="208" width="184" height="64" rx="6" fill="rgba(191,192,192,0.10)" stroke="#8e98ac" stroke-width="1"/>
+<rect x="82" y="226" width="28" height="28" rx="4" fill="rgba(191,192,192,0.12)"/>
+<g transform="translate(87,231) scale(0.75)" fill="none" stroke="#bfc0c0" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l14 0" /> <path d="M13 18l6 -6" /> <path d="M13 6l6 6" /></g>
+<text data-fit="1" x="118" y="238" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Load generator</text>
+<text data-fit="1" x="118" y="252" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace">reader questions</text>
+</g>
+<g data-node="site">
+<rect x="280" y="208" width="184" height="64" rx="6" fill="#2d3142"/>
+<rect x="280" y="208" width="184" height="64" rx="6" fill="#393e53" stroke="#f5f5f5" stroke-width="1"/>
+<rect x="290" y="226" width="28" height="28" rx="4" fill="rgba(245,245,245,0.06)"/>
+<g transform="translate(295,231) scale(0.75)" fill="none" stroke="#f5f5f5" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4a2 2 0 0 0 -2 2v3a2 3 0 0 1 -2 3a2 3 0 0 1 2 3v3a2 2 0 0 0 2 2" /> <path d="M17 4a2 2 0 0 1 2 2v3a2 3 0 0 0 2 3a2 3 0 0 0 -2 3v3a2 2 0 0 1 -2 2" /></g>
+<text data-fit="1" x="326" y="238" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Site API + Redis</text>
+<text data-fit="1" x="326" y="252" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace">touchline-site-api</text>
+</g>
+<g data-node="orch">
+<rect x="488" y="208" width="184" height="64" rx="6" fill="#2d3142"/>
+<rect x="488" y="208" width="184" height="64" rx="6" fill="#393e53" stroke="#f5f5f5" stroke-width="1"/>
+<rect x="498" y="226" width="28" height="28" rx="4" fill="rgba(245,245,245,0.06)"/>
+<g transform="translate(503,231) scale(0.75)" fill="none" stroke="#f5f5f5" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2l0 -4" /> <path d="M12 2v2" /> <path d="M9 12v9" /> <path d="M15 12v9" /> <path d="M5 16l4 -2" /> <path d="M15 14l4 2" /> <path d="M9 18h6" /> <path d="M10 8v.01" /> <path d="M14 8v.01" /></g>
+<text data-fit="1" x="534" y="238" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Orchestrator agent</text>
+<text data-fit="1" x="534" y="252" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace">POST /v1/ask</text>
+</g>
+<g data-node="spec">
+<rect x="696" y="208" width="184" height="64" rx="6" fill="#2d3142"/>
+<rect x="696" y="208" width="184" height="64" rx="6" fill="#393e53" stroke="#f5f5f5" stroke-width="1"/>
+<rect x="706" y="226" width="28" height="28" rx="4" fill="rgba(245,245,245,0.06)"/>
+<g transform="translate(711,231) scale(0.75)" fill="none" stroke="#f5f5f5" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2l0 -4" /> <path d="M12 2v2" /> <path d="M9 12v9" /> <path d="M15 12v9" /> <path d="M5 16l4 -2" /> <path d="M15 14l4 2" /> <path d="M9 18h6" /> <path d="M10 8v.01" /> <path d="M14 8v.01" /></g>
+<text data-fit="1" x="742" y="232.5" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Specialist agents ×4</text>
+<text data-fit="1" x="742" y="246.5" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace">news, odds,</text>
+<text data-fit="1" x="742" y="257.5" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace">editorial, compliance</text>
+</g>
+<g data-node="alloy">
+<rect x="696" y="312" width="184" height="56" rx="6" fill="#2d3142"/>
+<rect x="696" y="312" width="184" height="56" rx="6" fill="#393e53" stroke="#f5f5f5" stroke-width="1"/>
+<rect x="706" y="326" width="28" height="28" rx="4" fill="rgba(245,245,245,0.06)"/>
+<g transform="translate(711,331) scale(0.75)" fill="none" stroke="#f5f5f5" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 18a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /> <path d="M5 6a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /> <path d="M15 12a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /> <path d="M7 8l0 8" /> <path d="M7 8a4 4 0 0 0 4 4h4" /></g>
+<text data-fit="1" x="742" y="338" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Alloy collector</text>
+<text data-fit="1" x="742" y="352" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace">OTLP in, pod logs</text>
+</g>
+<g data-node="cognito">
+<rect x="72" y="428" width="184" height="64" rx="6" fill="#2d3142"/>
+<rect x="72" y="428" width="184" height="64" rx="6" fill="rgba(245,245,245,0.03)" stroke="rgba(245,245,245,0.30)" stroke-width="1"/>
+<rect x="82" y="446" width="28" height="28" rx="4" fill="rgba(245,245,245,0.06)"/>
+<g transform="translate(87,451) scale(0.75)" fill="none" stroke="#bfc0c0" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6" /> <path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" /> <path d="M8 11v-4a4 4 0 1 1 8 0v4" /></g>
+<text data-fit="1" x="118" y="452.5" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Amazon Cognito</text>
+<text data-fit="1" x="118" y="466.5" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace">OIDC, one group</text>
+<text data-fit="1" x="118" y="477.5" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace">per team</text>
+</g>
+<g data-node="bedrock">
+<rect x="280" y="428" width="184" height="64" rx="6" fill="#2d3142"/>
+<rect x="280" y="428" width="184" height="64" rx="6" fill="rgba(245,245,245,0.03)" stroke="rgba(245,245,245,0.30)" stroke-width="1"/>
+<rect x="290" y="446" width="28" height="28" rx="4" fill="rgba(245,245,245,0.06)"/>
+<g transform="translate(295,451) scale(0.75)" fill="none" stroke="#bfc0c0" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.657 18c-2.572 0 -4.657 -2.007 -4.657 -4.483c0 -2.475 2.085 -4.482 4.657 -4.482c.393 -1.762 1.794 -3.2 3.675 -3.773c1.88 -.572 3.956 -.193 5.444 1c1.488 1.19 2.162 3.007 1.77 4.769h.99c1.913 0 3.464 1.56 3.464 3.486c0 1.927 -1.551 3.487 -3.465 3.487h-11.878" /></g>
+<text data-fit="1" x="326" y="452.5" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Amazon Bedrock</text>
+<text data-fit="1" x="326" y="466.5" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace">inference profiles</text>
+<text data-fit="1" x="326" y="477.5" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace">per team and model</text>
+</g>
+<g data-node="cw">
+<rect x="488" y="428" width="184" height="64" rx="6" fill="#2d3142"/>
+<rect x="488" y="428" width="184" height="64" rx="6" fill="rgba(245,245,245,0.03)" stroke="rgba(245,245,245,0.30)" stroke-width="1"/>
+<rect x="498" y="446" width="28" height="28" rx="4" fill="rgba(245,245,245,0.06)"/>
+<g transform="translate(503,451) scale(0.75)" fill="none" stroke="#bfc0c0" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19l16 0" /> <path d="M4 15l4 -6l4 2l4 -5l4 4" /></g>
+<text data-fit="1" x="534" y="452.5" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif">CloudWatch</text>
+<text data-fit="1" x="534" y="466.5" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace">metric stream,</text>
+<text data-fit="1" x="534" y="477.5" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace">invocation log opt-in</text>
+</g>
+<g data-node="fh">
+<rect x="696" y="428" width="184" height="64" rx="6" fill="#2d3142"/>
+<rect x="696" y="428" width="184" height="64" rx="6" fill="rgba(245,245,245,0.03)" stroke="rgba(245,245,245,0.30)" stroke-width="1"/>
+<rect x="706" y="446" width="28" height="28" rx="4" fill="rgba(245,245,245,0.06)"/>
+<g transform="translate(711,451) scale(0.75)" fill="none" stroke="#bfc0c0" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4l-8 4l8 4l8 -4l-8 -4" /> <path d="M4 12l8 4l8 -4" /> <path d="M4 16l8 4l8 -4" /></g>
+<text data-fit="1" x="742" y="452.5" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Firehose</text>
+<text data-fit="1" x="742" y="466.5" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace">delivery to</text>
+<text data-fit="1" x="742" y="477.5" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace">Grafana Cloud</text>
+</g>
+<g data-node="pg">
+<rect x="72" y="564" width="184" height="56" rx="6" fill="#2d3142"/>
+<rect x="72" y="564" width="184" height="56" rx="6" fill="rgba(245,245,245,0.05)" stroke="#bfc0c0" stroke-width="1"/>
+<rect x="82" y="578" width="28" height="28" rx="4" fill="rgba(191,192,192,0.12)"/>
+<g transform="translate(87,583) scale(0.75)" fill="none" stroke="#bfc0c0" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6a8 3 0 1 0 16 0a8 3 0 1 0 -16 0" /> <path d="M4 6v6a8 3 0 0 0 16 0v-6" /> <path d="M4 12v6a8 3 0 0 0 16 0v-6" /></g>
+<text data-fit="1" x="118" y="590" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Gateway Postgres</text>
+<text data-fit="1" x="118" y="604" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace">spend, caps, audit</text>
+</g>
+<g data-node="gw">
+<rect x="280" y="564" width="184" height="56" rx="6" fill="#2d3142"/>
+<rect x="280" y="564" width="184" height="56" rx="6" fill="rgba(240,138,89,0.08)" stroke="#f08a59" stroke-width="1"/>
+<rect x="290" y="578" width="28" height="28" rx="4" fill="rgba(240,138,89,0.12)"/>
+<g transform="translate(295,583) scale(0.75)" fill="none" stroke="#f08a59" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 12v.01" /> <path d="M3 21h18" /> <path d="M5 21v-16a2 2 0 0 1 2 -2h6m4 10.5v7.5" /> <path d="M21 7h-7m3 -3l-3 3l3 3" /></g>
+<text data-fit="1" x="326" y="590" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Claude apps gateway</text>
+<text data-fit="1" x="326" y="604" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace">:443, private CA</text>
+</g>
+<g data-node="pdc">
+<rect x="72" y="652" width="184" height="56" rx="6" fill="#2d3142"/>
+<rect x="72" y="652" width="184" height="56" rx="6" fill="#393e53" stroke="#f5f5f5" stroke-width="1"/>
+<rect x="82" y="666" width="28" height="28" rx="4" fill="rgba(245,245,245,0.06)"/>
+<g transform="translate(87,671) scale(0.75)" fill="none" stroke="#f5f5f5" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a12 12 0 0 0 8.5 3a12 12 0 0 1 -8.5 15a12 12 0 0 1 -8.5 -15a12 12 0 0 0 8.5 -3" /> <path d="M11 11a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /> <path d="M12 12l0 2.5" /></g>
+<text data-fit="1" x="118" y="678" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif">PDC agent</text>
+<text data-fit="1" x="118" y="692" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace">dials out to Grafana</text>
+</g>
+<g data-node="halloy">
+<rect x="488" y="652" width="184" height="56" rx="6" fill="#2d3142"/>
+<rect x="488" y="652" width="184" height="56" rx="6" fill="#393e53" stroke="#f5f5f5" stroke-width="1"/>
+<rect x="498" y="666" width="28" height="28" rx="4" fill="rgba(245,245,245,0.06)"/>
+<g transform="translate(503,671) scale(0.75)" fill="none" stroke="#f5f5f5" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 18a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /> <path d="M5 6a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /> <path d="M15 12a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /> <path d="M7 8l0 8" /> <path d="M7 8a4 4 0 0 0 4 4h4" /></g>
+<text data-fit="1" x="534" y="678" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Host Alloy</text>
+<text data-fit="1" x="534" y="692" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace">logs, host metrics</text>
+</g>
+<g data-node="devs">
+<rect x="280" y="740" width="184" height="56" rx="6" fill="#2d3142"/>
+<rect x="280" y="740" width="184" height="56" rx="6" fill="rgba(191,192,192,0.10)" stroke="#8e98ac" stroke-width="1"/>
+<rect x="290" y="754" width="28" height="28" rx="4" fill="rgba(191,192,192,0.12)"/>
+<g transform="translate(295,759) scale(0.75)" fill="none" stroke="#bfc0c0" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 7l5 5l-5 5" /> <path d="M12 19l7 0" /></g>
+<text data-fit="1" x="326" y="766" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Claude Code ×5</text>
+<text data-fit="1" x="326" y="780" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace">developer containers</text>
+</g>
+<g data-node="ao">
+<rect x="980" y="200" width="216" height="80" rx="6" fill="#2d3142"/>
+<rect x="980" y="200" width="216" height="80" rx="6" fill="rgba(240,138,89,0.08)" stroke="#f08a59" stroke-width="1"/>
+<rect x="990" y="226" width="28" height="28" rx="4" fill="rgba(240,138,89,0.12)"/>
+<g transform="translate(995,231) scale(0.75)" fill="none" stroke="#f08a59" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" /> <path d="M21 21l-6 -6" /></g>
+<text data-fit="1" x="1026" y="232.5" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Agent Observability</text>
+<text data-fit="1" x="1026" y="246.5" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace">evaluators, guards,</text>
+<text data-fit="1" x="1026" y="257.5" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace">experiments</text>
+</g>
+<g data-node="otlp">
+<rect x="980" y="316" width="180" height="396" rx="6" fill="#2d3142"/>
+<rect x="980" y="316" width="180" height="396" rx="6" fill="rgba(245,245,245,0.03)" stroke="rgba(245,245,245,0.30)" stroke-width="1"/>
+<rect x="990" y="328" width="28" height="28" rx="4" fill="rgba(245,245,245,0.06)"/>
+<g transform="translate(995,333) scale(0.75)" fill="none" stroke="#bfc0c0" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 12h13" /> <path d="M18 9l3 3l-3 3" /> <path d="M5.5 9.5l-2.5 2.5l2.5 2.5l2.5 -2.5l-2.5 -2.5" /></g>
+<text data-fit="1" x="1026" y="340" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif">OTLP gateway</text>
+<text data-fit="1" x="1026" y="353" fill="#bfc0c0" font-size="9" font-family="'Geist Mono', monospace">metrics, logs, traces</text>
+<line x1="990" y1="368" x2="1150" y2="368" stroke="rgba(245,245,245,0.12)" stroke-width="0.8"/>
+<g transform="translate(994,378) scale(0.583333)" fill="none" stroke="#bfc0c0" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19l16 0" /> <path d="M4 15l4 -6l4 2l4 -5l4 4" /></g>
+<text data-fit="1" x="1016" y="388.5" fill="#f5f5f5" font-size="11" font-family="'Geist', sans-serif">Mimir</text>
+<g transform="translate(994,396) scale(0.583333)" fill="none" stroke="#bfc0c0" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3v4a1 1 0 0 0 1 1h4" /> <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2" /> <path d="M9 9l1 0" /> <path d="M9 13l6 0" /> <path d="M9 17l6 0" /></g>
+<text data-fit="1" x="1016" y="406.5" fill="#f5f5f5" font-size="11" font-family="'Geist', sans-serif">Loki</text>
+<g transform="translate(994,414) scale(0.583333)" fill="none" stroke="#bfc0c0" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 18a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /> <path d="M5 6a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /> <path d="M15 12a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /> <path d="M7 8l0 8" /> <path d="M7 8a4 4 0 0 0 4 4h4" /></g>
+<text data-fit="1" x="1016" y="424.5" fill="#f5f5f5" font-size="11" font-family="'Geist', sans-serif">Tempo</text>
+</g>
+<g data-node="apps">
+<rect x="980" y="792" width="216" height="156" rx="6" fill="#2d3142"/>
+<rect x="980" y="792" width="216" height="156" rx="6" fill="rgba(245,245,245,0.03)" stroke="rgba(245,245,245,0.30)" stroke-width="1"/>
+<rect x="990" y="804" width="28" height="28" rx="4" fill="rgba(245,245,245,0.06)"/>
+<g transform="translate(995,809) scale(0.75)" fill="none" stroke="#bfc0c0" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5a1 1 0 0 1 1 -1h16a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-16a1 1 0 0 1 -1 -1v-10" /> <path d="M7 20h10" /> <path d="M9 16v4" /> <path d="M15 16v4" /></g>
+<text data-fit="1" x="1026" y="816" fill="#f5f5f5" font-size="12" font-weight="600" font-family="'Geist', sans-serif">Dashboards and apps</text>
+<line x1="990" y1="844" x2="1186" y2="844" stroke="rgba(245,245,245,0.12)" stroke-width="0.8"/>
+<g transform="translate(994,854) scale(0.583333)" fill="none" stroke="#bfc0c0" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19l16 0" /> <path d="M4 15l4 -6l4 2l4 -5l4 4" /></g>
+<text data-fit="1" x="1016" y="864.5" fill="#f5f5f5" font-size="11" font-family="'Geist', sans-serif">Four dashboards</text>
+<g transform="translate(994,872) scale(0.583333)" fill="none" stroke="#bfc0c0" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4" /> <path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0" /> <path d="M12 16h.01" /></g>
+<text data-fit="1" x="1016" y="882.5" fill="#f5f5f5" font-size="11" font-family="'Geist', sans-serif">Recording, alert rules</text>
+<g transform="translate(994,890) scale(0.583333)" fill="none" stroke="#bfc0c0" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 0 -8.979 9" /> <path d="M3.6 9h16.8" /> <path d="M3.6 15h8.9" /> <path d="M11.5 3a17 17 0 0 0 0 18" /> <path d="M12.5 3a16.992 16.992 0 0 1 2.522 10.376" /> <path d="M17.001 19a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /> <path d="M19.001 15.5v1.5" /> <path d="M19.001 21v1.5" /> <path d="M22.032 17.25l-1.299 .75" /> <path d="M17.27 20l-1.3 .75" /> <path d="M15.97 17.25l1.3 .75" /> <path d="M20.733 20l1.3 .75" /></g>
+<text data-fit="1" x="1016" y="900.5" fill="#f5f5f5" font-size="11" font-family="'Geist', sans-serif">App Observability</text>
+<g transform="translate(994,908) scale(0.583333)" fill="none" stroke="#bfc0c0" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" /> <path d="M3.6 9h16.8" /> <path d="M3.6 15h16.8" /> <path d="M11.5 3a17 17 0 0 0 0 18" /> <path d="M12.5 3a17 17 0 0 1 0 18" /></g>
+<text data-fit="1" x="1016" y="918.5" fill="#f5f5f5" font-size="11" font-family="'Geist', sans-serif">Frontend Observability</text>
+<g transform="translate(994,926) scale(0.583333)" fill="none" stroke="#bfc0c0" stroke-width="1.50" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 18a2 2 0 1 0 -4 0a2 2 0 0 0 4 0" /> <path d="M20 6a2 2 0 1 0 -4 0a2 2 0 0 0 4 0" /> <path d="M8 6a2 2 0 1 0 -4 0a2 2 0 0 0 4 0" /> <path d="M20 18a2 2 0 1 0 -4 0a2 2 0 0 0 4 0" /> <path d="M14 12a2 2 0 1 0 -4 0a2 2 0 0 0 4 0" /> <path d="M7.5 7.5l3 3" /> <path d="M7.5 16.5l3 -3" /> <path d="M13.5 13.5l3 3" /> <path d="M16.5 7.5l-3 3" /></g>
+<text data-fit="1" x="1016" y="936.5" fill="#f5f5f5" font-size="11" font-family="'Geist', sans-serif">Knowledge Graph</text>
+</g>
+<line x1="40" y1="972" x2="1208" y2="972" stroke="rgba(245,245,245,0.10)" stroke-width="0.8"/>
+<text x="40" y="988" fill="#bfc0c0" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.18em">KEY</text>
+<rect x="40" y="1000" width="14" height="10" rx="2" fill="rgba(240,138,89,0.08)" stroke="#f08a59" stroke-width="1"/>
+<text x="60" y="1008" fill="#bfc0c0" font-size="8.5" font-family="'Geist', sans-serif">Focal</text>
+<rect x="112.5" y="1000" width="14" height="10" rx="2" fill="#393e53" stroke="#f5f5f5" stroke-width="1"/>
+<text x="132.5" y="1008" fill="#bfc0c0" font-size="8.5" font-family="'Geist', sans-serif">Component</text>
+<rect x="204.6" y="1000" width="14" height="10" rx="2" fill="rgba(245,245,245,0.05)" stroke="#bfc0c0" stroke-width="1"/>
+<text x="224.6" y="1008" fill="#bfc0c0" font-size="8.5" font-family="'Geist', sans-serif">Store</text>
+<rect x="277.1" y="1000" width="14" height="10" rx="2" fill="rgba(245,245,245,0.03)" stroke="rgba(245,245,245,0.30)" stroke-width="1"/>
+<text x="297.1" y="1008" fill="#bfc0c0" font-size="8.5" font-family="'Geist', sans-serif">Managed service</text>
+<rect x="398.6" y="1000" width="14" height="10" rx="2" fill="rgba(191,192,192,0.10)" stroke="#8e98ac" stroke-width="1"/>
+<text x="418.6" y="1008" fill="#bfc0c0" font-size="8.5" font-family="'Geist', sans-serif">Driver or client</text>
+<line x1="525.0" y1="1005" x2="553.0" y2="1005" stroke="#bfc0c0" stroke-width="1.2" marker-end="url(#arrow)"/>
+<text x="561.0" y="1008" fill="#bfc0c0" font-size="8.5" font-family="'Geist', sans-serif">Request</text>
+<line x1="623.3" y1="1005" x2="651.3" y2="1005" stroke="#6a95d8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+<text x="659.3" y="1008" fill="#bfc0c0" font-size="8.5" font-family="'Geist', sans-serif">AWS or model call</text>
+<line x1="770.5999999999999" y1="1005" x2="798.5999999999999" y2="1005" stroke="#f08a59" stroke-width="1.2" marker-end="url(#arrow-accent)"/>
+<text x="806.5999999999999" y="1008" fill="#bfc0c0" font-size="8.5" font-family="'Geist', sans-serif">Generations</text>
+<line x1="888.4999999999999" y1="1005" x2="916.4999999999999" y2="1005" stroke="#bfc0c0" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+<text x="924.4999999999999" y="1008" fill="#bfc0c0" font-size="8.5" font-family="'Geist', sans-serif">Telemetry or async</text>
+</svg>
+    </div>
+  </div>
+</body>
+</html>

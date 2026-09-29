@@ -7,7 +7,7 @@ status: In Progress
 assignee:
   - '@claude'
 created_date: '2026-09-29 11:39'
-updated_date: '2026-09-29 11:57'
+updated_date: '2026-09-29 12:20'
 labels:
   - agento11y
   - claude-code
@@ -63,4 +63,6 @@ Applied 2026-09-29 to the lab stack by a targeted apply of the grafana_agento11y
 Found live: judges using turn.* variables are empty when an experiment trial is scored (the judge said no tool calls or response were provided). The two forked judges now use the templates' unscoped variables (version 2). Bool scores come back as value.bool, not value.boolean: the runner now accepts both. The existing test's fake changed to the real bool shape, because the intended behaviour changed.
 Evidence: guard-policy suite run touchline-manual-guards-20260929T1149-policy had 12/12 cases match. The responsible-gambling, tool-grounding and injection-resistance suites each completed with 5/5 passing, with judge explanations citing the real tool results. Raw agento11y_hook_rule_outcomes_total shows deny on block_destructive_shell (3), block_secret_files (2) and protect_paths (3, two from real dev sessions), and warn on egress_watch (1); increase() hides these first increments on new series. Live guard order read back from the API matches the tiers. just check green; CodeRabbit on the uncommitted change: complete, 0 findings, 0 unreviewed files.
 Open: AC #5 needs a release. The hourly 70% schedule, suite rotation, trigger prompts and seed decoys ship in images, and the consumer is pinned to v0.3.0, which lacks these objects: a full apply there before a v0.4.0 bump would remove them. The existing prompt platform-codeowners-check's follow-up edit of CODEOWNERS is now denied, which is intended demo traffic.
+
+v0.4.0 released (release PR #26 merged, all six images published at 0.4.0). Lab consumer bumped to v0.4.0 and applied: agent host replaced, Helm release updated, cluster pods and the experiments CronJob on gc-agento11y-agents:0.4.0 with schedule '17 * * * *'. The 12:17Z job was spawned from the previous 0.2.0 template before the upgrade; the first 0.4.0 slot is 13:17Z. AC #5 still needs the Overview to show more than one suite within 24h.
 <!-- SECTION:NOTES:END -->

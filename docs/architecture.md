@@ -6,48 +6,13 @@ Claude apps gateway, and Bedrock's own telemetry. One Terraform module (`terrafo
 of it, except the EKS cluster, which you bring or create with
 [examples/eks-auto-mode](https://github.com/rknightion/grafana-cloud-agento11y-demo/tree/main/examples/eks-auto-mode).
 
-```mermaid
-flowchart TB
-  subgraph Cluster["EKS, namespace touchline (Helm chart charts/touchline)"]
-    web["browser (Faro)"] --> api["touchline-site-api"]
-    api --> redis[("Redis")]
-    api --> orch["touchline-orchestrator"]
-    orch --> news["touchline-news"] & odds["touchline-odds"] & ed["touchline-editorial"] & comp["touchline-compliance"]
-    lg["touchline-loadgen"] --> api
-    ex["experiments CronJob"] --> orch
-    col["Alloy (OTLP in, pod logs, k8s attributes, OTLP out)"]
-  end
-  subgraph Host["EC2 agent host (docker compose)"]
-    d1["dev-alex-morgan ... dev-casey-nguyen"] -->|HTTPS, private CA| gw["Claude apps gateway :443"]
-    gw --> pg[("Postgres: spend, caps, audit")]
-    pdc["PDC agent"] --> pg
-    ha["host Alloy: container logs, host metrics"]
-    caps["spend-caps (one shot)"] --> gw
-  end
-  br["Bedrock application inference profiles, one per team and model"]
-  cog["Cognito user pool: 3 groups, 5 users"]
-  orch & news & odds & ed & comp -->|EKS Pod Identity| br
-  gw -->|instance role| br
-  gw -.->|OIDC| cog
-  br --> ms["CloudWatch metric stream"] --> fh1["Firehose"]
-  br --> il["invocation log (opt-in)"] --> fh2["Firehose"]
-  subgraph GC["Grafana Cloud"]
-    otlp["OTLP: Mimir, Loki, Tempo"]
-    ao["Agent Observability"]
-    ui["dashboards, rules, App O11y, Frontend O11y, Knowledge Graph"]
-  end
-  col --> otlp
-  orch & news & odds & ed & comp -->|generations| ao
-  gw -->|forward_to client OTel| otlp
-  d1 -->|agento11y plugin| ao
-  ha --> otlp
-  fh1 --> otlp
-  fh2 --> otlp
-  web -->|Faro| ui
-  pdc -.->|outbound tunnel| ui
-```
+![Touchline architecture: the site and five AI agents on EKS, five Claude Code developers behind the Claude apps gateway on an EC2 host, Amazon Bedrock with CloudWatch and Firehose, and the Grafana Cloud stack receiving generations in Agent Observability and OTLP telemetry](assets/diagrams/architecture-overview.png#only-light)
+![Touchline architecture: the site and five AI agents on EKS, five Claude Code developers behind the Claude apps gateway on an EC2 host, Amazon Bedrock with CloudWatch and Firehose, and the Grafana Cloud stack receiving generations in Agent Observability and OTLP telemetry](assets/diagrams/architecture-overview-dark.png#only-dark)
 
 ## In the cluster
+
+![In the cluster: the reader browser and load generator call the site API, which uses Redis and calls the orchestrator; the orchestrator routes to the news, odds, editorial and compliance agents, which call Bedrock through Pod Identity and send generations to Agent Observability, while Alloy forwards OTLP to Grafana Cloud](assets/diagrams/architecture-cluster.png#only-light)
+![In the cluster: the reader browser and load generator call the site API, which uses Redis and calls the orchestrator; the orchestrator routes to the news, odds, editorial and compliance agents, which call Bedrock through Pod Identity and send generations to Agent Observability, while Alloy forwards OTLP to Grafana Cloud](assets/diagrams/architecture-cluster-dark.png#only-dark)
 
 The Helm chart in [charts/touchline](https://github.com/rknightion/grafana-cloud-agento11y-demo/blob/main/charts/touchline/README.md) runs:
 
@@ -91,6 +56,9 @@ holds only non-secret values; at boot it reads one Secrets Manager secret with e
 and renders a docker compose project. Details in [agent-host/README.md](https://github.com/rknightion/grafana-cloud-agento11y-demo/blob/main/agent-host/README.md)
 and [coding-agents.md](coding-agents.md).
 
+![On the agent host: five Claude Code containers reach the Claude apps gateway over HTTPS; the gateway keeps spend in Postgres, signs developers in with Cognito, calls Bedrock with its instance role and forwards telemetry, the plugin sends generations to Agent Observability and the PDC agent tunnels Postgres to Grafana](assets/diagrams/architecture-agent-host.png#only-light)
+![On the agent host: five Claude Code containers reach the Claude apps gateway over HTTPS; the gateway keeps spend in Postgres, signs developers in with Cognito, calls Bedrock with its instance role and forwards telemetry, the plugin sends generations to Agent Observability and the PDC agent tunnels Postgres to Grafana](assets/diagrams/architecture-agent-host-dark.png#only-dark)
+
 - The Claude apps gateway, Anthropic's self-hosted gateway, which runs from the `claude` binary.
   It listens on 443 inside the compose network under the private hostname
   `<prefix>-gateway.internal`, with a certificate from a private CA that Terraform generates. On the
@@ -111,6 +79,9 @@ attributes that scope everything to the demo, MCP servers, the Agent Observabili
 the trading team, a narrower model list (Haiku only).
 
 ## On the AWS side
+
+![On the AWS side: the agents and the gateway call per-team Bedrock inference profiles; a CloudWatch metric stream and opt-in invocation logging reach Grafana Cloud Metrics and Logs through Firehose](assets/diagrams/architecture-bedrock.png#only-light)
+![On the AWS side: the agents and the gateway call per-team Bedrock inference profiles; a CloudWatch metric stream and opt-in invocation logging reach Grafana Cloud Metrics and Logs through Firehose](assets/diagrams/architecture-bedrock-dark.png#only-dark)
 
 - Bedrock: for every team and every `bedrock_models` entry, an application inference profile
   copied from the system cross-region profile you name. The agents and the gateway call these

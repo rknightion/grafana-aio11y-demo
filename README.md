@@ -50,48 +50,10 @@ Graph rule that joins the services complete the stack.
 
 ## Architecture
 
-```mermaid
-flowchart LR
-  subgraph AWS["Your AWS account"]
-    subgraph EKS["EKS cluster, namespace touchline"]
-      site["site API + Redis"] --> orch["orchestrator agent"]
-      orch --> spec["news / odds / editorial / compliance agents"]
-      loadgen["load generator"] --> site
-      exp["experiments CronJob"] --> orch
-      alloy["Alloy collector"]
-      site -. OTLP .-> alloy
-      orch -. OTLP .-> alloy
-      spec -. OTLP .-> alloy
-    end
-    subgraph Host["EC2 agent host (SSM only, no inbound)"]
-      devs["5 Claude Code developer containers"] --> gw["Claude apps gateway"]
-      gw --> pg[("gateway Postgres")]
-      pdc["PDC agent"] --> pg
-      halloy["host Alloy"]
-    end
-    cognito["Amazon Cognito"]
-    bedrock["Amazon Bedrock\nper-team application inference profiles"]
-    cw["CloudWatch metric stream\n+ invocation logging (opt-in)"] --> fh["Firehose"]
-    orch --> bedrock
-    spec --> bedrock
-    gw --> bedrock
-    gw -. OIDC .-> cognito
-    bedrock --> cw
-  end
-  subgraph GC["Grafana Cloud stack"]
-    otlp["OTLP gateway: Mimir, Loki, Tempo"]
-    ao["Agent Observability\nevaluators, guards, experiments"]
-    dash["dashboards, recording and alert rules,\nApp O11y, Frontend O11y, Knowledge Graph"]
-  end
-  alloy --> otlp
-  spec -->|generations| ao
-  orch -->|generations| ao
-  gw -->|telemetry forward_to| otlp
-  devs -->|agento11y plugin| ao
-  halloy --> otlp
-  fh --> otlp
-  pdc -. tunnel .-> dash
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/diagrams/architecture-overview-dark.png">
+  <img alt="Touchline architecture: the site and five AI agents on EKS, five Claude Code developers behind the Claude apps gateway on an EC2 host, Amazon Bedrock with CloudWatch and Firehose, and the Grafana Cloud stack receiving generations in Agent Observability and OTLP telemetry" src="docs/assets/diagrams/architecture-overview.png">
+</picture>
 
 More detail in [docs/architecture.md](docs/architecture.md).
 
