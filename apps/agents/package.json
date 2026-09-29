@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@aws-crypto/sha256-js": "5.2.0",
-    "@aws-sdk/client-bedrock-runtime": "3.1141.0",
+    "@aws-sdk/client-bedrock-runtime": "3.1142.0",
     "@aws-sdk/credential-provider-node": "3.972.84",
     "@grafana/agento11y": "0.13.0",
     "@opentelemetry/api": "1.9.1",
