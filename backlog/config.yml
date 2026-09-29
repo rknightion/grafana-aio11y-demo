@@ -1,4 +1,4 @@
-project_name: "grafana-aio11y-demo"
+project_name: "grafana-cloud-agento11y-demo"
 default_status: "To Do"
 statuses: ["To Do", "In Progress", "Parked", "Done"]
 definition_of_done:

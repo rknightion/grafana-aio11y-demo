@@ -1,4 +1,4 @@
-# Build and publish every image multi-arch to ghcr.io/<owner>/grafana-aio11y-demo-<name> (flat
+# Build and publish every image multi-arch to ghcr.io/<owner>/gc-agento11y-<name> (flat
 # names: the shared container-publish reusable derives its uploaded artifact name from
 # image-name and rejects a "/" in it) through the shared container-publish reusable. Edge builds
 # on main; release_tag set for releases.
@@ -56,7 +56,7 @@ jobs:
     uses: rknightion/.github/.github/workflows/container-publish.yml@f32275a4a7641f34db5cb005d270db961b54a680 # v1.25.3
     with:
       release-tag: ${{ inputs.release_tag }}
-      image-name: grafana-aio11y-demo-${{ matrix.name }}
+      image-name: gc-agento11y-${{ matrix.name }}
       context: ${{ matrix.context }}
       dockerfile: ${{ matrix.dockerfile }}
       # Private until published: no code-scanning upload or attestations on this plan yet.

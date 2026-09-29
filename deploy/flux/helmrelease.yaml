@@ -20,7 +20,7 @@ spec:
       reconcileStrategy: Revision
       sourceRef:
         kind: GitRepository
-        name: grafana-aio11y-demo
+        name: grafana-cloud-agento11y-demo
         namespace: flux-system
   valuesFrom:
     - kind: ConfigMap

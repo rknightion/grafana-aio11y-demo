@@ -1,6 +1,6 @@
 module "demo" {
   # Pin a release tag when consuming from git:
-  # source = "github.com/rknightion/grafana-aio11y-demo//terraform?ref=vX.Y.Z"
+  # source = "github.com/rknightion/grafana-cloud-agento11y-demo//terraform?ref=vX.Y.Z"
   source = "../../terraform"
 
   providers = {

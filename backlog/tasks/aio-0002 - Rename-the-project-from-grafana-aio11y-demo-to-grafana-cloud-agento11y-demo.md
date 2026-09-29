@@ -1,10 +1,11 @@
 ---
 id: AIO-0002
 title: Rename the project from grafana-aio11y-demo to grafana-cloud-agento11y-demo
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@claude'
 created_date: '2026-09-29 09:25'
-updated_date: '2026-09-29 09:40'
+updated_date: '2026-09-29 10:45'
 labels:
   - naming
 dependencies: []
@@ -33,6 +34,19 @@ The demo is about Grafana Cloud Agent Observability, and the product name is age
 - [ ] #1 just check
 <!-- DOD:END -->
 
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. OpenBao (needs a fresh admin token): new permission set, policy and JWT role release-please-grafana-cloud-agento11y-demo (the old set names the repo by name, so it stops minting after the rename), and a new role docs-sync-grafana-cloud-agento11y-demo. Both roles bind repository_id, which survives the rename.
+2. gh repo rename to grafana-cloud-agento11y-demo; repoint the local remote.
+3. In-repo rename: workflows (image-name gc-agento11y-<app>, permission set, docs-sync role and payload), terraform/variables.tf and chart name_prefix gc-agento11y-, justfile images-push prefix and buildx builder, docs.toml, docs, READMEs, deploy/, examples/, AGENTS.md, backlog/config.yml project name. just check, then one feat commit so release-please cuts 0.3.0.
+4. Docs hub: docs-repos.json entry, the projects slug map, and a 301 in the renamed-projects _redirects block.
+5. Merge the release PR; confirm images publish as gc-agento11y-<app>:0.3.0, are public and pull anonymously; confirm old grafana-aio11y-demo-<app> tags still pull.
+6. Private lab consumer stack: module source to the new URL at v0.3.0, tofu plan only (the host replacement is expected; Rob applies).
+7. Delete the old OpenBao permission set, policy and roles once the new ones mint green.
+8. Rename the local checkout directory and rekey the Claude Code project memory path.
+<!-- SECTION:PLAN:END -->
+
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
@@ -41,4 +55,7 @@ Requested wording: repository name grafana-cloud-agento11y-demo; identifiers ren
 Decided (Rob): every in-project identifier matches the repository name grafana-cloud-agento11y-demo (image names ghcr.io/rknightion/grafana-cloud-agento11y-demo-<app>, docs slug, buildx builder, module source), not grafana-agento11y-demo. Supersedes the open question above.
 
 Amended (Rob): images are the exception to the one-name rule. Publish them as ghcr.io/rknightion/gc-agento11y-<app> (e.g. gc-agento11y-agents, gc-agento11y-dev-workstation); everything else takes grafana-cloud-agento11y-demo. The images-push recipe's default prefix follows (gc-agento11y-).
+
+Decided (Rob, pickup): Claude merges the 0.3.0 release PR; the lab consumer stack gets a plan only, Rob applies; new gc-agento11y-<app> GHCR packages are made public if they come up private; the local checkout directory is renamed at the end and the Claude Code memory path rekeyed.
+In-repo rename staged (not committed): 30 files, just check green. The rename commit waits for the new OpenBao permission set, because pushing it before the rename would point release-please at a set that cannot mint yet.
 <!-- SECTION:NOTES:END -->

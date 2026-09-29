@@ -6,7 +6,7 @@ deploymentEnvironment: demo
 
 images:
   registry: ghcr.io/rknightion
-  namePrefix: grafana-aio11y-demo-
+  namePrefix: gc-agento11y-
   tag: "0.1.0"
   pullSecret: ""
 

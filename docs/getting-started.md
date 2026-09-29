@@ -1,6 +1,6 @@
 ---
 title: Getting started
-description: Prerequisites and a ten-minute quickstart for grafana-aio11y-demo.
+description: Prerequisites and a ten-minute quickstart for grafana-cloud-agento11y-demo.
 ---
 
 # Getting started
@@ -18,7 +18,7 @@ Short version below. [Prerequisites](prerequisites.md) has every scope and switc
   one-time use-case form), cross-region inference profiles allowed by your SCPs, and permission to
   create IAM roles, Cognito, EC2, Secrets Manager, Firehose and CloudWatch resources.
 - An EKS cluster with the Pod Identity agent (built in on Auto Mode), or use
-  [examples/eks-auto-mode](https://github.com/rknightion/grafana-aio11y-demo/tree/main/examples/eks-auto-mode)
+  [examples/eks-auto-mode](https://github.com/rknightion/grafana-cloud-agento11y-demo/tree/main/examples/eks-auto-mode)
   to create one, plus a subnet with NAT for the agent host.
 - Tools: OpenTofu 1.8+ or Terraform 1.8+, the AWS CLI with the Session Manager plugin, `helm`,
   `kubectl` and [`just`](https://github.com/casey/just).
@@ -29,8 +29,8 @@ About ten minutes of typing. EKS cluster creation alone usually takes 10 to 15 m
 The commands use `tofu`; `terraform` works the same way.
 
 ```bash
-git clone https://github.com/rknightion/grafana-aio11y-demo
-cd grafana-aio11y-demo
+git clone https://github.com/rknightion/grafana-cloud-agento11y-demo
+cd grafana-cloud-agento11y-demo
 
 # 1. A VPC and an EKS Auto Mode cluster (skip if you bring your own cluster)
 tofu -chdir=examples/eks-auto-mode init

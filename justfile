@@ -66,10 +66,10 @@ ci: check
 # prepended to every image name (registry/prefix<name>); pass "" for a mirror whose repositories
 # are already registry/<name> with no shared prefix (e.g. an ECR mirror at registry/<acct-repo>).
 [group('build')]
-images-push registry tag="dev" prefix="grafana-aio11y-demo-":
+images-push registry tag="dev" prefix="gc-agento11y-":
     # Multi-platform builds need a docker-container builder; create a dedicated one if missing.
-    docker buildx inspect aio11y-multiarch >/dev/null 2>&1 || docker buildx create --name aio11y-multiarch --driver docker-container >/dev/null
-    for spec in {{ images }}; do IFS=: read -r name ctx file <<<"$spec"; docker buildx build --builder aio11y-multiarch --platform linux/amd64,linux/arm64 -t {{ registry }}/{{ prefix }}$name:{{ tag }} -f "$file" --push "$ctx"; done
+    docker buildx inspect grafana-cloud-agento11y-demo-multiarch >/dev/null 2>&1 || docker buildx create --name grafana-cloud-agento11y-demo-multiarch --driver docker-container >/dev/null
+    for spec in {{ images }}; do IFS=: read -r name ctx file <<<"$spec"; docker buildx build --builder grafana-cloud-agento11y-demo-multiarch --platform linux/amd64,linux/arm64 -t {{ registry }}/{{ prefix }}$name:{{ tag }} -f "$file" --push "$ctx"; done
 
 # Render the chart to plain manifests for kubectl users (VALUES from `terraform output -raw chart_values`)
 [group('gen')]

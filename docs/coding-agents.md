@@ -2,7 +2,7 @@
 
 The coding-agent half of the demo is one EC2 instance playing a small engineering team. It runs
 the Claude apps gateway, its Postgres, a PDC agent, a host Alloy and one Claude Code container per
-developer, all under docker compose. [agent-host/README.md](https://github.com/rknightion/grafana-aio11y-demo/blob/main/agent-host/README.md) covers the
+developer, all under docker compose. [agent-host/README.md](https://github.com/rknightion/grafana-cloud-agento11y-demo/blob/main/agent-host/README.md) covers the
 boot sequence and the files in detail; this page is the operator's view.
 
 ## What runs where
@@ -174,7 +174,7 @@ occasional multi-probe bursts from one developer at a time otherwise a PII probe
 that the preflight deny guard should block -- see [the runbook's PII guard
 section](demo-runbook.md#the-pii-guard). A share of sessions continue for one to three
 `--- followup` turns on the same Claude Code session (`--resume`), and some stop early
-(abandoned). Prompts are in [agent-host/prompts](https://github.com/rknightion/grafana-aio11y-demo/tree/main/agent-host/prompts). Models are
+(abandoned). Prompts are in [agent-host/prompts](https://github.com/rknightion/grafana-cloud-agento11y-demo/tree/main/agent-host/prompts). Models are
 weighted towards Haiku within the team's allowed models. Each session writes one JSON result line
 to the container log (`event=dev_session`, including `user_turns` and `abandoned`).
 

@@ -3,9 +3,9 @@
 # file plus its fleet-wide base config.
 
 [site]
-name = "grafana-aio11y-demo"
+name = "grafana-cloud-agento11y-demo"
 description = "A self-contained demo of AI observability on Grafana Cloud: in-app AI agents on Amazon Bedrock, Claude Code developers through the Claude apps gateway, and Bedrock's own telemetry, one terraform apply into your own AWS account."
-license_note = "grafana-aio11y-demo is licensed Apache-2.0"
+license_note = "grafana-cloud-agento11y-demo is licensed Apache-2.0"
 author = "Rob Knight"
 keywords = [
     "grafana cloud",
@@ -59,11 +59,11 @@ Reference = [
 
 [assets]
 social_image = "assets/social-card.png"
-social_image_alt = "grafana-aio11y-demo documentation social preview card"
+social_image_alt = "grafana-cloud-agento11y-demo documentation social preview card"
 
 [[social]]
 icon = "fontawesome/brands/github"
-link = "https://github.com/rknightion/grafana-aio11y-demo"
+link = "https://github.com/rknightion/grafana-cloud-agento11y-demo"
 name = "GitHub Repository"
 
 [tags]

@@ -1,4 +1,4 @@
-# grafana-aio11y-demo
+# grafana-cloud-agento11y-demo
 
 A self-contained demo of AI observability on Grafana Cloud, built around **Touchline Times**, a
 fictional sports newspaper that publishes match news, betting odds and bookmaker offers. One
@@ -119,8 +119,8 @@ About ten minutes of typing. EKS cluster creation alone usually takes 10 to 15 m
 The commands use `tofu`; `terraform` works the same way.
 
 ```bash
-git clone https://github.com/rknightion/grafana-aio11y-demo
-cd grafana-aio11y-demo
+git clone https://github.com/rknightion/grafana-cloud-agento11y-demo
+cd grafana-cloud-agento11y-demo
 
 # 1. A VPC and an EKS Auto Mode cluster (skip if you bring your own cluster)
 tofu -chdir=examples/eks-auto-mode init

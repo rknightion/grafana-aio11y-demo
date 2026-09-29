@@ -1,9 +1,9 @@
 ---
-title: grafana-aio11y-demo
+title: grafana-cloud-agento11y-demo
 description: A self-contained demo of AI observability on Grafana Cloud, built around a fictional sports newspaper's AI agents, its coding-agent developers and Amazon Bedrock.
 ---
 
-# grafana-aio11y-demo
+# grafana-cloud-agento11y-demo
 
 A self-contained demo of AI observability on Grafana Cloud. One `terraform apply` into your own
 AWS account, EKS cluster and Grafana Cloud stack stands up a small AI application, a small team of
@@ -129,4 +129,4 @@ More detail, including per-component diagrams, in [Architecture](architecture.md
 
 ## Licence
 
-Apache-2.0. Source and issues: [GitHub](https://github.com/rknightion/grafana-aio11y-demo).
+Apache-2.0. Source and issues: [GitHub](https://github.com/rknightion/grafana-cloud-agento11y-demo).

@@ -34,7 +34,7 @@ jobs:
         with:
           permission-set: docs-sync
           # One shared permission set, but a role per repo to pin repository_id.
-          role: docs-sync-grafana-aio11y-demo
+          role: docs-sync-grafana-cloud-agento11y-demo
           tailscale-client-id: ${{ secrets.TS_WIF_CLIENT_ID }}
           tailscale-audience: ${{ secrets.TS_WIF_AUDIENCE }}
 
@@ -44,4 +44,4 @@ jobs:
           token: ${{ steps.bao.outputs.token }}
           repository: m7kni/m7kni-net-site
           event-type: docs-update
-          client-payload: '{"repository": "grafana-aio11y-demo"}'
+          client-payload: '{"repository": "grafana-cloud-agento11y-demo"}'

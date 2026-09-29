@@ -1,6 +1,6 @@
 ---
 title: Cost
-description: What grafana-aio11y-demo costs to run, and how to cap it.
+description: What grafana-cloud-agento11y-demo costs to run, and how to cap it.
 ---
 
 # Cost

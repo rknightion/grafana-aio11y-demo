@@ -9,7 +9,7 @@ most apply failures trace back to one of these.
 
 Any Grafana Cloud stack you can administer. Note its slug (the `<slug>` in
 `https://<slug>.grafana.net`) and URL; they become `grafana_cloud_stack_slug` and
-`grafana_stack_url` in [examples/complete](https://github.com/rknightion/grafana-aio11y-demo/tree/main/examples/complete).
+`grafana_stack_url` in [examples/complete](https://github.com/rknightion/grafana-cloud-agento11y-demo/tree/main/examples/complete).
 
 A dedicated stack is simplest. On a shared stack the module scopes its objects to the demo (see
 [security.md](security.md#guards-and-evaluation-scope)), but it still creates stack-wide objects
@@ -124,7 +124,7 @@ to enable `alertingSimplifiedRouting` and `grafanaManagedRecordingRules`.
 
 ### An EKS cluster
 
-- Bring your own, or create one with [examples/eks-auto-mode](https://github.com/rknightion/grafana-aio11y-demo/tree/main/examples/eks-auto-mode).
+- Bring your own, or create one with [examples/eks-auto-mode](https://github.com/rknightion/grafana-cloud-agento11y-demo/tree/main/examples/eks-auto-mode).
 - It needs the EKS Pod Identity agent add-on (built in on Auto Mode). The module creates a Pod
   Identity association for the agents' service account; without the agent the pods get no AWS
   credentials.

@@ -160,7 +160,7 @@ Enable it only in a dedicated sandbox account.
   set `endpoint_public_access_cidrs`. Narrow it, or run Terraform from inside the VPC.
 - The site has no Ingress by default; you reach it with `kubectl port-forward`. With
   `site_ingress` set, it is as public as your ingress class makes it: read the warning in
-  [apps/site/README.md](https://github.com/rknightion/grafana-aio11y-demo/blob/main/apps/site/README.md) first, because `POST /api/picks` calls the orchestrator
+  [apps/site/README.md](https://github.com/rknightion/grafana-cloud-agento11y-demo/blob/main/apps/site/README.md) first, because `POST /api/picks` calls the orchestrator
   (and so Bedrock) with no authentication or rate limiting, so anyone who reaches it spends your
   Bedrock budget.
 - The Faro collector URL is public by design (it is in every page). Without an Ingress, the
@@ -182,8 +182,8 @@ Enable it only in a dedicated sandbox account.
   cosign verify \
     --certificate-identity-regexp '^https://github\.com/rknightion/\.github/\.github/workflows/container-publish\.yml@' \
     --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-    --certificate-github-workflow-repository rknightion/grafana-aio11y-demo \
-    ghcr.io/rknightion/grafana-aio11y-demo-gateway:<tag>
+    --certificate-github-workflow-repository rknightion/grafana-cloud-agento11y-demo \
+    ghcr.io/rknightion/gc-agento11y-gateway:<tag>
   ```
 
   `--certificate-github-workflow-repository` ties the signature to builds started from this

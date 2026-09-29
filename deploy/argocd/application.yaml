@@ -16,7 +16,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/rknightion/grafana-aio11y-demo
+    repoURL: https://github.com/rknightion/grafana-cloud-agento11y-demo
     # Pin the same release tag as the Terraform module source.
     targetRevision: main
     path: charts/touchline

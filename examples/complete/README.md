@@ -39,7 +39,7 @@ traffic rates, images, site ingress and so on) can be added to the `module "demo
 Replace the local `source` with a pinned release:
 
 ```hcl
-source = "github.com/rknightion/grafana-aio11y-demo//terraform?ref=vX.Y.Z"
+source = "github.com/rknightion/grafana-cloud-agento11y-demo//terraform?ref=vX.Y.Z"
 ```
 
 ## State

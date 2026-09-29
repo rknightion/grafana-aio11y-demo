@@ -1,4 +1,4 @@
-# grafana-aio11y-demo
+# grafana-cloud-agento11y-demo
 
 The public Touchline AI observability demo: a Terraform module (`terraform/`), the `touchline` Helm
 chart (`charts/touchline/`), the app images (`apps/`) and the EC2 agent host (`agent-host/`). It is
@@ -27,8 +27,9 @@ needs `tofu -chdir=terraform init -backend=false` after a provider lock bump.
 
 release-please cuts `vX.Y.Z` from conventional commits. Its PR bumps `terraform/variables.tf`
 (the `images.tag` default), the chart version and appVersion, and the reference docs. The images
-workflow publishes `ghcr.io/rknightion/grafana-aio11y-demo-<app>:<version>` on release. A consumer
-can pin `?ref=vX.Y.Z` only after those images exist.
+workflow publishes `ghcr.io/rknightion/gc-agento11y-<app>:<version>` on release. A consumer
+can pin `?ref=vX.Y.Z` only after those images exist. Releases up to v0.2.0 predate the rename from
+`grafana-aio11y-demo`: their images are `grafana-aio11y-demo-<app>` and must stay pullable.
 
 ## Gotchas
 

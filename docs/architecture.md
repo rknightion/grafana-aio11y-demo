@@ -4,7 +4,7 @@ The demo has three halves that share one Grafana Cloud stack: the in-cluster Tou
 and its AI agents, an EC2 host that plays a small engineering team using Claude Code through the
 Claude apps gateway, and Bedrock's own telemetry. One Terraform module (`terraform/`) creates all
 of it, except the EKS cluster, which you bring or create with
-[examples/eks-auto-mode](https://github.com/rknightion/grafana-aio11y-demo/tree/main/examples/eks-auto-mode).
+[examples/eks-auto-mode](https://github.com/rknightion/grafana-cloud-agento11y-demo/tree/main/examples/eks-auto-mode).
 
 ```mermaid
 flowchart TB
@@ -49,12 +49,12 @@ flowchart TB
 
 ## In the cluster
 
-The Helm chart in [charts/touchline](https://github.com/rknightion/grafana-aio11y-demo/blob/main/charts/touchline/README.md) runs:
+The Helm chart in [charts/touchline](https://github.com/rknightion/grafana-cloud-agento11y-demo/blob/main/charts/touchline/README.md) runs:
 
 - `touchline-site-api`, the reader site's Node backend, with a Redis cache for odds questions.
   Its browser bundle is instrumented with Faro when Frontend Observability is on.
 - Five agents from one image: the orchestrator (`POST /v1/ask`) and four specialists (news,
-  odds, editorial, compliance). They call the shared tools in [apps/mcp-tools](https://github.com/rknightion/grafana-aio11y-demo/tree/main/apps/mcp-tools)
+  odds, editorial, compliance). They call the shared tools in [apps/mcp-tools](https://github.com/rknightion/grafana-cloud-agento11y-demo/tree/main/apps/mcp-tools)
   in-process, the same implementation Claude Code reaches over MCP. Each agent calls Bedrock
   through its team's application inference profile. Every model call is an Agent Observability
   generation, and every tool result goes through the stack's preflight guard.
@@ -88,7 +88,7 @@ AWS access.
 One EC2 instance (Amazon Linux 2023, `t4g.xlarge` by default) in a subnet you choose. It has no
 key pair and no inbound security group rules; you reach it with SSM Session Manager. Its user data
 holds only non-secret values; at boot it reads one Secrets Manager secret with every credential
-and renders a docker compose project. Details in [agent-host/README.md](https://github.com/rknightion/grafana-aio11y-demo/blob/main/agent-host/README.md)
+and renders a docker compose project. Details in [agent-host/README.md](https://github.com/rknightion/grafana-cloud-agento11y-demo/blob/main/agent-host/README.md)
 and [coding-agents.md](coding-agents.md).
 
 - The Claude apps gateway, Anthropic's self-hosted gateway, which runs from the `claude` binary.
