@@ -34,7 +34,7 @@ jobs:
         with:
           tofu_wrapper: false
       - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
-      - uses: terraform-linters/setup-tflint@1cf010d3c7aef302051ccdb68c14c5dc2efa34ef # v6.3.1
+      - uses: terraform-linters/setup-tflint@6ffdbaa3be476b3431f7275c26966ef32ff60337 # v6.3.2
       - name: Install kubeconform and shellcheck
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
