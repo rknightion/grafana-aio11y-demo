@@ -2,8 +2,10 @@ import { randomBytes } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
+import { Redis } from 'ioredis';
 import { chromium } from 'playwright';
 import { loadReaderCorpus, renderPhrasing } from '../../corpus/readers.mjs';
+import { firstFresh, questionClaimer } from '../../corpus/recent.mjs';
 import { contentCapture, serviceNamespace } from './config.mjs';
 
 // One synthetic reader session in headless Chromium against the site, run on a schedule
@@ -15,6 +17,9 @@ import { contentCapture, serviceNamespace } from './config.mjs';
 const MAX_START_DELAY_MS = Number(process.env.BROWSER_MAX_START_DELAY_MS ?? 4 * 60 * 1000);
 const THINK_TIME_MIN_MS = 5 * 1000;
 const THINK_TIME_MAX_MS = 40 * 1000;
+// Replacement questions a run can fall back to when a planned one was asked recently (by any
+// site-browser run or the load generator; see apps/corpus/recent.mjs).
+const SPARE_QUESTIONS = 12;
 
 const CORPUS = loadReaderCorpus();
 const FIXTURES = JSON.parse(readFileSync(new URL('../../mcp-tools/src/data/fixtures.json', import.meta.url), 'utf8'));
@@ -48,12 +53,24 @@ function sampleDistinct(items, count, random) {
   return shuffled.slice(0, count);
 }
 
+function splitPlanned(sampled, count) {
+  return { questions: sampled.slice(0, count), spares: sampled.slice(count) };
+}
+
+// The shared recent-question store, when the chart provides one (REDIS_URL).
+function defaultClaimer() {
+  if (!process.env.REDIS_URL) return { claim: questionClaimer(null), close() {} };
+  const redis = new Redis(process.env.REDIS_URL, { maxRetriesPerRequest: 1, connectTimeout: 3000, commandTimeout: 2000 });
+  redis.on('error', () => {});
+  return { claim: questionClaimer(redis), close: () => redis.disconnect() };
+}
+
 export function createSessionPlan(seed = randomBytes(4).readUInt32LE()) {
   const random = seededRandom(seed);
   const questionCount = 1 + Math.floor(random() * 3);
   return {
     startDelayMs: Math.floor(random() * (MAX_START_DELAY_MS + 1)),
-    questions: sampleDistinct(FIXTURE_QUESTIONS, questionCount, random),
+    ...splitPlanned(sampleDistinct(FIXTURE_QUESTIONS, questionCount + SPARE_QUESTIONS, random), questionCount),
     thinkTimesMs: Array.from(
       { length: questionCount - 1 },
       () => THINK_TIME_MIN_MS + Math.floor(random() * (THINK_TIME_MAX_MS - THINK_TIME_MIN_MS + 1)),
@@ -61,11 +78,21 @@ export function createSessionPlan(seed = randomBytes(4).readUInt32LE()) {
   };
 }
 
-export async function runBrowser(plan = createSessionPlan()) {
+/** The planned question for `index`, or the first spare not yet asked in this run, whichever
+ * claim() reports nobody asked recently; null when every candidate was. */
+export function nextQuestion(plan, index, asked, claim) {
+  const candidates = [plan.questions[index], ...plan.spares].filter((question) => !asked.includes(question));
+  return firstFresh(candidates, claim);
+}
+
+export async function runBrowser(plan = createSessionPlan(), { claimer: injected } = {}) {
   await sleep(plan.startDelayMs);
-  const browser = await chromium.launch({ headless: true });
+  const claimer = injected ?? defaultClaimer();
   const failures = [];
+  const asked = [];
+  let browser;
   try {
+    browser = await chromium.launch({ headless: true });
     const page = await browser.newPage();
     await page.goto(process.env.SITE_URL || `http://${serviceNamespace()}-site-api:8080/`, {
       waitUntil: 'domcontentloaded',
@@ -73,7 +100,13 @@ export async function runBrowser(plan = createSessionPlan()) {
     });
     for (let index = 0; index < plan.questions.length; index += 1) {
       if (index > 0) await sleep(plan.thinkTimesMs[index - 1]);
-      await page.locator('#question').fill(plan.questions[index]);
+      const question = await nextQuestion(plan, index, asked, claimer.claim);
+      if (!question) {
+        console.log(JSON.stringify({ event: 'browser-skip', index, reason: 'every candidate asked recently' }));
+        continue;
+      }
+      asked.push(question);
+      await page.locator('#question').fill(question);
       await page.locator('#picks-form button').click();
       await page.waitForFunction(() => {
         const value = document.querySelector('#result')?.textContent || '';
@@ -85,10 +118,11 @@ export async function runBrowser(plan = createSessionPlan()) {
       if (result.includes('"error"') || result.startsWith('Request failed:')) failures.push(result);
     }
   } finally {
-    await browser.close();
+    await browser?.close();
+    claimer.close();
   }
   if (failures.length > 0) process.exitCode = 1;
-  return { ...plan, failures: failures.length };
+  return { ...plan, asked, failures: failures.length };
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {

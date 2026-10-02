@@ -12,7 +12,7 @@ RUN apt-get update \
 COPY site/package.json site/package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund \
  && npx playwright install --with-deps --only-shell chromium \
- && rm -rf node_modules/@opentelemetry node_modules/@grafana node_modules/ioredis \
+ && rm -rf node_modules/@opentelemetry node_modules/@grafana \
  && npm cache clean --force \
  && rm -rf /var/lib/apt/lists/* \
  && chmod -R a+rX /ms-playwright \

@@ -661,3 +661,29 @@ test('loadgen redraws a first question it asked recently instead of repeating it
   // A pool that only ever repeats still returns a question rather than looping forever.
   assert.equal(pickFreshQuestion(new Set(['same']), Math.random, () => ({ question: 'same' })).question, 'same');
 });
+
+test('loadgen skips a first question another process claimed in the shared store, and the store fails open', async () => {
+  const { questionClaimer } = await import('../../corpus/recent.mjs');
+  // Redis SET key value EX ttl NX semantics, at the network edge.
+  const keys = new Map();
+  const redis = { async set(key, value, ex, ttl, nx) { assert.deepEqual([ex, nx], ['EX', 'NX']); if (keys.has(key)) return null; keys.set(key, ttl); return 'OK'; } };
+  const seeded = () => { let state = 7; return () => { state = (state * 16807) % 2147483647; return state / 2147483647; }; };
+  const dir = await mkdtemp(join(tmpdir(), 'agents-loadgen-claim-'));
+  try {
+    await writeFile(join(dir, 'rate.json'), JSON.stringify({ enabled: true, requestsPerMinute: 1, dailyBudgetUsd: 1 }));
+    const options = { file: join(dir, 'rate.json'), stateDir: dir, env: {}, preflight: async () => {}, post: async () => ({ usage: [] }), log() {} };
+    const planned = pickQuestion(seeded()).question;
+    // A site-browser run already asked the question this loadgen's seed would open with.
+    assert.equal(await questionClaimer(redis)(planned), true);
+    const sent = (await createLoadgen({ ...options, random: seeded(), claim: questionClaimer(redis) }).tick()).payload.question;
+    assert.notEqual(sent, planned);
+    assert.equal(keys.size, 2, 'the question it did send is claimed for every other process');
+    assert.equal(await questionClaimer(redis)(sent), false);
+    // When every draw was asked recently the turn is skipped, never sent as a repeat.
+    const skipped = await createLoadgen({ ...options, random: seeded(), claim: async () => false }).tick();
+    assert.deepEqual([skipped.sent, skipped.skipped], [false, 'recent-question']);
+    // An unreachable store never stops traffic.
+    const down = { async set() { throw new Error('connect ECONNREFUSED'); } };
+    assert.equal((await createLoadgen({ ...options, random: seeded(), claim: questionClaimer(down) }).tick()).payload.question, planned);
+  } finally { await rm(dir, { recursive: true }); }
+});

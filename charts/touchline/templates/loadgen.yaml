@@ -75,6 +75,9 @@ spec:
               value: {{ .Values.agentVersion | quote }}
             - name: SITE_URL
               value: "http://{{ include "touchline.prefix" . }}-site-api:8080"
+            # Shared recent-question store with the site-browser CronJob (apps/corpus/recent.mjs).
+            - name: REDIS_URL
+              value: "redis://{{ include "touchline.prefix" . }}-redis:6379"
             - name: LOADGEN_SETTINGS_FILE
               value: "/etc/{{ $name }}/rate.json"
             - name: LOADGEN_STATE_DIR

@@ -5,7 +5,7 @@ import net from 'node:net';
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 const Redis = createRequire(import.meta.url)('ioredis');
-import { createSessionPlan, FIXTURE_QUESTIONS } from '../src/browser.mjs';
+import { createSessionPlan, nextQuestion, FIXTURE_QUESTIONS } from '../src/browser.mjs';
 import { createSiteServer, browserConfig, askUrl } from '../src/server.mjs';
 import { contentCapture } from '../src/config.mjs';
 const listen = server => new Promise(resolve => server.listen(0, '127.0.0.1', () => resolve(server.address().port)));
@@ -48,6 +48,23 @@ test('every browser session plan finishes inside the CronJob activeDeadlineSecon
     const worst = plan.startDelayMs + 30_000 + plan.questions.length * 45_000 + plan.thinkTimesMs.reduce((a, b) => a + b, 0);
     assert.ok(worst < 540_000, `seed ${seed}: ${worst}ms leaves under a minute of the 600s deadline`);
   }
+});
+
+test('a browser run swaps a planned question someone asked recently for an unasked spare', async () => {
+  const plan = createSessionPlan(20261002);
+  assert.equal(plan.spares.length, 12);
+  assert.ok(plan.spares.every(question => !plan.questions.includes(question)));
+  const recent = new Set([plan.questions[0], plan.spares[0]]);
+  const claim = async question => !recent.has(question) && Boolean(recent.add(question));
+  const first = await nextQuestion(plan, 0, [], claim);
+  assert.equal(first, plan.spares[1]);
+  // Within one run a spare is never reused, even when the store has forgotten it.
+  assert.equal(await nextQuestion(plan, 0, [first], async () => true), plan.questions[0]);
+  assert.notEqual(await nextQuestion({ ...plan, questions: [first] }, 0, [first], async () => true), first);
+  // Every candidate, all thirteen, is tried; when all were asked recently the question is skipped.
+  const tried = [];
+  assert.equal(await nextQuestion(plan, 0, [], async question => { tried.push(question); return false; }), null);
+  assert.equal(tried.length, 1 + plan.spares.length);
 });
 
 test('browser session plans are seeded, jittered and draw distinct fixture questions', async () => {

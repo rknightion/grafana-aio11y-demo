@@ -24,7 +24,9 @@ import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { listFixtures } from '@touchline/mcp-tools/tools';
+import { Redis } from 'ioredis';
 import { loadReaderCorpus, renderPhrasing } from '../../corpus/readers.mjs';
+import { questionClaimer } from '../../corpus/recent.mjs';
 import { boolEnv, serviceNamespace } from './config.mjs';
 
 export const MAX_DAILY_BUDGET_USD = 30;
@@ -70,6 +72,22 @@ export function pickFreshQuestion(recent, random = Math.random, pick = pickQuest
   let picked = pick(random);
   for (let attempt = 0; attempt < 12 && recent.has(picked.question); attempt++) picked = pick(random);
   return picked;
+}
+/** pickFreshQuestion, redrawn (a few times at most) while `claim` reports another process (a
+ * site-browser run) asked the same text recently; null when every draw was. */
+export async function pickUnclaimedQuestion(recent, claim, random = Math.random, pick = pickQuestion) {
+  for (let attempt = 0; attempt < 12; attempt++) {
+    const picked = pickFreshQuestion(recent, random, pick);
+    if (await claim(picked.question)) return picked;
+  }
+  return null;
+}
+/** The shared recent-question store (apps/corpus/recent.mjs) when REDIS_URL is set. */
+function defaultClaim(env) {
+  if (!env.REDIS_URL) return questionClaimer(null);
+  const redis = new Redis(env.REDIS_URL, { maxRetriesPerRequest: 1, connectTimeout: 3000, commandTimeout: 2000 });
+  redis.on('error', () => {});
+  return questionClaimer(redis);
 }
 function remember(recent, question) {
   recent.delete(question);
@@ -209,7 +227,7 @@ async function writeState(stateDir, state) {
   try { await directory.sync(); } finally { await directory.close(); }
 }
 
-export function createLoadgen({ file = settingsFile(), stateDir = process.env.LOADGEN_STATE_DIR ?? '/var/lib/loadgen', siteUrl = picksUrl(), preflight = defaultPreflight, post = defaultPost, now = () => new Date(), random = Math.random, wait = (ms, signal) => sleep(ms, undefined, { signal }).catch(() => {}), rate, env = process.env, log = (value) => console.log(JSON.stringify(value)) } = {}) {
+export function createLoadgen({ file = settingsFile(), stateDir = process.env.LOADGEN_STATE_DIR ?? '/var/lib/loadgen', siteUrl = picksUrl(), preflight = defaultPreflight, post = defaultPost, now = () => new Date(), random = Math.random, wait = (ms, signal) => sleep(ms, undefined, { signal }).catch(() => {}), rate, env = process.env, claim = defaultClaim(env), log = (value) => console.log(JSON.stringify(value)) } = {}) {
   const source = `${serviceNamespace(env)}-loadgen`;
   const recentQuestions = new Set();
   async function tick(session) {
@@ -224,7 +242,10 @@ export function createLoadgen({ file = settingsFile(), stateDir = process.env.LO
       question = pickInjectionQuestion(random);
       userId = session.userId;
     } else {
-      ({ question, readerId: userId, persona, intent, fixture } = pickFreshQuestion(recentQuestions, random));
+      const picked = await pickUnclaimedQuestion(recentQuestions, claim, random);
+      // Every draw was asked recently somewhere: skip this turn rather than repeat it.
+      if (!picked) return { sent: false, skipped: 'recent-question', spent: state.spent, settings };
+      ({ question, readerId: userId, persona, intent, fixture } = picked);
       remember(recentQuestions, question);
     }
     const payload = { question, userId, conversationId: session?.conversationId ?? `${serviceNamespace(env)}-${randomUUID()}`, conversationTitle: session?.conversationTitle ?? question.replace(/Tool note:.*/i, '').slice(0, 72).trim() };

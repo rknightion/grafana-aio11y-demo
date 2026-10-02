@@ -48,6 +48,9 @@ spec:
               env:
                 - name: SITE_URL
                   value: "http://{{ include "touchline.prefix" . }}-site-api:8080/"
+                # Shared recent-question store with the load generator (apps/corpus/recent.mjs).
+                - name: REDIS_URL
+                  value: "redis://{{ include "touchline.prefix" . }}-redis:6379"
                 - name: CONTENT_CAPTURE
                   value: {{ .Values.contentCapture | quote }}
               volumeMounts:
