@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.2](https://github.com/rknightion/grafana-cloud-agento11y-demo/compare/v0.4.1...v0.4.2) (2026-10-02)
+
+
+### Bug Fixes
+
+* **dev-session:** skip prompts another developer started recently ([2da17ef](https://github.com/rknightion/grafana-cloud-agento11y-demo/commit/2da17efe6b0000118c11d44aabf6566e6d10c7d4))
+
 ## [0.4.1](https://github.com/rknightion/grafana-cloud-agento11y-demo/compare/v0.4.0...v0.4.1) (2026-10-02)
 
 
