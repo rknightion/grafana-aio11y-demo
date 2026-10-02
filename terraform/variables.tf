@@ -218,7 +218,7 @@ variable "images" {
   type = object({
     registry    = optional(string, "ghcr.io/rknightion")
     name_prefix = optional(string, "gc-agento11y-")
-    tag         = optional(string, "0.4.0") # x-release-please-version
+    tag         = optional(string, "0.4.1") # x-release-please-version
     digests     = optional(map(string), {})
     pull_secret = optional(string)
   })
