@@ -1,11 +1,11 @@
 ---
 id: AIO-0003
 title: Clear the @opentelemetry/core baggage advisory in apps/agents
-status: In Progress
+status: Done
 assignee:
   - '@claude'
 created_date: '2026-09-29 10:07'
-updated_date: '2026-10-02 10:21'
+updated_date: '2026-10-02 10:31'
 labels:
   - deps
 dependencies: []
@@ -23,7 +23,7 @@ Dependabot alert 9 (moderate): @opentelemetry/core below 2.8.0 allocates unbound
 <!-- AC:BEGIN -->
 - [x] #1 npm ls @opentelemetry/core in apps/agents shows no version below 2.8.0
 - [x] #2 Dependabot alert 9 is closed as fixed
-- [ ] #3 The agents still export traces and generations to Agent Observability after the change
+- [x] #3 The agents still export traces and generations to Agent Observability after the change
 <!-- AC:END -->
 
 ## Definition of Done
@@ -45,4 +45,12 @@ Shipped 3e6ad14: npm override @opentelemetry/core 2.11.0 in apps/agents; npm ls 
 2026-10-02: Rob chose to leave the lab down; the remaining live AC is proved on the next demo deploy, not by a standalone redeploy.
 
 2026-10-02: v0.4.1 released and deployed to the lab by a full apply (156 added); touchline pods Running. Live ACs can now be sampled: dev sessions after the agent host's ~30-minute sign-in, the Experiments AC within 24h.
+
+AC3 live-verified 2026-10-02 on v0.4.1 (override included): within 10 minutes of deploy, 17 in-app touchline conversations carried generations in Agent Observability, and Tempo held traces rooted in orchestrator, odds, news, compliance, editorial, site-api and loadgen.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Forced @opentelemetry/core 2.11.0 with an npm override in apps/agents (3e6ad14), closing Dependabot alert 9. Verified by npm ls, just check, and live on v0.4.1: the agents still export traces and generations.
+<!-- SECTION:FINAL_SUMMARY:END -->
