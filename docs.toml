@@ -7,6 +7,9 @@ name = "grafana-cloud-agento11y-demo"
 description = "A self-contained demo of AI observability on Grafana Cloud: in-app AI agents on Amazon Bedrock, Claude Code developers through the Claude apps gateway, and Bedrock's own telemetry, one terraform apply into your own AWS account."
 license_note = "grafana-cloud-agento11y-demo is licensed Apache-2.0"
 author = "Rob Knight"
+# Diagram sources, kept beside the PNGs they render to. They load a web font,
+# and the hub fails the fleet build on any third-party subresource.
+exclude = ["assets/diagrams/src/**"]
 keywords = [
     "grafana cloud",
     "ai observability",
