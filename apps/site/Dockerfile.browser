@@ -5,6 +5,10 @@
 FROM node:24-bookworm-slim
 ENV NODE_ENV=production PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 WORKDIR /app
+# Take Debian security fixes the base image has not been rebuilt with yet (Trivy gates the build).
+RUN apt-get update \
+ && apt-get upgrade -y --no-install-recommends \
+ && rm -rf /var/lib/apt/lists/*
 COPY site/package.json site/package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts --no-audit --no-fund \
  && npx playwright install --with-deps --only-shell chromium \

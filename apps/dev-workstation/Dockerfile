@@ -55,8 +55,11 @@ ARG MCP_NODE_VERSION=2026.8.31
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-# hadolint ignore=DL3008
+# Upgrade first to take Debian security fixes the base image has not been rebuilt with yet (Trivy
+# gates the build).
+# hadolint ignore=DL3005,DL3008
 RUN apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
     && apt-get install -y --no-install-recommends \
        ca-certificates curl git gpgv jq less openssl procps python3 python3-yaml tini tmux \
     && rm -rf /var/lib/apt/lists/*
