@@ -7,7 +7,7 @@ status: In Progress
 assignee:
   - '@claude'
 created_date: '2026-09-29 11:39'
-updated_date: '2026-09-29 13:05'
+updated_date: '2026-10-02 09:53'
 labels:
   - agento11y
   - claude-code
@@ -67,4 +67,6 @@ Open: AC #5 needs a release. The hourly 70% schedule, suite rotation, trigger pr
 v0.4.0 released (release PR #26 merged, all six images published at 0.4.0). Lab consumer bumped to v0.4.0 and applied: agent host replaced, Helm release updated, cluster pods and the experiments CronJob on gc-agento11y-agents:0.4.0 with schedule '17 * * * *'. The 12:17Z job was spawned from the previous 0.2.0 template before the upgrade; the first 0.4.0 slot is 13:17Z. AC #5 still needs the Overview to show more than one suite within 24h.
 
 Lab demo torn down after the demo (enabled=false, 156 destroyed). AC #5 can only be proven on the next deploy: the Experiments Overview should show more than one suite within 24h of bringing it back.
+
+2026-10-02: Rob chose to leave the lab down; the remaining live AC is proved on the next demo deploy, not by a standalone redeploy.
 <!-- SECTION:NOTES:END -->

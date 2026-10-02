@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@claude'
 created_date: '2026-09-29 08:46'
-updated_date: '2026-09-29 10:37'
+updated_date: '2026-10-02 09:53'
 labels:
   - traffic
 dependencies: []
@@ -40,4 +40,6 @@ Lanes in one checkout, disjoint files, frozen seams (reader corpus apps/corpus/,
 
 <!-- SECTION:NOTES:BEGIN -->
 All subtask code shipped in v0.2.0 and deployed to the lab 2026-09-29. Open: AC2 (30-minute no-duplicate sample) not sampled at Rob's request; AIO-0001.05 AC3 waits for the first live multi-turn session. Follow-on: renovate.json now tracks the agento11y CLI/plugin (33ce015).
+
+2026-10-02: Rob chose to leave the lab down; the remaining live AC is proved on the next demo deploy, not by a standalone redeploy.
 <!-- SECTION:NOTES:END -->
