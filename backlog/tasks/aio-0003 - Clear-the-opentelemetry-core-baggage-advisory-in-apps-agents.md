@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@claude'
 created_date: '2026-09-29 10:07'
-updated_date: '2026-10-02 09:53'
+updated_date: '2026-10-02 10:21'
 labels:
   - deps
 dependencies: []
@@ -43,4 +43,6 @@ Dependabot alert 9 (moderate): @opentelemetry/core below 2.8.0 allocates unbound
 Shipped 3e6ad14: npm override @opentelemetry/core 2.11.0 in apps/agents; npm ls shows 35 copies, all 2.11.0. Dependabot alert 9 state fixed 2026-10-02T09:22Z. just check exit 0, 117 agents tests pass. Telemetry exercised locally: orchestrator against a local OTLP sink exports /v1/traces, identical to the pre-change baseline (metrics did not reach the sink in either run). AC3 stays open: generations to Agent Observability not checked, needs the lab stack.
 
 2026-10-02: Rob chose to leave the lab down; the remaining live AC is proved on the next demo deploy, not by a standalone redeploy.
+
+2026-10-02: v0.4.1 released and deployed to the lab by a full apply (156 added); touchline pods Running. Live ACs can now be sampled: dev sessions after the agent host's ~30-minute sign-in, the Experiments AC within 24h.
 <!-- SECTION:NOTES:END -->

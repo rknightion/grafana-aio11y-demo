@@ -7,7 +7,7 @@ status: In Progress
 assignee:
   - '@claude'
 created_date: '2026-09-29 11:39'
-updated_date: '2026-10-02 09:53'
+updated_date: '2026-10-02 10:21'
 labels:
   - agento11y
   - claude-code
@@ -69,4 +69,6 @@ v0.4.0 released (release PR #26 merged, all six images published at 0.4.0). Lab 
 Lab demo torn down after the demo (enabled=false, 156 destroyed). AC #5 can only be proven on the next deploy: the Experiments Overview should show more than one suite within 24h of bringing it back.
 
 2026-10-02: Rob chose to leave the lab down; the remaining live AC is proved on the next demo deploy, not by a standalone redeploy.
+
+2026-10-02: v0.4.1 released and deployed to the lab by a full apply (156 added); touchline pods Running. Live ACs can now be sampled: dev sessions after the agent host's ~30-minute sign-in, the Experiments AC within 24h.
 <!-- SECTION:NOTES:END -->
