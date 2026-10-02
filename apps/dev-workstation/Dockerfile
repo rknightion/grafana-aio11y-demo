@@ -124,9 +124,13 @@ RUN chmod 0755 /usr/local/bin/claude-install /usr/local/bin/dev-entrypoint /opt/
     && ln -s /opt/agent-host/bin/dev-reseed /usr/local/bin/dev-reseed \
     && ln -s /opt/agent-host/bin/dev-login-link /usr/local/bin/dev-login-link \
     && ln -s /opt/agent-host/bin/pii-burst-window /usr/local/bin/pii-burst-window \
-    && install -d -o node -g node /home/node/.claude /home/node/work /home/node/.local/bin
+    && install -d -o node -g node /home/node/.claude /home/node/work /home/node/.local/bin \
+       /var/lib/agent-host/recent-prompts
 
+# RECENT_PROMPTS_DIR is a volume shared by every developer container (agent-host/render), so a
+# fresh named volume takes this directory's node ownership.
 ENV HOME=/home/node \
+    RECENT_PROMPTS_DIR=/var/lib/agent-host/recent-prompts \
     CLAUDE_CONFIG_DIR=/home/node/.claude \
     CLAUDE_CODE_CACHE=/opt/claude-code \
     NODE_EXTRA_CA_CERTS=/etc/agent-host/ca.pem \

@@ -563,7 +563,7 @@ def compose_project(v, files, host_root="/etc/agent-host"):
         },
     }
 
-    volumes = {"claude-code": {}, "pgdata": {}, "pdc-home": {}, "alloy-data": {}}
+    volumes = {"claude-code": {}, "pgdata": {}, "pdc-home": {}, "alloy-data": {}, "recent-prompts": {}}
     plugin_ref = f"grafana/agento11y#plugins/agento11y/v{agento11y_version(v)}"
     # Every developer container needs the full roster to pick its own PII-probe burst
     # deterministically (pii-burst-window, AIO-0001.03): each container only otherwise knows its
@@ -596,6 +596,7 @@ def compose_project(v, files, host_root="/etc/agent-host"):
             "secrets": use(f"dev-{slug}", ["developer_password"]),
             "volumes": [
                 f"claude-home-{slug}:/home/node/.claude",
+                "recent-prompts:/var/lib/agent-host/recent-prompts",
                 "claude-code:/opt/claude-code:ro",
                 f"{cfg}/managed-settings.json:/etc/claude-code/managed-settings.json:ro",
                 f"{cfg}/ca.pem:/etc/agent-host/ca.pem:ro",

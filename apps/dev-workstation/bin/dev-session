@@ -27,6 +27,8 @@ ABANDON_PERCENT="${SESSION_ABANDON_PERCENT:-20}"
 MAX_FOLLOWUPS="${SESSION_MAX_FOLLOWUPS:-3}"
 PII_BASELINE_PERCENT="${PII_BASELINE_PERCENT:-2}"
 TEAM_DEFAULT="${DEVELOPER_TEAM:-platform}"
+RECENT_PROMPTS_DIR="${RECENT_PROMPTS_DIR:-}"
+RECENT_PROMPT_MINUTES="${RECENT_PROMPT_MINUTES:-45}"
 MCP="${MCP_SERVER_NAME:-touchline}"
 CODEBASE_SEED="${CODEBASE_SEED:-/opt/agent-host/codebase/seed-repo}"
 STATE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/agent-host"
@@ -54,22 +56,62 @@ pick_model() {
   echo "${ids[0]}"
 }
 
+# Drops from a pool every prompt any developer on this host started in the last
+# RECENT_PROMPT_MINUTES (the shared RECENT_PROMPTS_DIR), so two developers never send the same
+# opening text close together (AIO-0001 AC2). Without a usable directory nothing is filtered.
+not_recent() {
+  local picks="$RECENT_PROMPTS_DIR/picks" cutoff
+  if [[ -z "$RECENT_PROMPTS_DIR" || ! -r "$picks" ]]; then
+    cat
+    return
+  fi
+  cutoff=$(($(date +%s) - RECENT_PROMPT_MINUTES * 60))
+  grep -v -x -F -f <(awk -v c="$cutoff" '$1 >= c { print $2 }' "$picks") || true
+}
+
 # PII probes: a low baseline everywhere, plus this developer's own scheduled burst window
 # (pii-burst-window; see AIO-0001.03). Otherwise mostly this developer's own team, sometimes any
-# non-PII prompt.
+# non-PII prompt. A pool emptied by not_recent falls back to every non-PII prompt not used
+# recently, then to every non-PII prompt.
 pick_prompt() {
   local -a pool=()
   local in_burst
   in_burst="$(pii-burst-window 2>/dev/null || echo 0)"
   if [[ "$in_burst" == "1" ]] || ((RANDOM % 100 < PII_BASELINE_PERCENT)); then
-    mapfile -t pool < <(find "$PROMPTS_DIR" -name 'pii-*.txt')
+    mapfile -t pool < <(find "$PROMPTS_DIR" -name 'pii-*.txt' | not_recent)
   elif ((RANDOM % 100 < 70)); then
-    mapfile -t pool < <(grep -l -x "team: $TEAM_DEFAULT" "$PROMPTS_DIR"/*.txt | grep -v '/pii-')
+    mapfile -t pool < <(grep -l -x "team: $TEAM_DEFAULT" "$PROMPTS_DIR"/*.txt | grep -v '/pii-' | not_recent)
+  fi
+  if ((${#pool[@]} == 0)); then
+    mapfile -t pool < <(find "$PROMPTS_DIR" -name '*.txt' ! -name 'pii-*.txt' | not_recent)
   fi
   if ((${#pool[@]} == 0)); then
     mapfile -t pool < <(find "$PROMPTS_DIR" -name '*.txt' ! -name 'pii-*.txt')
   fi
   printf '%s\n' "${pool[@]}" | shuf -n 1
+}
+
+# Picks a prompt and records it in the shared list under a host-wide lock, so two developers
+# choosing at the same moment still see each other's pick.
+pick_prompt_shared() {
+  local choice
+  if [[ -z "$RECENT_PROMPTS_DIR" ]] || ! { exec 8>>"$RECENT_PROMPTS_DIR/.lock"; } 2>/dev/null; then
+    pick_prompt
+    return
+  fi
+  if ! flock -w 30 8; then
+    exec 8>&-
+    pick_prompt
+    return
+  fi
+  choice="$(pick_prompt)"
+  [[ -n "$choice" ]] && printf '%s %s\n' "$(date +%s)" "$choice" >>"$RECENT_PROMPTS_DIR/picks"
+  # Keep only the window's picks so the file stays small.
+  local cutoff=$(($(date +%s) - RECENT_PROMPT_MINUTES * 60))
+  awk -v c="$cutoff" '$1 >= c' "$RECENT_PROMPTS_DIR/picks" >"$RECENT_PROMPTS_DIR/picks.tmp" \
+    && mv "$RECENT_PROMPTS_DIR/picks.tmp" "$RECENT_PROMPTS_DIR/picks"
+  exec 8>&-
+  printf '%s\n' "$choice"
 }
 
 # Parses a Seam 2 prompt file into globals: title, file_effort, file_budget, and turns[] (turns[0]
@@ -106,7 +148,7 @@ parse_prompt() {
 }
 
 model="${SESSION_MODEL:-$(pick_model)}"
-prompt_file="${1:-$(pick_prompt)}"
+prompt_file="${1:-$(pick_prompt_shared)}"
 [[ -r "$prompt_file" ]] || { echo "dev-session: no prompt file" >&2; exit 2; }
 
 declare -a turns=()
