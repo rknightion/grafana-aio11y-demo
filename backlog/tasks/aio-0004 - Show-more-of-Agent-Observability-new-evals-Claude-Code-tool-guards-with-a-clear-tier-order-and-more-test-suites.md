@@ -3,11 +3,11 @@ id: AIO-0004
 title: >-
   Show more of Agent Observability: new evals, Claude Code tool guards with a
   clear tier order, and more test suites
-status: In Progress
+status: Done
 assignee:
   - '@claude'
 created_date: '2026-09-29 11:39'
-updated_date: '2026-10-02 10:21'
+updated_date: '2026-10-02 13:37'
 labels:
   - agento11y
   - claude-code
@@ -30,7 +30,7 @@ Decided (Rob): the new Claude Code tool guards deny, and scheduled traffic delib
 - [x] #2 Claude Code postflight deny guards for destructive shell, secret-file reads and protected paths, plus an informational egress warn guard, each observed denying (or warning) live on agento11y_hook_rule_outcomes_total
 - [x] #3 Every guard sits in a documented tier (0-9 critical deny, 10-19 detectors, 20-39 redaction, 40-59 LLM judges, 60+ informational); the no-op preflight Claude Code redact rules and the stray redact_api_keys guard are gone
 - [x] #4 The runner runs N suites from apps/agents/config/suites/, each with its own scoring evaluators; the responsible-gambling, tool-grounding, injection-resistance and guard-policy suites are published on the stack and each has at least one completed run
-- [ ] #5 The experiments CronJob fires on 70% of hourly slots with the daily cap unchanged, and the Experiments overview shows runs for more than one suite in a 24h range
+- [x] #5 The experiments CronJob fires on 70% of hourly slots with the daily cap unchanged, and the Experiments overview shows runs for more than one suite in a 24h range
 - [x] #6 Docs describe the new evals, guard tiers, suites and the plugin's guard limits
 <!-- AC:END -->
 
@@ -38,7 +38,7 @@ Decided (Rob): the new Claude Code tool guards deny, and scheduled traffic delib
 <!-- DOD:BEGIN -->
 - [x] #1 just check
 - [x] #2 just check
-- [ ] #3 CodeRabbit review of the runner and Terraform changes
+- [x] #3 CodeRabbit review of the runner and Terraform changes
 <!-- DOD:END -->
 
 ## Implementation Plan
@@ -71,4 +71,12 @@ Lab demo torn down after the demo (enabled=false, 156 destroyed). AC #5 can only
 2026-10-02: Rob chose to leave the lab down; the remaining live AC is proved on the next demo deploy, not by a standalone redeploy.
 
 2026-10-02: v0.4.1 released and deployed to the lab by a full apply (156 added); touchline pods Running. Live ACs can now be sampled: dev sessions after the agent host's ~30-minute sign-in, the Experiments AC within 24h.
+
+AC5 live-verified 2026-10-02 after the redeploy: the experiments CronJob runs '17 * * * *' with FIRE_PROBABILITY 0.7 and EXPERIMENTS_DAILY_RUN_CAP default 12, and Agent Observability lists two completed scheduled runs of different suites within 24h: touchline-sched-guards-policy-20261002T1254 (touchline_claude_code_guard_policy) and touchline-sched-rg-haiku-20261002T1325 (touchline_responsible_gambling), matching last_over_time(agento11y_experiment_completed_timestamp_seconds) by suite_id. DoD 3 rests on the CodeRabbit review already recorded above (complete, 0 findings, 0 unreviewed files).
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Added tool-result grounding, injection-resistance, session-helpfulness and secret-leak evaluators with their rules and a review collection; tiered Claude Code postflight deny guards and an egress warn guard; four published suites run by an N-suite runner; and an hourly 70% experiments schedule under the unchanged daily cap. Verified live: guard denials on agento11y_hook_rule_outcomes_total, completed suite runs, and scheduled runs of two suites within 24h.
+<!-- SECTION:FINAL_SUMMARY:END -->
