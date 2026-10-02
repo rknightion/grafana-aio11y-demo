@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.4.1](https://github.com/rknightion/grafana-cloud-agento11y-demo/compare/v0.4.0...v0.4.1) (2026-10-02)
+
+
+### Bug Fixes
+
+* **deps:** force @opentelemetry/core 2.11.0 in apps/agents ([3e6ad14](https://github.com/rknightion/grafana-cloud-agento11y-demo/commit/3e6ad140b57bf0076ca8f57b4c6755eb1206d394))
+* **deps:** update dependency @aws-sdk/client-bedrock-runtime to v3.1143.0 ([#36](https://github.com/rknightion/grafana-cloud-agento11y-demo/issues/36)) ([a1febab](https://github.com/rknightion/grafana-cloud-agento11y-demo/commit/a1febabca47ca528694e585e39937a91ae17bc93))
+* **deps:** update dependency @aws-sdk/client-bedrock-runtime to v3.1144.0 ([#38](https://github.com/rknightion/grafana-cloud-agento11y-demo/issues/38)) ([8c156fe](https://github.com/rknightion/grafana-cloud-agento11y-demo/commit/8c156fe0110c1b663440f31bd1d58f9a5d3633bc))
+* **deps:** update dependency @aws-sdk/client-bedrock-runtime to v3.1145.0 ([#42](https://github.com/rknightion/grafana-cloud-agento11y-demo/issues/42)) ([f01d357](https://github.com/rknightion/grafana-cloud-agento11y-demo/commit/f01d35782a5dc92bd8565e97d9379a0e016d6c74))
+* **images:** take Debian security upgrades in site-browser and dev-workstation ([f527f54](https://github.com/rknightion/grafana-cloud-agento11y-demo/commit/f527f5413a3d763f6f51086bbd0fd41b8a937626))
+
+
+### Documentation
+
+* add a screenshots gallery page ([6179ec7](https://github.com/rknightion/grafana-cloud-agento11y-demo/commit/6179ec768267a544c7dcda188a33c3894ba38dcf))
+* keep diagram source HTML out of the published site ([9ed258c](https://github.com/rknightion/grafana-cloud-agento11y-demo/commit/9ed258c942e08d883104f2d72b2efbeee2b33e41))
+* replace the Mermaid architecture diagrams with designed images ([b6c9749](https://github.com/rknightion/grafana-cloud-agento11y-demo/commit/b6c97496836fc850e8cfc63046f905c6be5d972f))
+
 ## [0.4.0](https://github.com/rknightion/grafana-cloud-agento11y-demo/compare/v0.3.0...v0.4.0) (2026-09-29)
 
 
