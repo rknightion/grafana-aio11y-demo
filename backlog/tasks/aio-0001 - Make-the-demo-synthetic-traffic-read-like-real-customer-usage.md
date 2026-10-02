@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@claude'
 created_date: '2026-09-29 08:46'
-updated_date: '2026-10-02 10:21'
+updated_date: '2026-10-02 11:12'
 labels:
   - traffic
 dependencies: []
@@ -44,4 +44,6 @@ All subtask code shipped in v0.2.0 and deployed to the lab 2026-09-29. Open: AC2
 2026-10-02: Rob chose to leave the lab down; the remaining live AC is proved on the next demo deploy, not by a standalone redeploy.
 
 2026-10-02: v0.4.1 released and deployed to the lab by a full apply (156 added); touchline pods Running. Live ACs can now be sampled: dev sessions after the agent host's ~30-minute sign-in, the Experiments AC within 24h.
+
+AC2 failed live 2026-10-02 on v0.4.1: in a 30-minute window two newsroom developers (10:46Z and 10:53Z) drew the same newsroom-glossary-typo prompt and sent identical opening text; in-app titles had no repeats. Cause: each developer picked at random from its team pool (newsroom 15 prompts) with no coordination. Fix 2da17ef (Rob chose it): a shared recent-prompts volume on the agent host, written under a host-wide flock, from which pick_prompt drops anything started in the last 45 minutes. Scratch proof: 40 sequential newsroom picks gave 19 distinct before and 40 after; 36 concurrent picks from three pickers in a Linux container were all distinct; a held lock falls back after 30 s without writing. Re-sample after v0.4.2 is deployed.
 <!-- SECTION:NOTES:END -->
