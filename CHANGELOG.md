@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.3](https://github.com/rknightion/grafana-cloud-agento11y-demo/compare/v0.4.2...v0.4.3) (2026-10-02)
+
+
+### Bug Fixes
+
+* **traffic:** never open two in-app conversations with the same question ([cfd54eb](https://github.com/rknightion/grafana-cloud-agento11y-demo/commit/cfd54eb2cd79a72e9c7ea429c3e128274734b5d6))
+
 ## [0.4.2](https://github.com/rknightion/grafana-cloud-agento11y-demo/compare/v0.4.1...v0.4.2) (2026-10-02)
 
 
