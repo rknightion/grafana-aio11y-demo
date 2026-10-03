@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.4](https://github.com/rknightion/grafana-cloud-agento11y-demo/compare/v0.4.3...v0.4.4) (2026-10-03)
+
+
+### Bug Fixes
+
+* **deps:** update dependency @aws-sdk/client-bedrock-runtime to v3.1146.0 ([#48](https://github.com/rknightion/grafana-cloud-agento11y-demo/issues/48)) ([9a139a3](https://github.com/rknightion/grafana-cloud-agento11y-demo/commit/9a139a3b36084e35ffad63af6546d93be47b64f9))
+* **deps:** update dependency @modelcontextprotocol/sdk to v1.32.0 ([#46](https://github.com/rknightion/grafana-cloud-agento11y-demo/issues/46)) ([ada0a65](https://github.com/rknightion/grafana-cloud-agento11y-demo/commit/ada0a65f9028b36ef9ba7bf837245c4697376543))
+
 ## [0.4.3](https://github.com/rknightion/grafana-cloud-agento11y-demo/compare/v0.4.2...v0.4.3) (2026-10-02)
 
 
